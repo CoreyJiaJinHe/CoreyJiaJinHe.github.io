@@ -1,0 +1,480 @@
+SQL> Create type person_t as object (Name varchar2(20), Address varchar2(20), PNumber varchar2(20), prefEmail varchar(20), SIN varchar2(10), EContacts varchar2(20), Banking varchar2(20), member function getDetails return varchar2) not final;
+  2  /
+
+Type created.
+
+SQL> Create type Faculty_t as object (FacultyName varchar2(20), FacultyID varchar2(20), MAP member function viewFaculties return varchar2);
+  2  /
+
+Type created.
+
+SQL> Create type Department_t as object (DepartmentID varchar2(10), departmentName varchar2(20), foid ref faculty_t);
+  2  /
+
+Type created.
+
+SQL> Create type professor_t under person_t (ProfID int(20), isTenured char(1), doid ref Department_t, overriding member function getDetails return varchar2);
+  2  /
+
+Type created.
+
+SQL> Create type Course_t as object (CourseID varchar2(10), foid ref Faculty_t, doid ref Department_t, Cost int(6), CampusLocation varchar2(10), Credits int (2),
+  2  map member function viewCourses return varchar2,
+  3  member function calculateAverageGrades(CourseID in varchar2) return float,
+  4  member function boostGradeByHighest(CourseID in varchar2) return varchar2,
+  5  member function boostGradeByLowest(CourseID in varchar2) return varchar2,
+  6  member function percentagePassed(CourseID in varchar2) return varchar2,
+  7  member function calculateMaxCapacity(CourseID in varchar2) return varchar2);
+  8  /
+
+Type created.
+
+SQL> Create type CoursePreRequisites_t as object(CPRID varchar2(10), coid ref course_t, prcoid ref course_t, member function viewPreRequisites(baseCourseID in varchar2) return varchar2);
+  2  /
+
+Type created.
+
+SQL> Create type CourseTypes_t as object (CourseType varchar2(4), member function scoursetype return varchar2);
+  2  /
+
+Type created.
+
+SQL> Create type section_t as Object(coid ref course_t, proid ref Professor_t, SectionID varchar2(10), Time varchar2(5), StartDate varchar2(8), EndDate varchar2(8), RoomID varchar2(10), MaxCapacity int(3), CurrentCapacity int(3), ctype CourseTypes_t,
+  2  member function calculateAverageGrades(SectionID in varchar2)  return float);
+  3  /
+
+Type created.
+
+SQL> Create type DegreeProgram_t as object (DegreeID varchar2(10), doid ref Faculty_t, GPARequirement int, CreditRequirement int,
+  2  member function compareGPA(studentID in varchar2, degreeID in varchar2) return varchar2,
+  3  member function compareCredits(studentID in varchar2, degreeID in varchar2) return varchar2,
+  4  member function compareSTDR(studentID in varchar2, degreeID in varchar2) return varchar2);
+  5  /
+
+Type created.
+
+SQL> Create type DegreeRequisite_t as object (DRID varchar2(10),dpoid ref DegreeProgram_t, coid ref course_t, member function viewDegreeRequisites (DegreeID in varchar2) return varchar2);
+  2  /
+
+Type created.
+
+SQL> Create type student_t under person_t (sid varchar2(10), gradStat char(1), foid ref Faculty_t, dpoid ref DegreeProgram_t,
+  2  overriding member function getDetails return varchar2,
+  3  member function calculateGPA(sid in varchar2) return float,
+  4  member function calculateCredits(sid in varchar2) return int);
+  5  /
+
+Type created.
+
+SQL> Create type StudentTranscript_t as object (STranscriptID varchar2(10), soid ref student_t, secoid ref section_t, Credits Integer, Grade Integer,
+  2  ORDER member function compareGrade(s in StudentTranscript_t) return integer);
+  3  /
+
+Type created.
+
+SQL> 
+SQL> 
+SQL> Create table Faculty of Faculty_t(FacultyID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table Department of Department_t (DepartmentID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table Professor of professor_t(ProfID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table Course of Course_t(CourseID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table CoursePreReq of CoursePreRequisites_t (CPRID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table Section of section_t(SectionID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table DegreeProgram of DegreeProgram_t(DegreeID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table student of student_t (sid primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table STranscript of StudentTranscript_t (STranscriptID primary key);
+
+Table created.
+
+SQL> 
+SQL> Create table DegreeRequisite of DegreeRequisite_t (DRID primary key);
+
+Table created.
+
+SQL> create type body person_t as member function getDetails return varchar2
+  2  is
+  3  begin
+  4  return self.name;
+  5  end;
+  6  end;
+  7  /
+
+Type body created.
+
+SQL> Create type body student_t as overriding member function getDetails return varchar2
+  2  is
+  3  begin
+  4  return 'Student ID: '||self.SID||', Name: '||self.name||', Student Type: '||self.gradStat;
+  5  end;
+  6  member function calculateGPA(sid in varchar2) return float
+  7  is
+  8  GPA NUMBER;
+  9  Begin
+ 10  Select AVG(grade) INTO GPA FROM STranscript s WHERE s.soid.sid=sid;
+ 11  Return GPA;
+ 12  end;
+ 13  member function calculateCredits(sid in varchar2) return int
+ 14  is
+ 15  totalCredits NUMBER;
+ 16  Begin
+ 17  Select SUM(credits) INTO totalCredits FROM STranscript s WHERE s.soid.sid=sid;
+ 18  Return totalCredits;
+ 19  end;
+ 20  end;
+ 21  /
+
+Type body created.
+
+SQL> Create type body StudentTranscript_t as ORDER member function compareGrade(s in StudentTranscript_t) return INTEGER
+  2  is
+  3  begin
+  4  if (self.grade> s.grade) then
+  5  RETURN -1;
+  6  elsif (self.grade< s.grade) then
+  7  RETURN 1;
+  8  else
+  9  RETURN 0;
+ 10  end if;
+ 11  end;
+ 12  end;
+ 13  /
+
+Type body created.
+
+SQL> Create type body faculty_t as MAP member function viewFaculties return varchar2
+  2  Is
+  3  Begin
+  4  return self.FacultyName;
+  5  end;
+  6  end;
+  7  /
+
+Type body created.
+
+SQL> create type body professor_t as overriding member function getDetails return varchar2
+  2  is
+  3  begin
+  4  return 'Professor ID:'||self.profID||', Name: '||self.name||' Tenure Status: '||self.isTenured;
+  5  end;
+  6  end;
+  7  /
+
+Type body created.
+
+SQL> Create type body CoursePreRequisites_t as member function viewPreRequisites(baseCourseID in varchar2) return varchar2
+  2  is
+  3  LoopInt Number;
+  4  Cursor courseNames IS SELECT c.CourseID FROM Course c, CoursePreReq cpr WHERE c.CourseID=cpr.prcoid.CourseID AND cpr.prcoid.CourseID=BaseCourseID;
+  5  CourseID courseNames%ROWTYPE;
+  6  RequiredCourses varchar2(50);
+  7  begin
+  8  SELECT COUNT(*) INTO LoopInt FROM CoursePrereq cpr where cpr.prcoid.CourseID=baseCourseID;
+  9  if LoopInt = 0 then
+ 10  return 'There are no prerequisites for this course';
+ 11  end if;
+ 12  
+ 13  OPEN courseNAMES;
+ 14  FOR indx in 1..LoopInt LOOP
+ 15  FETCH courseNames INTO CourseID;
+ 16  if indx=1 then
+ 17  RequiredCourses:=CourseID.CourseID;
+ 18  else
+ 19  RequiredCourses:=RequiredCourses||', '||CourseID.CourseID;
+ 20  end if;
+ 21  END LOOP;
+ 22  CLOSE courseNames;
+ 23  return 'The Required Courses for: '||BaseCourseID||' are: '||RequiredCourses;
+ 24  end;
+ 25  end;
+ 26  /
+
+Type body created.
+
+SQL> Create type body section_t as member function calculateAverageGrades(SectionID in varchar2) return float
+  2  Is
+  3  AverageGrade Number;
+  4  Begin
+  5  Select AVG(grade) INTO AverageGrade
+  6  FROM STranscript s WHERE s.secoid.SectionID =SectionID;
+  7  Return AverageGrade;
+  8  End;
+  9  End;
+ 10  /
+
+Type body created.
+
+SQL> Create type body Course_t as MAP member function viewCourses return varchar2
+  2  is
+  3  begin
+  4  return self.CourseID;
+  5  End;
+  6  Member function calculateAverageGrades (CourseID in varchar2) return float
+  7  Is
+  8  AverageGrade Number;
+  9  Begin
+ 10  Select AVG(s.grade) INTO AverageGrade
+ 11  FROM STranscript s WHERE s.secoid.coid.CourseID = CourseID;
+ 12  Return AverageGrade;
+ 13  end;
+ 14  Member function boostGradeByHighest (CourseID in varchar2) return varchar2
+ 15  is
+ 16  BoostBy Number;
+ 17  Boosted Number;
+ 18  oldAverageGrade Number;
+ 19  newAverageGrade Number;
+ 20  StudentGrades STranscript.Grade%TYPE;
+ 21  begin
+ 22  SELECT AVG(Grade) INTO oldAverageGrade FROM (SELECT Grade From STranscript s WHERE s.secoid.coid.CourseID=CourseID);
+ 23  SELECT MAX(Grade) INTO BoostBy FROM (SELECT Grade From STranscript s WHERE s.secoid.coid.CourseID=CourseID);
+ 24  
+ 25  Boosted:= 100 - BoostBy;
+ 26  newAverageGrade:=oldAverageGrade+Boosted;
+ 27  
+ 28  Return 'The Highest Grade:  '||BoostBy||', Old Average Grade: '||oldAverageGrade||', New Average Grade:  '||newAverageGrade||', Overall Boosted by: '||Boosted;
+ 29  end;
+ 30  
+ 31  Member function boostGradeByLowest (CourseID in varchar2) return varchar2
+ 32  is
+ 33  Boost Number;
+ 34  Boosted Number;
+ 35  oldAverageGrade Number;
+ 36  newAverageGrade Number;
+ 37  newSum Number:=0;
+ 38  LoopInt Number;
+ 39  
+ 40  CURSOR stgrades IS
+ 41  SELECT Grade FROM STranscript s WHERE s.secoid.coid.CourseID=CourseID;
+ 42  StudentGrades stgrades%ROWTYPE;
+ 43  begin
+ 44  SELECT AVG(Grade) INTO oldAverageGrade FROM (SELECT Grade From STranscript s WHERE s.secoid.coid.CourseID=CourseID);
+ 45  
+ 46  SELECT COUNT(*) INTO LoopInt FROM STranscript s WHERE s.secoid.coid.CourseID=CourseID;
+ 47  OPEN stgrades;
+ 48  
+ 49  if LoopInt = 0 then
+ 50  return 'There are no students on record having taken this course: '||CourseID;
+ 51  end if;
+ 52  
+ 53  FOR indx in 1..LoopINT LOOP
+ 54  FETCH stgrades INTO StudentGrades;
+ 55  
+ 56  
+ 57  If StudentGrades.grade< 10 then
+ 58  newSUM:=newSUM+StudentGrades.grade+50;
+ 59  elsIf StudentGrades.grade< 20 then
+ 60  newSUM:=newSUM+StudentGrades.grade+40;
+ 61  elsIf StudentGrades.grade<30 then
+ 62  newSUM:=newSUM+StudentGrades.grade+30;
+ 63  elsIf StudentGrades.grade<40 then
+ 64  newSUM:=newSUM+StudentGrades.grade+20;
+ 65  elsIf StudentGrades.grade < 50 then
+ 66  newSUM:=newSUM+StudentGrades.grade+10;
+ 67  else
+ 68  newSUM:=newSUM+StudentGrades.grade;
+ 69  end if;
+ 70  
+ 71  END LOOP;
+ 72  CLOSE stgrades;
+ 73  
+ 74  newAverageGrade:=newSUM/LoopInt;
+ 75  
+ 76  Boosted:= newAverageGrade-oldAverageGrade;
+ 77  
+ 78  Return 'Old Average Grade: '||oldAverageGrade||', New Average Grade:  '||ROUND(newAverageGrade)||', Overall Boosted by: '||ROUND(Boosted);
+ 79  end;
+ 80  
+ 81  Member function percentagePassed(CourseID in varchar2) return varchar2
+ 82  is
+ 83  Passed number;
+ 84  Total number;
+ 85  Percentage number;
+ 86  begin
+ 87  Select Count(grade) into Passed from STranscript t where t.Grade > 51 AND t.secoid.coid.CourseID=CourseID;
+ 88  
+ 89  Select Count (grade) into Total from STranscript t where t.secoid.coid.CourseID=CourseID;
+ 90  Percentage:= Passed/Total;
+ 91  
+ 92  Return 'Percentage Passed: '||ROUND(Percentage,2)||', Exact Numbers: '||Passed||'/'||Total;
+ 93  end;
+ 94  member function calculateMaxCapacity(CourseID in varchar2) return varchar2
+ 95  is
+ 96  CourseCapacity Number;
+ 97  begin
+ 98  Select SUM(maxcapacity) into CourseCapacity from Section s where s.coid.CourseID=CourseID;
+ 99  return 'Max Capacity of Course: '||CourseCapacity;
+100  end;
+101  end;
+102  /
+
+Type body created.
+
+SQL> Create type body CourseTypes_t as member function scoursetype return varchar2
+  2  is
+  3  begin
+  4  return self.coursetype;
+  5  end;
+  6  end;
+  7  /
+
+Type body created.
+
+SQL> create type body DegreeRequisite_t as member function viewDegreeRequisites(DegreeID in varchar2) return varchar2
+  2  is
+  3  LoopInt Number;
+  4  Cursor courseNames IS SELECT c.CourseID FROM Course c, DegreeRequisite dr WHERE c.CourseID=dr.coid.CourseID AND dr.dpoid.DegreeID=DegreeID;
+  5  CourseID courseNames%ROWTYPE;
+  6  RequiredCourses varchar2(50);
+  7  Begin
+  8  OPEN courseNAMES;
+  9  
+ 10  SELECT COUNT(*) INTO LoopInt FROM DegreeRequisite dr where dr.dpoid.degreeID=degreeID;
+ 11  if LoopInt = 0 then
+ 12  return 'There is no such degree.';
+ 13  end if;
+ 14  
+ 15  FOR indx in 1..LoopInt LOOP
+ 16  FETCH courseNames INTO CourseID;
+ 17  if indx=1 then
+ 18  RequiredCourses:=CourseID.CourseID;
+ 19  else
+ 20  RequiredCourses:=RequiredCourses||', '||CourseID.CourseID;
+ 21  end if;
+ 22  END LOOP;
+ 23  CLOSE courseNames;
+ 24  
+ 25  return 'The Required Courses for: '||degreeID||' are: '||RequiredCourses;
+ 26  
+ 27  end;
+ 28  end;
+ 29  /
+
+Type body created.
+
+SQL> Create type body DegreeProgram_t as Member function compareGPA(studentID in varchar2, degreeID in varchar2) return varchar2
+  2  Is
+  3  Cursor StudentName IS SELECT s.name FROM Student s WHERE s.sid=studentID AND s.dpoid.degreeID=degreeID;
+  4  SName StudentName%ROWTYPE;
+  5  Name varchar2(20);
+  6  
+  7  ReqGPA DegreeProgram.GPARequirement%TYPE;
+  8  StudentGPA Number;
+  9  Begin
+ 10  
+ 11  ReqGPA:=self.GPARequirement;
+ 12  Select AVG(Grade) INTO StudentGPA FROM STranscript t WHERE t.soid.sid =studentID;
+ 13  
+ 14  OPEN StudentName;
+ 15  FETCH StudentName INTO SName;
+ 16  IF StudentName%NOTFOUND then
+ 17  return 'There is no such person.';
+ 18  End if;
+ 19  Name:=SName.name;
+ 20  CLOSE StudentName;
+ 21  
+ 22  
+ 23  If (ReqGPA <= StudentGPA) then
+ 24  Return 'Student '||Name||' has met the GPA requirement to graduate: '||StudentGPA||'/'||ReqGPA;
+ 25  Else
+ 26  Return 'Student '||Name||' has not met the GPA requirement to graduate: '||StudentGPA||'/'||ReqGPA;
+ 27  end if;
+ 28  end;
+ 29  
+ 30  Member function compareCredits(studentID in varchar2, degreeID in varchar2) return varchar2
+ 31  Is
+ 32  Cursor StudentName IS SELECT s.name FROM Student s WHERE s.sid=studentid AND s.dpoid.degreeID=degreeID;
+ 33  SName StudentName%ROWTYPE;
+ 34  Name varchar2(20);
+ 35  
+ 36  ReqCredit DegreeProgram.CreditRequirement%TYPE;
+ 37  StudentGPA Number;
+ 38  totalCredits Number;
+ 39  Begin
+ 40  
+ 41  OPEN StudentName;
+ 42  FETCH StudentName INTO SName;
+ 43  IF StudentName%NOTFOUND then
+ 44  return 'There is no such person.';
+ 45  End if;
+ 46  Name:=SName.name;
+ 47  CLOSE StudentName;
+ 48  
+ 49  ReqCredit:=self.CreditRequirement;
+ 50  Select sum(credits) INTO totalCredits FROM STranscript t WHERE t.soid.SID=studentid;
+ 51  
+ 52  
+ 53  If (ReqCredit<=totalCredits) then
+ 54  Return 'Student '||Name||' has met the Credit requirement to graduate: '||totalCredits||'/'||ReqCredit;
+ 55  Else
+ 56  Return 'Student '||Name||' has not met the Credit requirement to graduate: '||totalCredits||'/'||ReqCredit;
+ 57  end if;
+ 58  End;
+ 59  
+ 60  Member function compareSTDR(studentID in varchar2, degreeID in varchar2) return varchar2
+ 61  is
+ 62  Cursor StudentName IS SELECT s.name FROM Student s WHERE s.sid=studentid AND s.dpoid.degreeID=degreeID;
+ 63  SName StudentName%ROWTYPE;
+ 64  Name varchar2(20);
+ 65  
+ 66  missingCourses number;
+ 67  degree_CourseID Course.CourseID%TYPE;
+ 68  begin
+ 69  
+ 70  OPEN StudentName;
+ 71  FETCH StudentName INTO SName;
+ 72  IF StudentName%NOTFOUND then
+ 73  return 'There is no such person.';
+ 74  End if;
+ 75  Name:=SName.name;
+ 76  CLOSE StudentName;
+ 77  
+ 78  
+ 79  Select Count(*) INTO missingCourses FROM (Select CourseID From DegreeRequisite dr, Course c WHERE dr.dpoid.DegreeID = DegreeID AND dr.coid.CourseID=c.CourseID
+ 80  MINUS
+ 81  Select CourseID From STranscript t, Course c Where t.soid.SID = studentid AND  t.Grade > 60 AND c.CourseID=t.secoid.coid.CourseID) subquery1;
+ 82  
+ 83  Select Name into Name from Student s WHERE s.SID=studentid;
+ 84  
+ 85  IF (missingCourses>0) then
+ 86  return 'Student '||Name||' has not met the mandatory Course Requirements to graduate.';
+ 87  Else
+ 88  return 'Student '||Name||' has met the mandatory Course Requirements to graduate.';
+ 89  End if;
+ 90  End;
+ 91  end;
+ 92  /
+
+Type body created.
+
+SQL> spool off;

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<title>Oasis Woodworks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="mycssv2.css">
+<head>
+
+<style>
+
+
+</style>
+
+
+    <script type ="text/javascript" src = "checkLogin.js"></script>
+    <script type ="text/javascript" src="stacking.js"></script>
+    <script type ="text/javascript" src="getSize.js"></script>
+    <script type ="text/javascript" src="getSuggestions.js"></script>
+    <script type ="text/javascript" src="calculatePrice.js"></script>
+    <script type ="text/javascript" src="cart.js"></script>
+
+</head>
+
+
+
+<body style="background-color:black;" onload="checkCookie(),getSize()">
+
+
+<div id="cartdiv" style="visibility:hidden;position:fixed;margin-left:80%;border:2px solid black;z-index:5;height:500px;width:200px;float:right;background-color:white;padding:10px;">
+<div style="border:1px solid black;text-align:center"><h2>Cart</h2>
+</div>
+<div style="border:1px solid black;display:block;height:410px;overflow-y:scroll;overflow-x:hide">
+<ul id="cart"></ul>
+
+</div>
+	<div style="margin-left:auto;margin-right:auto;width:155px;position:relative;">
+	<button id="clear" onclick="clearcart()">Clear Cart</button>
+	<button id="purchase">Checkout</button>
+	</div>
+</div>
+
+<div class="header">
+	<div class="namebar">
+	<img src="Images/img_saw.png" alt="Image of Logo" style="float:left;height:120px;width:120px;object-fit:contain">
+	<img src="Images/img_saw.png" alt="Image of Logo" style="float:right;height:120px;width:120px;object-fit:contain">
+		<div style="color:white;font-size:30px;">
+		<h1>Oasis Woodworks</h1>
+		</div>
+	</div>
+	<div style="background-color:white;width:100%;height:10px">
+	</div>
+
+	<div style="padding-top:10px;padding-bottom:10px;background-color:black;height:25px;"
+	<div class="navbar">
+	
+	<div class="dropdown">
+	<input list="suggestions" type="text" id="search" placeholder="Search" style="width:164px;" onkeyup="getSuggestions(this.value)"/>
+	<datalist id="suggestions">
+	</datalist>
+
+
+
+	<button type="submit" style="width:5%;min-width:75px;">Search</button>
+	<button onclick="location.href='HomePage.html'"   class="button button1">Home Page </button>
+	<button id="ProductPage" onclick="location.href='ProductPage.html'"  class="button button1">Finished Wood</button>
+	<button onclick="location.href='ErrorPage.html'"  class="button button1">Furniture</button>
+	<button id="login" onclick="location.href='login.html'" class="button button1">Login</button>
+	</div>
+	</div>
+</div>
+
+<div class="content" style="height:100%;min-height:1000px">
+<div style="margin-left:20px;margin-right:20px">
+<h1>Finished Wood</h1>
+
+
+<p><b>What type of wood would you like?</b></p>
+<p style="font-size:20px">In order below: Cedar, Fir, Pine, Redwood, Ash, Birch, Cherry, Mahogany.</p>
+
+	<div style="height:200px;margin-bottom:50px;">
+		<div class="imgcont">
+		<img id="img1" class="imgstack" src="Images/img_cedar.png" alt="Image of Cedar" style="left:0px" onclick="movetofront('img1')" />
+		<img id="img2"class="imgstack" src="Images/img_fir.png"  alt="Image of Fir" style="left:100px" onclick="movetofront('img2')"  />
+		<img id="img3"class="imgstack" src="Images/img_pine.png"  alt="Image of Pine" style="left:200px" onclick="movetofront('img3')"  />
+		<img id="img4" class="imgstack" src="Images/img_redwood.png"  alt="Image of Redwood" style="left:300px" onclick="movetofront('img4')"  />
+		<img id="img5"class="imgstack" src="Images/img_ash.png"  alt="Image of Ash" style="left:400px" onclick="movetofront('img5')"  />
+		<img id="img6"class="imgstack" src="Images/img_birch.png"  alt="Image of Birch" style="left:500px" onclick="movetofront('img6')"  />
+		<img id="img7"class="imgstack" src="Images/img_cherry.png"  alt="Image of Cherry" style="left:600px"  onclick="movetofront('img7')" />
+		<img id="img8"class="imgstack" src="Images/img_mahogany.png"  alt="Image of Mahogany" style="left:700px"  onclick="movetofront('img8')" />
+		</div>
+	</div>
+<div class = "imgcont2">
+<img src="Images/img_lumbersizes.png" alt="Picture of Lumber Sizes" style="object-fit:fit"/>
+</div>
+
+<div style="height:100px">
+<h2 id="DProperties">Properties</h2>
+<ul id="Properties"></ul>
+</div>
+<br>
+
+
+
+<select id="Type" name="Types of Wood" onchange="getSize()">
+<option>Cedar	</option>
+<option>Fir	</option>
+<option>Pine	</option>
+<option>Redwood	</option>
+<option>Ash	</option>
+<option>Birch	</option>
+<option>Cherry	</option>
+<option>Mahogany</option>
+</select>
+
+
+<h3 id="DSizes">Available Sizes</h3>
+
+<select id="Sizes" name="Available Sizes">
+</select>
+<br>
+
+<h3 id="DLengths">Available Length</h3>
+
+
+<select id="Lengths" name="Available Length">
+</select>
+<br>
+
+
+
+	<p><b>Quantity</b></p>
+	<p>Input quantity below.</p>
+	<label>Quantity: </label>
+	<input type = "text" id="Quantity" name="Quantity" onkeyup="calculatePrice()"/> 
+	<label id="qStatus"></label>
+	<br><br>
+	<label id="dCost"><b>Price: </b></label>
+	<label id="cost"></label>
+
+	
+	<br>
+	<br>
+	<div>
+	<button id="addtocart" onclick="calculatePrice(),addtocart()">Add to Cart</button>
+
+
+	<button id="viewcart" onclick="viewcart()">View Cart</button>
+	</div>
+
+
+<br><br><br><br><br>
+<div style="border:1px solid black;margin-top:20px;padding-left:20px;">
+<p>Not a carpenter? Not interested in making your own furniture? Then head on over to our <a style="color:blue" href="ErrorPage.html">furniture</a> section for our pre-built furniture!</p>
+</div>
+<br><br><br>
+</div>
+</div>
+
+<div id="footer">
+<table class="footer">
+<tr>
+<td class="footer"><label><a href="ErrorPage.html">FAQ</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Support</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Contact Us</a></label></td>
+</tr>
+<tr>
+<td class="footer"><label><a href="ErrorPage.html">Terms of Service</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Privacy Policy</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Cookie Policy</a></label></td>
+</tr>
+</div>
+</div>
+
+
+</body>
+</html>
+

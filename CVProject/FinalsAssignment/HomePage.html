@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<title>Oasis Woodworks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="mycssv2.css">
+<!Student Name: Corey He>
+<!Student ID: 217253527>
+<head>
+
+<style>
+
+</style>
+
+    <script type = "text/javascript"  src = "checkLogin.js"></script>
+    <script type ="text/javascript" src="getSuggestions.js"></script>
+
+
+
+
+</head>
+
+
+
+<body style="background-color:black;" onload="checkCookie()">
+
+
+
+<div class="header">
+	<div class="namebar">
+	<img src="Images/img_saw.png" alt="Image of Logo" style="float:left;height:120px;width:120px;object-fit:contain">
+	<img src="Images/img_saw.png" alt="Image of Logo" style="float:right;height:120px;width:120px;object-fit:contain">
+		<div style="color:white;font-size:30px;">
+		<h1>Oasis Woodworks</h1>
+		</div>
+	</div>
+	<div style="background-color:white;width:100%;height:10px">
+	</div>
+
+	<div style="padding-top:10px;padding-bottom:10px;background-color:black;height:25px;"
+	<div class="navbar">
+	
+	<div class="dropdown">
+	<input list="suggestions" type="text" id="search" placeholder="Search" style="width:164px;" onkeyup="getSuggestions(this.value)"/>
+	<datalist id="suggestions">
+	</datalist>
+
+
+
+	<button type="submit" style="width:5%;min-width:75px;">Search</button>
+	<button onclick="location.href='HomePage.html'"   class="button button1">Home Page </button>
+	<button id="ProductPage" onclick="location.href='ProductPage.html'"  class="button button1">Finished Wood</button>
+	<button onclick="location.href='ErrorPage.html'"  class="button button1">Furniture</button>
+	<button id="login" onclick="location.href='login.html'" class="button button1">Login</button>
+	</div>
+	</div>
+</div>
+<div class="content">
+<div style="color:black;font-size:20px;margin-left:5px;margin-right:5px">
+<p> We at Beaver's Woodshop pride ourselves as one of the best woodworkers in the country! We sell many different wooden products, from processed wood to pre-fabricated furniture and even assembled furniture. Each hand-made by our best carpenters.
+<br>Purchase now from our online store, or come in person and pick what wood suits you best!</p>
+</div>
+<div class="content2">
+<div style="margin-left:20px;margin-right:20px;font-size:20px;">
+	<h2>Types of Wood sold </h2>
+	<dl style="margin-left:40px;">
+	<dt> Cedar <img src="Images/img_cedar.png" alt="Image of Cedar Wood" style="height:60px;width:4%;object-fit:fill;float:right"></dt>
+	<dd> Cedar is prized for its natural resistance to decay and insect damage, which makes it ideal for outdoor projects. This wood is often used for shingles, shakes, posts, poles, outdoor furniture, interior paneling, house siding, decks, and saunas. Also, cedar is lightweight and this makes it an excellent choice for fishing net floats and canoes.</dd>
+	<dt> Fir <img src="Images/img_fir.png" alt="Image of Fir Wood" style="height:60px;width:4%;object-fit:fill;float:right"></dt>
+	<dd>Fir is chosen often due to it's relatively cheap price in the wood industry and it's availability. It is often used as construction and building products: lumber, plywood, doors, studding, roof trusses, floor and ceiling joists, window frames, laminated beams, and general millwork. Nonetheless, it makes a wonderful wood for furniture and fine cabinetry.</dd>
+	<dt> Pine <img src="Images/img_pine.png" alt="Image of Pine Wood" style="height:60px;width:4%;object-fit:fill;float:right"></dt>
+	<dd>Pine is a very stiff wood. This makes it durable and strong when used in furniture. It's not quite as strong as oak, but it does still offer durability. It is light in color, usually with a creamy white look, though the specific shade can vary. It's light color makes pine easy to stain any color you want, or you could apply a clear coat to protect the wood to let it's natural white color take center stage.
+	<dt> Redwood<img src="Images/img_redwood.png" alt="Image of Redwood Wood" style="height:60px;width:4%;object-fit:fill;float:right"> </dt>
+	<dd>Redwood is a wood that is very resistant to moisture. Thus making it a great choice for outdoor furniture. It is relatively soft and easy to work with. It has a slight reddish hue. You can use stains and paint on redwood, but it is such a nice color that many woodworkers use a water repellant with mildewcide for outdoor furniture.</dd>
+	<dt> Ash <img src="Images/img_ash.png" alt="Image of Ash Wood" style="height:60px;width:4%;object-fit:fill;float:right"></dt>
+	<dd>Ash is a relatiely rare wood. It is not often used within the shop though one is sure to have come in contact with the wood at some times. It is the traditional material for the handles of various tools because of it's hardness, stability, durability (indoors) and strength. It's strength is comparable to that as sugar maple. It is known for it's staining potential and ability to mimic oak. It has greak shock resistance and solid workability.
+	</dd>
+	<dt> Birch <img src="Images/img_birch.png" alt="Image of Birch Wood" style="height:60px;width:4%;object-fit:fill;float:right"></dt>
+	<dd>Birch is an abundant material in North America. Though it isn't a superior furniture-grade hardwood, it is a good one. It is both durable and attactive, it takes stain well and it's affordable. Birch is workable, it doesn't nick or gouge easily. It has a close grain that allows for even stains. Birch lumber has a handsome appearance. Because of its fine texture and straight grain, it machines well and routs beautifully.Though hard, birch is easy to sand, and it turns like a dream. Birch plywood is available in a wide range of grades.</dd>
+	<dt> Cherry <img src="Images/img_cherry.png" alt="Image of Cherry Wood" style="height:60px;width:4%;object-fit:fill;float:right"> </dt>
+	<dd>Cherry is a hardwood that is slightly more difficult to work with. However, it is considered a softer hardwood. It's appearance has a warmer reddish tone that can complement a lighter interior. It is easy to machine, nails and glues well, and when sanded and stained, it produces an excellent smooth finish. It dries fairly quickly with moderately high shrinkage but is dimensionally stable after kiln drying.</dd>
+	<dt> Mahogany <img src="Images/img_mahogany.png" alt="Image of Mahogany Wood" style="height:60px;width:4%;object-fit:fill;float:right"></dt>
+	<dd>Mahogany is a fan favourite for many generations of woodworkers. Genuine mahogany consists of two closely related species. Cuban mahogany and Honduran mahogany. Mahogany is loved for it's beauty, workability and stability. The Cuban mahogany provides a denser wood with tight growth rings, fine texture and a deep reddish brown color. While the Honduran mahogany varies greatly in density, color and figure, depending on where it's grown.
+	</dl>
+<p style="margin-left:20px">Please proceed to <a href="ProductPage.html" style="text-decoration:underline;color:blue">Processed Wood</a> to order.</p>
+
+</div>
+</div>
+
+
+<div id="footer">
+<table class="footer">
+<tr>
+<td class="footer"><label><a href="ErrorPage.html">FAQ</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Support</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Contact Us</a></label></td>
+</tr>
+<tr>
+<td class="footer"><label><a href="ErrorPage.html">Terms of Service</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Privacy Policy</a></label></td>
+<td class="footer"><label><a href="ErrorPage.html">Cookie Policy</a></label></td>
+</tr>
+</div>
+</div>
+
+
+
+</body>
+</html>
+
