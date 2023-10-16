@@ -8,7 +8,7 @@
 
         <head>
             <script>
-                function displayExamples(test,) {
+                function displayExamples(test) {
                     document.getElementById('Examples').innerHTML = '';
                     if (test == 'UIDesign') {
 
@@ -63,10 +63,12 @@
                 .column1 {
                     float: left;
                     width: 33.33%;
+                    min-width:200px;
                 }
                 .column2 {
                     float: left;
                     width: 20%;
+                    min-width:150px;
                 }
                 .Main{
                     margin-left:15%;
@@ -88,14 +90,14 @@
 
 
         <body
-            style="background-color: white;background-image:url('Circuit board Wallpaper.jpg');background-size:cover;background-repeat:no-repeat;background-attachment:fixed">
+            style="white-space:nowrap;background-color: white;background-image:url('Circuit board Wallpaper.jpg');background-size:cover;background-repeat:no-repeat;background-attachment:fixed">
             <div class="maincontainer">
-            <div>
-                <div class="header1">
+            <div >
+                <div class="header1" style="height:100px;overflow:hidden">
                     <h1>Email: coreyhe@my.yorku.ca</h1>
                 </div>
 
-                <div class="header2">
+                <div class="header2" style="height:100px;overflow:hidden">
                     <h1>Contact: My Digits</h1>
                 </div>
                 <div class="spacer" style="width:100%;height:10px">
@@ -110,12 +112,12 @@
                 <div style="width:100%;">
                     <div style="margin:auto;text-align:center">
                         <div class="spacer" style="width:33%;height:40px;float:right;"></div>
-                        <div style="background-color:white;border-style:solid;width:27%;margin-left:2%">
+                        <div style="background-color:white;border-style:solid;width:27%;margin-left:2%;overflow:hidden">
                             <h1>Corey He</h1>
                         </div>
                     </div>
-                    <div style="background-color:white;border-style:solid;width:27%;height:100px;margin-left:2%">
-                        <div style="width:100px;height:100px;margin-left:10px;float:left">
+                    <div style="background-color:white;border-style:solid;width:27%;height:100px;margin-left:2%;overflow:hidden">
+                        <div style="width:100px;height:100px;margin-left:10px;float:left;">
                             <h2>Address:</h2>
                         </div>
                         <div style="margin-left:1%">
@@ -132,24 +134,24 @@
                 <div class="Education"
                     style="margin-top:20px;margin-left:2%;border-style:solid;width:30%;height:100px;background-color:white;">
                     <div style="margin-top:1px;margin-left:10px">
-                        <h2 style="margin-top:4px;margin-bottom:1px;margin-left:1%">Education</h2>
-                        <h4 style="margin-top:1px;margin-bottom:1px;margin-left:1%">Information Technology, BA (Hons)
+                        <h2 style="margin-top:4px;margin-bottom:1px;margin-left:1%;overflow:hidden">Education</h2>
+                        <h4 style="margin-top:1px;margin-bottom:1px;margin-left:1%;overflow:hidden">Information Technology, BA (Hons)
                         </h4>
-                        <p style="margin-top:10px;margin-left:1%">York University, Toronto</p>
+                        <p style="margin-top:10px;margin-left:1%;overflow:hidden">York University, Toronto</p>
                     </div>
                 </div>
 
                 <div class="Personal Life"
-                    style="width:50%;margin-top:10px;margin-left:2%;margin-right:2%;border-style:solid;background-color:white;padding:10px">
+                    style="overflow:hidden;width:50%;margin-top:10px;margin-left:2%;margin-right:2%;border-style:solid;background-color:white;padding:10px">
                     <h2>Personal Life</h2>
-                    <p>I am in my last year at York University as part of its BA ITEC Honours Program. Before that, I
+                    <p style="white-space:normal">I am in my last year at York University as part of its BA ITEC Honours Program. Before that, I
                         moved from Brampton to North York upon finishing high school. I have a wide variety of interests
                         ranging from astronomy to the human body, animation, art, and more.</p>
 
                 </div>
 
                 <div class="Skills"
-                    style="margin-top:25px;padding-left:10px;padding-right:10px;margin-left:2%;margin-right:2%;background-color:white;height:150px;border-style:solid">
+                    style="overflow:hidden;margin-top:25px;padding-left:10px;padding-right:10px;margin-left:2%;margin-right:2%;background-color:white;height:150px;max-height:150px;border-style:solid">
                     <h2 style="padding-bottom:0px;margin-bottom:0px">Skills</h2>
                     <div class="column1">
                         <ul>
@@ -178,7 +180,7 @@
 
 
                 <div class="Expertise"
-                    style="margin-top:20px;margin-left:2%;margin-right:2%;padding:10px;border-style:solid;background-color:white;">
+                    style="max-height:350px;overflow:hidden;margin-top:20px;margin-left:2%;margin-right:2%;padding:10px;border-style:solid;background-color:white;">
                     <div class="Header">
                         <h1>Expertise</h1>
                     </div>
@@ -223,14 +225,23 @@
 
                 </div>
                 <div
-                    style="height:1100px;border-style:solid;background-color:turquoise;margin-top:50px;margin-left:2%;margin-right:2%">
+                    style="white-space:normal;height:1100px;border-style:solid;background-color:white;margin-top:50px;margin-left:2%;margin-right:2%">
                     <h1 style="margin-left:10px"><u>Example Work</u></h1>
 
-                    <div id="Examples" style="padding-left:10px;padding-right:10px">
+                    <div id="Examples" style="padding-left:10px;padding-right:10px;overflow:hidden">
                         <p>Examples of coding can be seen at my Github.</p>
                     </div>
                 </div>
 
+                <div style="white-space:normal;height:auto;border-style:solid;background-color:white;margin-top:50px;margin-bottom:100px;margin-left:2%;margin-right:2%;padding:10px">
+                    <h2>Lorem Ipsum</h2>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent bibendum vulputate dolor, ut rhoncus nibh laoreet nec. Pellentesque in lorem libero. Quisque vitae ex vitae ligula porta auctor. Maecenas fermentum sit amet nisl vel elementum. Sed at varius libero. Aenean sagittis nisl massa, sit amet lobortis nunc mollis quis. Curabitur nunc augue, iaculis nec enim quis, blandit dapibus felis.
+
+Maecenas ornare orci quis risus interdum tincidunt. Cras non nisl sollicitudin, facilisis risus pellentesque, tempor quam. Suspendisse potenti. Proin ac ligula elementum, sagittis nisl sed, tristique diam. Nulla facilisi. Ut consequat mauris sed sapien facilisis, vel malesuada quam mattis. Nullam nulla nisl, pellentesque non viverra quis, volutpat ut erat. Aenean in risus fringilla, fermentum massa pulvinar, pellentesque diam. Cras convallis nibh et diam porttitor, tristique pretium justo dignissim. Cras egestas hendrerit risus, eget tempor lacus feugiat elementum. Curabitur dictum ligula ac mi pellentesque condimentum. Donec pretium, odio ac rutrum accumsan, nibh lacus faucibus ante, sit amet facilisis ante dui vel elit. Proin tempus, dolor eu pharetra vehicula, augue mauris consequat elit, vitae aliquam sapien sem sed augue. Donec condimentum lacinia quam. Nulla ultricies est et accumsan euismod.
+
+
+</p>
+                    </div>
 
             </div>
         </div>
