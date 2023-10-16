@@ -30,12 +30,24 @@
                     }
                 }
             </script>
+
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js">
+                $(document).ready(function){
+                    $(window).resize();
+                }
+                $(window).resize(function{
+                    var windowWidth=$(window).width();
+                    var mainContainerWidth=windowWidth-100;
+                    $("maincontainer").css({"width":mainCOntainerWidth+"px"});
+                })
+
+            </script>
             <style>
                 .header1{
                     background-color:white;
                     float:right;
                     margin-right:15%;
-                    width:430px;
+                    width:31%;
                     padding-left:10px;
                     object-fit:contain;
                     text-align:right"
@@ -44,7 +56,7 @@
                     background-color:white;
                     float:left;
                     margin-left:15%;
-                    width:310px;
+                    width:22%;
                     padding-left:10px;
                     object-fit:contain;
                 }
@@ -77,8 +89,8 @@
 
         <body
             style="background-color: white;background-image:url('Circuit board Wallpaper.jpg');background-size:cover;background-repeat:no-repeat;background-attachment:fixed">
-
-            <div style="width:1330px">
+            <div class="maincontainer">
+            <div>
                 <div class="header1">
                     <h1>Email: coreyhe@my.yorku.ca</h1>
                 </div>
@@ -88,21 +100,21 @@
                 </div>
                 <div class="spacer" style="width:100%;height:10px">
                 </div>
-            
+            </div>
 
 
             <div class="Main">
-                <div class="ImageHolder">
+                <div class="ImageHolder" >
                     <img src="person.jpg" alt="Default Avatar" style="width:100%;object-fit:fill;">
                 </div>
                 <div style="width:100%;">
                     <div style="margin:auto;text-align:center">
                         <div class="spacer" style="width:33%;height:40px;float:right;"></div>
-                        <div style="background-color:white;border-style:solid;width:250px;margin-left:2%">
+                        <div style="background-color:white;border-style:solid;width:27%;margin-left:2%">
                             <h1>Corey He</h1>
                         </div>
                     </div>
-                    <div style="background-color:white;border-style:solid;width:250px;height:100px;margin-left:2%">
+                    <div style="background-color:white;border-style:solid;width:27%;height:100px;margin-left:2%">
                         <div style="width:100px;height:100px;margin-left:10px;float:left">
                             <h2>Address:</h2>
                         </div>
@@ -115,10 +127,10 @@
                         </div>
                     </div>
                 </div>
-                
+
 
                 <div class="Education"
-                    style="margin-top:20px;margin-left:2%;border-style:solid;width:300px;height:100px;background-color:white;">
+                    style="margin-top:20px;margin-left:2%;border-style:solid;width:30%;height:100px;background-color:white;">
                     <div style="margin-top:1px;margin-left:10px">
                         <h2 style="margin-top:4px;margin-bottom:1px;margin-left:1%">Education</h2>
                         <h4 style="margin-top:1px;margin-bottom:1px;margin-left:1%">Information Technology, BA (Hons)
@@ -218,9 +230,9 @@
                         <p>Examples of coding can be seen at my Github.</p>
                     </div>
                 </div>
-            </div>
+
 
             </div>
-
+        </div>
 
         </body>
