@@ -1,0 +1,13 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        // Configuration for running the React app (vite-project)
+        {
+            "name": "Run React App",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run dev", // Adjust if your dev command is different
+            "cwd": "${workspaceFolder}/react-app", // Path to the React project folder
+        },
+    ],
+}

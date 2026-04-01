@@ -1,7 +1,47 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 //import './App.css'
-
+import ToggleableSwitchComponent from './components/ToggleComponent'
 function App() {
+  const [activeProject, setActiveProject] = useState('')
+  const [hoveredProject, setHoveredProject] = useState('')
+  const [nightMode, setNightMode] = useState(false)
+  const [isLeftBarOpen, setIsLeftBarOpen] = useState(false)
+
+  const getProjectHeadingStyle = (projectKey) => {
+    const isHovered = hoveredProject === projectKey
+    const isActive = activeProject === projectKey
+
+    return {
+      marginBottom: "8px",
+      cursor: "pointer",
+      textDecoration: "underline",
+      whiteSpace: "normal",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+      lineHeight: "1.25",
+      color: isActive ? "#0b5ed7" : isHovered ? "#0a7a2f" : "#1f2937",
+      backgroundColor: isActive ? "#dbeafe" : isHovered ? "#dcfce7" : "transparent",
+      border: isActive || isHovered ? "1px solid #9ca3af" : "1px solid transparent",
+      borderRadius: "8px",
+      padding: "8px",
+      transition: "all 150ms ease"
+    }
+  }
+
+  const handleProjectSelect = (projectKey, inputKey) => {
+    setActiveProject(projectKey)
+    displayExamples(inputKey)
+  }
+
+  const handleProjectLeave = (projectKey) => {
+    setHoveredProject('')
+    setActiveProject((current) => (current === projectKey ? '' : current))
+  }
+
+  useEffect(() => {
+    document.body.style.backgroundColor = nightMode ? "#1f2937" : "lightgrey"
+    document.body.style.color = nightMode ? "#f3f4f6" : "#1f2937"
+  }, [nightMode])
 
   function displayExamples(input) {
     document.getElementById('Examples').innerHTML = ''
@@ -25,7 +65,6 @@ function App() {
     }
   }
 
-
   // <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js">
   //     $(document).ready(function){
   //         $(window).resize();
@@ -42,27 +81,68 @@ function App() {
   return (
     <>
       <body>
-        <div className="Home-Page-Background" style={{ whiteSpace: "nowrap", backgroundColor: "lightgrey", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundAttachment: "fixed" }}>
-          <div className="Home-Page-Main-Container" style={{width:"80%", marginLeft:"10%", marginRight:"10%"}}>
-            <div className="Home-Page-Contact-Header" style={{
-                padding: "10px",
-                objectFit: "contain",
-                height: "100px",
-                overflow: "hidden"
-                }}>
-              <div className="Home-Page-Contact-Right" style={{float: "right"}}>
-                <address>
-                  <h1>Email: corey72he@gmail.com</h1>
-                </address>
-              </div>
-              <div className="Home-Page-Primary-Contact-Left" style={{float: "left",}}>
-                <h1>Preferred Contact: Email</h1>
-              </div>
+        <div className="Home-Page-Background" style={{ whiteSpace: "nowrap", backgroundColor: nightMode ? "#111827" : "lightgrey", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundAttachment: "fixed" }}>
+          <div className="Left-Bar" style={{
+            position: "fixed",
+            top: "16px",
+            left: "0",
+            width: "150px",
+            backgroundColor: nightMode ? "#111827" : "#e5e7eb",
+            display: "flex",
+            alignItems: "center",
+            padding: "16px",
+            border: "1px solid #9ca3af",
+            borderLeft: "none",
+            borderRadius: "0 12px 12px 0",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+            zIndex: "1000",
+            transform: isLeftBarOpen ? "translateX(0)" : "translateX(calc(-100% + 20px))",
+            transition: "transform 220ms ease"
+          }}>
+            <button className ="Left-Bar-Toggle-Button"
+              type="button"
+              aria-label={isLeftBarOpen ? "Close left bar" : "Open left bar"}
+              onClick={() => setIsLeftBarOpen((current) => !current)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "-18px",
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                border: "1px solid #6b7280",
+                backgroundColor: nightMode ? "#0f172a" : "#ffffff",
+                color: nightMode ? "#f9fafb" : "#1f2937",
+                cursor: "pointer",
+                fontSize: "18px",
+                fontWeight: "bold",
+                lineHeight: "1"
+              }}
+            >
+              {isLeftBarOpen ? "\u00d7" : "\u2630"}
+            </button>
+            <div className="Component-Night-Mode-Toggle">
+              <ToggleableSwitchComponent setNightMode={setNightMode} nightMode={nightMode} />
             </div>
-
-
-            <article className="Main" style={{ marginLeft: "15%", marginRight: "15%", marginTop: "100px", width: "70%" }}>
-              <div className="ImageHolder" style={{
+          </div>
+          <div className="Home-Page-Contact-Header" style={{
+            padding: "30px",
+            objectFit: "contain",
+            height: "100px",
+            overflow: "hidden"
+          }}>
+            <div className="Home-Page-Contact-Right" style={{ float: "right" }}>
+              <address>
+                <h1>Email: corey72he@gmail.com</h1>
+              </address>
+            </div>
+            <div className="Home-Page-Primary-Contact-Left" style={{ float: "left", }}>
+              <h1>Preferred Contact: Email</h1>
+            </div>
+          </div>
+          <div className="Home-Page-Main-Container" style={{ marginLeft: "10%", marginRight: "10%" }}>
+            <article className="Home-Page-Main-Content" style={{ backgroundColor: "transparent", borderStyle: "hidden", width: "100%", height: "auto", marginTop: "20px" }}>
+              <div className="Home-Page-Portrait-Image" style={{
                 float: "right",
                 width: "33%",
                 borderStyle: "hidden",
@@ -71,132 +151,323 @@ function App() {
               }}>
                 <img src="person.jpg" alt="Default Avatar" style={{ width: "100%", objectFit: "fill" }} />
               </div>
-              <div style={{ width: "100%" }}>
-                <div style={{ margin: "auto", textAlign: "center" }}>
-                  <div className="spacer" style={{ width: "33%", height: "40px", float: "right" }}></div>
-                  <div style={{ backgroundColor: "white", borderStyle: "solid", width: "27%", marginLeft: "2%", overflow: "hidden" }}>
-                    <h1>Corey He</h1>
-                  </div>
+              <article className="Home-Page-Personal-Details" style={{
+                margin: "auto",
+                textAlign: "center",
+                marginBottom: "20px",
+                display: "flow-root"
+              }}>
+                <div style={{ backgroundColor: "white", borderStyle: "solid", borderWidth: "1px", width: "25%", overflow: "hidden", marginBottom: "10px" }}>
+                  <h1>Corey He</h1>
                 </div>
-                <div style={{ backgroundColor: "white", borderStyle: "solid", width: "27%", height: "100px", marginLeft: "2%", overflow: "hidden" }}>
-                  <div style={{ width: "100px", height: "100px", marginLeft: "10px", float: "left" }}>
-                    <h2>Address: </h2>
-                  </div>
-                  <div style={{ marginLeft: "1%" }}>
+                <div style={{
+                  backgroundColor: "white", borderStyle: "solid", borderWidth: "1px", width: "25%", minHeight: "100px", height: "auto",
+                  float: "left", marginBottom: "10px", overflow: "hidden", paddingBottom: "10px"
+                }}>
+                  <h2>Address: </h2>
                   <address>
-                  <ul style={{ listStyle: "none", paddingTop: "10px", marginRight: "10px" }}>
-                      <li>North York ON</li>
+                    <ul style={{
+                      listStyle: "none",
+                      marginTop: "0", paddingLeft: "0"
+                    }}>
+                      <li>North York, ON</li>
                       <li>M2J</li>
                       <li>Toronto</li>
                     </ul>
-                    </address>
+                  </address>
+                </div>
+              </article>
+
+              <article className="Home-Page-Education"
+                style={{
+                  clear: "both", borderStyle: "solid", borderWidth: "1px", minWidth: "50px", width: "auto", maxWidth: "fit-content",
+                  height: "100px", backgroundColor: "white", paddingLeft: "20px", paddingRight: "20px"
+                }}>
+                <div style={{ overflow: "hidden" }}>
+                  <h2 style={{ marginTop: "4px", marginBottom: "1px" }}>Education</h2>
+                  <h4 style={{ marginTop: "1px", marginBottom: "1px" }}>Information Technology, BA (Hons)</h4>
+                  <p style={{ marginTop: "10px", overflow: "hidden" }}>York University, Toronto</p>
+                </div>
+              </article>
+
+              <article className="Home-Page-Personal-Life" style={{
+                overflow: "hidden",
+                width: "50%",
+                marginTop: "10px",
+                paddingLeft: "10px",
+                paddingRight: "10px",
+                borderStyle: "solid",
+                borderWidth: "1px",
+                backgroundColor: "white"
+              }}>
+                <h2>Personal Life</h2>
+                <p style={{ whiteSpace: "normal" }}>Detail-oriented IT graduate with hands-on experience building full-stack
+                  web applications and desktop software using Python, FastAPI, React, and MongoDB.
+                  Experienced in database design, API development, and software testing.
+                  Strong problem-solving skills with a focus on system reliability, data integrity, and user experience.
+                  Seeking an entry-level IT or software development role to contribute technical and analytical skills.</p>
+              </article>
+
+              <article className="Home-Page-Skills" style={{
+                overflow: "hidden",
+                marginTop: "25px",
+                paddingLeft: "10px",
+                paddingRight: "10px",
+                borderStyle: "solid",
+                borderWidth: "1px",
+                backgroundColor: "white",
+                maxHeight: "200px"
+              }}>
+                <h2 style={{ paddingBottom: "0px", marginBottom: "0px" }}>Skills</h2>
+                <div className="row" style={{ display: "flex", flexWrap: "wrap", overflow: "hidden" }}>
+                  <div className="column1">
+                    <ul>
+                      <li>Leadership</li>
+                      <li>Communication</li>
+                      <li>Time Management</li>
+                      <li>Multitasking</li>
+                    </ul>
+                  </div>
+                  <div className="column1">
+                    <ul>
+                      <li>Problem Solving</li>
+                      <li>Critical Thinking</li>
+                      <li>Adaptability</li>
+                      <li>Quick Learner</li>
+                    </ul>
+                  </div>
+                  <div className="column1">
+                    <ul>
+                      <li>SDLC Knowledge</li>
+                      <li>Technical Requirements</li>
+                      <li>Business Requirements</li>
+                      <li>UI and Graphics Requirements</li>
+                    </ul>
+                  </div>
+                  <div className="column1">
+                    <ul>
+                      <li>Systems Design</li>
+                      <li>System Architecture</li>
+                      <li>Database Design</li>
+                      <li>Software Testing</li>
+                    </ul>
+                  </div>
+                  <div className="column1">
+                    <ul>
+                      <li>Software Development</li>
+                      <li>Web Development</li>
+                      <li>Desktop Software Development</li>
+                      <li>API Development</li>
+                    </ul>
+                  </div>
+                  <div className="column1">
+                    <ul>
+                      <li>Version Control</li>
+                      <li>Git</li>
+                      <li>GitHub</li>
+                      <li>CI/CD</li>
+                    </ul>
+                  </div>
+                  <div className="column1">
+                    <ul>
+                      <li>AI Prompt Engineering</li>
+                      <li>AI Code Generation</li>
+                    </ul>
                   </div>
                 </div>
-              </div>
-
-
-              <article className="Education"
-                style={{ marginTop: "20px", marginLeft: "2%", borderStyle: "solid", width: "30%", height: "100px", backgroundColor: "white" }}>
-                <div style={{ marginTop: "1px", marginLeft: "10px" }}>
-                  <h2 style={{ marginTop: "4px", marginBottom: "1px", marginLeft: "1%", overflow: "hidden" }}>Education</h2>
-                  <h4 style={{ marginTop: "1px", marginBottom: "1px", marginLeft: "1%", overflow: "hidden" }}>Information Technology, BA (Hons)
-                  </h4>
-                  <p style={{ marginTop: "10px", marginLeft: "1%", overflow: "hidden" }}>York University, Toronto</p>
-                </div>
-              </article>
-
-              <article className="Personal Life"
-                style={{ overflow: "hidden", width: "50%", marginTop: "10px", marginLeft: "2%", marginRight: "2%", borderStyle: "solid", backgroundColor: "white", padding: "10px" }}>
-                <h2>Personal Life</h2>
-                <p style={{ whiteSpace: "normal" }}>I am a graduate of York University. I graduated from their BA ITEC program with Honours. Before that, I
-                  moved from Brampton to North York upon finishing high school. I have a wide variety of interests
-                  ranging from astronomy to the human body, animation, art, and more.</p>
-              </article>
-
-              <article className="Skills"
-                style={{ overflow: "hidden", marginTop: "25px", paddingLeft: "10px", paddingRight: "10px", marginLeft: "2%", marginRight: "2%", backgroundColor: "white", height: "150px", maxHeight: "150px", borderStyle: "solid" }}>
-                <h2 style={{ paddingBottom: "0px", marginBottom: "0px" }}>Skills</h2>
-                <div className="column1" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                  <ul>
-                    <li>Leadership</li>
-                    <li>Communication</li>
-                    <li>Time Management</li>
-                    <li>Multitasking</li>
-                  </ul>
-                </div>
-                <div className="column1" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                  <ul>
-                    <li>SDLC Knowledge</li>
-                    <li>Technical Requirements</li>
-                    <li>Business Requirements</li>
-                    <li>UI and Graphics Requirements</li>
-                  </ul>
-                </div>
-                <div className="column1" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                  <ul>
-                    <li>Systems Design</li>
-                    <li>System Architecture</li>
-                  </ul>
-                </div>
-
               </article>
 
 
-              <article className="Expertise"
-                style={{ maxHeight: "350px", overflow: "hidden", marginTop: "20px", marginLeft: "2%", marginRight: "2%", padding: "10px", borderStyle: "solid", backgroundColor: "white" }}>
+              <article className="Home-Page-Expertise"
+                style={{
+                  overflow: "hidden",
+                  marginTop: "25px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
+                  backgroundColor: "white",
+                  maxHeight: "350px"
+                }}>
                 <div className="Header">
                   <h1>Expertise</h1>
                 </div>
-                <div className="row" style={{ height: "250px" }}>
-                  <div className="column2" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                    <h2>Programmer</h2>
+                <h2>Programmer</h2>
+                <div className="row" style={{ display: "flex", flexWrap: "wrap" }}>
+                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
                     <p style={{ marginLeft: "10px" }}>Languages:</p>
                     <ul>
                       <li>Java</li>
-                      <li>C#</li>
+                      <li>JS/JavaScript</li>
                       <li>Python</li>
-                      <li>HTML</li>
-                      <li>CSS</li>
                       <li>JS</li>
                       <li>SQL</li>
                       <li>XML</li>
                     </ul>
                   </div>
-                  <div className="column2" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                    <h2 style={{ marginBottom: "40px" }}>Data Analyst</h2>
-                    <button type="button" id="data1" onclick="displayExamples('Analyse')">Diabetes
-                      Dataset</button>
+                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                    <p style={{ marginLeft: "10px" }}>Web Technologies:</p>
+                    <ul>
+                      <li>HTML</li>
+                      <li>CSS</li>
+                      <li>PHP</li>
+                      <li>AJAX</li>
+                      <li>JSON</li>
+                      <li>REST APIs</li>
+                      <li>VITE</li>
+                    </ul>
                   </div>
-                  <div className="column2" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                    <h2 style={{ marginBottom: "40px" }}>UI Designer</h2>
-                    <button type="button" id="mobileUI1" onClick={() => displayExamples('UIDesign')}>Mobile App
-                      Design</button>
+                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                    <p style={{ marginLeft: "10px" }}>Frameworks and Libraries:</p>
+                    <ul>
+                      <li>React</li>
+                      <li>FastAPI</li>
+                      <li>Flask</li>
+                      <li>PyQt</li>
+                      <li>AJAX</li>
+                      <li>SKLearn</li>
+                      <li>Matplotlib</li>
+                    </ul>
                   </div>
-                  <div className="column2" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                    <h2 style={{ marginBottom: "40px" }}>Web Developer</h2>
-                    <button type="button" id="webpage1" onClick={() => displayExamples('Webpage')}>Beginner
-                      Webpage</button>
-                  </div>
-                  <div className="column2" style={{ float: "left", width: "33.33%", minWidth: "200px" }}>
-                    <h2 style={{ marginBottom: "40px" }}>Database Admin</h2>
-                    <button type="button" id="database1" onClick={() => displayExamples('Database')}>Database
-                      Design</button>
+                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                    <p style={{ marginLeft: "10px" }}>Databases:</p>
+                    <ul>
+                      <li>MongoDB</li>
+                      <li>PostgreSQL</li>
+                    </ul>
                   </div>
                 </div>
               </article>
-              <article className="ExampleWork"
-                style={{ whiteSpace: "normal", height: "1100px", borderStyle: "solid", backgroundColor: "white", marginTop: "50px", marginLeft: "2%", marginRight: "2%" }}>
+              <article className="Home-Page-School-Projects"
+                style={{
+                  overflow: "hidden",
+                  marginTop: "25px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
+                  backgroundColor: "white",
+                  maxHeight: "350px"
+                }}>
+                <div>
+                  <h1>School Projects</h1>
+                  <p>Click the headings to open the project details.</p>
+                  <div className="row" style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "space-evenly",
+                    gap: "16px",
+                    alignItems: "stretch"
+                  }}>
+
+                    <div className="column2" style={{
+                      flex: "1 1 220px",
+                      minWidth: "200px",
+                      maxWidth: "260px",
+                      textAlign: "center"
+                    }}>
+                      <h2
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleProjectSelect('analyse', 'Analyse')}
+                        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProjectSelect('analyse', 'Analyse')}
+                        onMouseEnter={() => setHoveredProject('analyse')}
+                        onMouseLeave={() => handleProjectLeave('analyse')}
+                        style={getProjectHeadingStyle('analyse')}
+                      >
+                        Data Analyst: Diabetes Risk Prediction
+                      </h2>
+                    </div>
+                    <div className="column2" style={{ flex: "1 1 220px", minWidth: "200px", maxWidth: "260px", textAlign: "center" }}>
+                      <h2
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleProjectSelect('uidesign', 'UIDesign')}
+                        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProjectSelect('uidesign', 'UIDesign')}
+                        onMouseEnter={() => setHoveredProject('uidesign')}
+                        onMouseLeave={() => handleProjectLeave('uidesign')}
+                        style={getProjectHeadingStyle('uidesign')}
+                      >
+                        UI Designer: Mobile App Design
+                      </h2>
+                    </div>
+                    <div className="column2" style={{ flex: "1 1 220px", minWidth: "200px", maxWidth: "260px", textAlign: "center" }}>
+                      <h2
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleProjectSelect('webpage', 'Webpage')}
+                        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProjectSelect('webpage', 'Webpage')}
+                        onMouseEnter={() => setHoveredProject('webpage')}
+                        onMouseLeave={() => handleProjectLeave('webpage')}
+                        style={getProjectHeadingStyle('webpage')}
+                      >
+                        Web Developer: Beginner Commerce Webpage
+                      </h2>
+                    </div>
+                    <div className="column2" style={{ flex: "1 1 220px", minWidth: "200px", maxWidth: "260px", textAlign: "center" }}>
+                      <h2
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleProjectSelect('database', 'Database')}
+                        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProjectSelect('database', 'Database')}
+                        onMouseEnter={() => setHoveredProject('database')}
+                        onMouseLeave={() => handleProjectLeave('database')}
+                        style={getProjectHeadingStyle('database')}
+                      >
+                        Database Admin: University Database Design
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article className="Home-Page-Personal-Projects" style={{
+                  overflow: "hidden",
+                  marginTop: "25px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
+                  backgroundColor: "white",
+                  maxHeight: "350px"
+              }}>
+                <h1>Personal Projects</h1>
+              </article>
+              <article className="Home-Page-Example-Work"
+                style={{
+                  overflow: "hidden",
+                  marginTop: "25px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
+                  whiteSpace: "normal",
+                  height: "1100px",
+                  borderStyle: "solid",
+                  backgroundColor: "white",
+                  }}>
                 <h1 style={{ marginLeft: "10px" }}><u>Example Work</u></h1>
 
                 <div id="Examples" style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
-                  <p>Examples of coding can be seen at my Github.</p>
+                  <p>More examples of my work can be seen at my Github.</p>
                 </div>
               </article>
 
-              <article style={{ whiteSpace: "normal", height: "auto", borderStyle: "solid", backgroundColor: "white", marginTop: "50px", marginBottom: "100px", marginLeft: "2%", marginRight: "2%", padding: "10px" }}>
-                <h2>Lorem Ipsum</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent bibendum vulputate dolor, ut rhoncus nibh laoreet nec. Pellentesque in lorem libero. Quisque vitae ex vitae ligula porta auctor. Maecenas fermentum sit amet nisl vel elementum. Sed at varius libero. Aenean sagittis nisl massa, sit amet lobortis nunc mollis quis. Curabitur nunc augue, iaculis nec enim quis, blandit dapibus felis.
-                  Maecenas ornare orci quis risus interdum tincidunt. Cras non nisl sollicitudin, facilisis risus pellentesque, tempor quam. Suspendisse potenti. Proin ac ligula elementum, sagittis nisl sed, tristique diam. Nulla facilisi. Ut consequat mauris sed sapien facilisis, vel malesuada quam mattis. Nullam nulla nisl, pellentesque non viverra quis, volutpat ut erat. Aenean in risus fringilla, fermentum massa pulvinar, pellentesque diam. Cras convallis nibh et diam porttitor, tristique pretium justo dignissim. Cras egestas hendrerit risus, eget tempor lacus feugiat elementum. Curabitur dictum ligula ac mi pellentesque condimentum. Donec pretium, odio ac rutrum accumsan, nibh lacus faucibus ante, sit amet facilisis ante dui vel elit. Proin tempus, dolor eu pharetra vehicula, augue mauris consequat elit, vitae aliquam sapien sem sed augue. Donec condimentum lacinia quam. Nulla ultricies est et accumsan euismod.
+              <article style={{
+                  overflow: "hidden",
+                  marginTop: "25px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
+                  backgroundColor: "white",
+                  maxHeight: "350px"
+              }}>
+                <h2>Afterword</h2>
+                <p>
+                  Thank you for taking the time to review my portfolio.
+                  I am excited about the opportunity to contribute my skills and passion for technology to a dynamic team.
+                  I am eager to continue learning and growing as a professional, and I look forward to the possibility of working together in the future.
+                  Please feel free to reach out if you have any questions or would like to discuss potential opportunities.
                 </p>
               </article>
 
