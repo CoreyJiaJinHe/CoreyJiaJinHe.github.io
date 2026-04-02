@@ -1,0 +1,173 @@
+.Home-Page-Background {
+	white-space: nowrap;
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+}
+
+.Home-Page-Background--day {
+	background-color: lightgrey;
+}
+
+.Home-Page-Background--night {
+	background-color: #111827;
+}
+
+.Home-Page-Contact-Header {
+	padding: 30px;
+	object-fit: contain;
+	height: 100px;
+	overflow: hidden;
+}
+
+.Home-Page-Contact-Right {
+	float: right;
+}
+
+.Home-Page-Primary-Contact-Left {
+	float: left;
+}
+
+.Home-Page-Main-Container {
+	margin-left: 10%;
+	margin-right: 10%;
+}
+
+.Home-Page-Main-Content {
+	background-color: transparent;
+	border-style: hidden;
+	width: 100%;
+	height: auto;
+	margin-top: 20px;
+}
+
+.Home-Page-Portrait-Image {
+	float: right;
+	width: 33%;
+	border-style: hidden;
+	margin-right: 2%;
+	margin-top: 2%;
+}
+
+.Home-Page-Portrait-Image-Img {
+	width: 100%;
+	object-fit: fill;
+}
+
+.Home-Page-Article {
+	overflow: hidden;
+	margin-top: 25px;
+	padding-left: 10px;
+	padding-right: 10px;
+	border-style: solid;
+	border-width: 1px;
+	background-color: white;
+}
+
+.Home-Page-Article--personal-details {
+	margin: auto;
+	margin-bottom: 20px;
+	text-align: center;
+	display: flow-root;
+	overflow: visible;
+	border: none;
+	background-color: transparent;
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.Home-Page-Article--education {
+	clear: both;
+	min-width: 50px;
+	width: auto;
+	max-width: fit-content;
+	height: 100px;
+	padding-left: 20px;
+	padding-right: 20px;
+	margin-top: 0;
+}
+
+.Home-Page-Article--personal-life {
+	width: 50%;
+	margin-top: 10px;
+}
+
+.Home-Page-Article--skills {
+	max-height: 200px;
+}
+
+.Home-Page-Article--panel {
+	max-height: 350px;
+}
+
+.Home-Page-Article--afterword {
+	overflow: visible;
+	max-height: none;
+	white-space: normal;
+}
+
+.Home-Page-Article--example-work {
+	white-space: normal;
+	height: 1100px;
+}
+
+.layout-generic-panel{
+    background-color: white;
+    border-style: solid;
+    border-width: 1px;
+    width: 25%;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.layout-generic-panel--two{
+    background-color: white;
+    border-style: solid;
+    border-width: 1px;
+    width: 25%;
+    min-height: 100px;
+    height: auto;
+    float: left;
+    margin-bottom: 10px;
+    overflow: hidden;
+    padding-bottom: 10px;
+}
+
+.layout-row-skills {
+	display: flex;
+	flex-wrap: wrap;
+	overflow: hidden;
+}
+
+.layout-row-expertise {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.layout-row-projects {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-evenly;
+	gap: 16px;
+	align-items: stretch;
+}
+
+.layout-column-skills {
+	box-sizing: border-box;
+	flex: 1 1 200px;
+	min-width: 180px;
+}
+
+.layout-column-project {
+	box-sizing: border-box;
+	flex: 1 1 220px;
+	min-width: 200px;
+	max-width: 260px;
+	text-align: center;
+}
+
+.layout-section {
+	float: left;
+	min-width: 150px;
+}
+

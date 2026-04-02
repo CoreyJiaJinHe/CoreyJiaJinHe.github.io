@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-//import './App.css'
+import './Home.css'
 import ToggleableSwitchComponent from './components/ToggleComponent'
 function App() {
   const [activeProject, setActiveProject] = useState('')
@@ -81,7 +81,7 @@ function App() {
   return (
     <>
       <body>
-        <div className="Home-Page-Background" style={{ whiteSpace: "nowrap", backgroundColor: nightMode ? "#111827" : "lightgrey", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundAttachment: "fixed" }}>
+        <div className={`Home-Page-Background ${nightMode ? 'Home-Page-Background--night' : 'Home-Page-Background--day'}`}>
           <div className="Left-Bar" style={{
             position: "fixed",
             top: "16px",
@@ -125,45 +125,26 @@ function App() {
               <ToggleableSwitchComponent setNightMode={setNightMode} nightMode={nightMode} />
             </div>
           </div>
-          <div className="Home-Page-Contact-Header" style={{
-            padding: "30px",
-            objectFit: "contain",
-            height: "100px",
-            overflow: "hidden"
-          }}>
-            <div className="Home-Page-Contact-Right" style={{ float: "right" }}>
+          <div className="Home-Page-Contact-Header">
+            <div className="Home-Page-Contact-Right">
               <address>
                 <h1>Email: corey72he@gmail.com</h1>
               </address>
             </div>
-            <div className="Home-Page-Primary-Contact-Left" style={{ float: "left", }}>
+            <div className="Home-Page-Primary-Contact-Left">
               <h1>Preferred Contact: Email</h1>
             </div>
           </div>
-          <div className="Home-Page-Main-Container" style={{ marginLeft: "10%", marginRight: "10%" }}>
-            <article className="Home-Page-Main-Content" style={{ backgroundColor: "transparent", borderStyle: "hidden", width: "100%", height: "auto", marginTop: "20px" }}>
-              <div className="Home-Page-Portrait-Image" style={{
-                float: "right",
-                width: "33%",
-                borderStyle: "hidden",
-                marginRight: "2%",
-                marginTop: "2%"
-              }}>
-                <img src="person.jpg" alt="Default Avatar" style={{ width: "100%", objectFit: "fill" }} />
+          <div className="Home-Page-Main-Container">
+            <article className="Home-Page-Main-Content">
+              <div className="Home-Page-Portrait-Image">
+                <img src="person.jpg" alt="Default Avatar" className="Home-Page-Portrait-Image-Img" />
               </div>
-              <article className="Home-Page-Personal-Details" style={{
-                margin: "auto",
-                textAlign: "center",
-                marginBottom: "20px",
-                display: "flow-root"
-              }}>
-                <div style={{ backgroundColor: "white", borderStyle: "solid", borderWidth: "1px", width: "25%", overflow: "hidden", marginBottom: "10px" }}>
+              <article id="Home-Page-Personal-Details" className="Home-Page-Article Home-Page-Article--personal-details">
+                <div className ="layout-generic-panel">
                   <h1>Corey He</h1>
                 </div>
-                <div style={{
-                  backgroundColor: "white", borderStyle: "solid", borderWidth: "1px", width: "25%", minHeight: "100px", height: "auto",
-                  float: "left", marginBottom: "10px", overflow: "hidden", paddingBottom: "10px"
-                }}>
+                <div className ="layout-generic-panel layout-generic-panel--two">
                   <h2>Address: </h2>
                   <address>
                     <ul style={{
@@ -178,11 +159,7 @@ function App() {
                 </div>
               </article>
 
-              <article className="Home-Page-Education"
-                style={{
-                  clear: "both", borderStyle: "solid", borderWidth: "1px", minWidth: "50px", width: "auto", maxWidth: "fit-content",
-                  height: "100px", backgroundColor: "white", paddingLeft: "20px", paddingRight: "20px"
-                }}>
+              <article id="Home-Page-Education" className="Home-Page-Article Home-Page-Article--education">
                 <div style={{ overflow: "hidden" }}>
                   <h2 style={{ marginTop: "4px", marginBottom: "1px" }}>Education</h2>
                   <h4 style={{ marginTop: "1px", marginBottom: "1px" }}>Information Technology, BA (Hons)</h4>
@@ -190,17 +167,8 @@ function App() {
                 </div>
               </article>
 
-              <article className="Home-Page-Personal-Life" style={{
-                overflow: "hidden",
-                width: "50%",
-                marginTop: "10px",
-                paddingLeft: "10px",
-                paddingRight: "10px",
-                borderStyle: "solid",
-                borderWidth: "1px",
-                backgroundColor: "white"
-              }}>
-                <h2>Personal Life</h2>
+              <article id="Home-Page-Personal-Life" className="Home-Page-Article Home-Page-Article--personal-life">
+                <h2>About Me</h2>
                 <p style={{ whiteSpace: "normal" }}>Detail-oriented IT graduate with hands-on experience building full-stack
                   web applications and desktop software using Python, FastAPI, React, and MongoDB.
                   Experienced in database design, API development, and software testing.
@@ -208,19 +176,10 @@ function App() {
                   Seeking an entry-level IT or software development role to contribute technical and analytical skills.</p>
               </article>
 
-              <article className="Home-Page-Skills" style={{
-                overflow: "hidden",
-                marginTop: "25px",
-                paddingLeft: "10px",
-                paddingRight: "10px",
-                borderStyle: "solid",
-                borderWidth: "1px",
-                backgroundColor: "white",
-                maxHeight: "200px"
-              }}>
+              <article id="Home-Page-Skills" className="Home-Page-Article Home-Page-Article--skills">
                 <h2 style={{ paddingBottom: "0px", marginBottom: "0px" }}>Skills</h2>
-                <div className="row" style={{ display: "flex", flexWrap: "wrap", overflow: "hidden" }}>
-                  <div className="column1">
+                <div className="layout-row-skills">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>Leadership</li>
                       <li>Communication</li>
@@ -228,7 +187,7 @@ function App() {
                       <li>Multitasking</li>
                     </ul>
                   </div>
-                  <div className="column1">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>Problem Solving</li>
                       <li>Critical Thinking</li>
@@ -236,7 +195,7 @@ function App() {
                       <li>Quick Learner</li>
                     </ul>
                   </div>
-                  <div className="column1">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>SDLC Knowledge</li>
                       <li>Technical Requirements</li>
@@ -244,7 +203,7 @@ function App() {
                       <li>UI and Graphics Requirements</li>
                     </ul>
                   </div>
-                  <div className="column1">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>Systems Design</li>
                       <li>System Architecture</li>
@@ -252,7 +211,7 @@ function App() {
                       <li>Software Testing</li>
                     </ul>
                   </div>
-                  <div className="column1">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>Software Development</li>
                       <li>Web Development</li>
@@ -260,7 +219,7 @@ function App() {
                       <li>API Development</li>
                     </ul>
                   </div>
-                  <div className="column1">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>Version Control</li>
                       <li>Git</li>
@@ -268,7 +227,7 @@ function App() {
                       <li>CI/CD</li>
                     </ul>
                   </div>
-                  <div className="column1">
+                  <div className="layout-column-skills">
                     <ul>
                       <li>AI Prompt Engineering</li>
                       <li>AI Code Generation</li>
@@ -278,23 +237,13 @@ function App() {
               </article>
 
 
-              <article className="Home-Page-Expertise"
-                style={{
-                  overflow: "hidden",
-                  marginTop: "25px",
-                  paddingLeft: "10px",
-                  paddingRight: "10px",
-                  borderStyle: "solid",
-                  borderWidth: "1px",
-                  backgroundColor: "white",
-                  maxHeight: "350px"
-                }}>
+              <article id="Home-Page-Expertise" className="Home-Page-Article Home-Page-Article--panel">
                 <div className="Header">
                   <h1>Expertise</h1>
                 </div>
                 <h2>Programmer</h2>
-                <div className="row" style={{ display: "flex", flexWrap: "wrap" }}>
-                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                <div className="layout-row-expertise">
+                  <div className="layout-section">
                     <p style={{ marginLeft: "10px" }}>Languages:</p>
                     <ul>
                       <li>Java</li>
@@ -305,7 +254,7 @@ function App() {
                       <li>XML</li>
                     </ul>
                   </div>
-                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                  <div className="layout-section">
                     <p style={{ marginLeft: "10px" }}>Web Technologies:</p>
                     <ul>
                       <li>HTML</li>
@@ -317,7 +266,7 @@ function App() {
                       <li>VITE</li>
                     </ul>
                   </div>
-                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                  <div className="layout-section">
                     <p style={{ marginLeft: "10px" }}>Frameworks and Libraries:</p>
                     <ul>
                       <li>React</li>
@@ -329,7 +278,7 @@ function App() {
                       <li>Matplotlib</li>
                     </ul>
                   </div>
-                  <div className="section" style={{ float: "left", minWidth: "150px" }}>
+                  <div className="layout-section" >
                     <p style={{ marginLeft: "10px" }}>Databases:</p>
                     <ul>
                       <li>MongoDB</li>
@@ -338,34 +287,13 @@ function App() {
                   </div>
                 </div>
               </article>
-              <article className="Home-Page-School-Projects"
-                style={{
-                  overflow: "hidden",
-                  marginTop: "25px",
-                  paddingLeft: "10px",
-                  paddingRight: "10px",
-                  borderStyle: "solid",
-                  borderWidth: "1px",
-                  backgroundColor: "white",
-                  maxHeight: "350px"
-                }}>
+              <article id="Home-Page-School-Projects" className="Home-Page-Article Home-Page-Article--panel">
                 <div>
                   <h1>School Projects</h1>
                   <p>Click the headings to open the project details.</p>
-                  <div className="row" style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    justifyContent: "space-evenly",
-                    gap: "16px",
-                    alignItems: "stretch"
-                  }}>
+                  <div className="layout-row-projects">
 
-                    <div className="column2" style={{
-                      flex: "1 1 220px",
-                      minWidth: "200px",
-                      maxWidth: "260px",
-                      textAlign: "center"
-                    }}>
+                    <div className="layout-column-project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -378,7 +306,7 @@ function App() {
                         Data Analyst: Diabetes Risk Prediction
                       </h2>
                     </div>
-                    <div className="column2" style={{ flex: "1 1 220px", minWidth: "200px", maxWidth: "260px", textAlign: "center" }}>
+                    <div className="layout-column-project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -391,7 +319,7 @@ function App() {
                         UI Designer: Mobile App Design
                       </h2>
                     </div>
-                    <div className="column2" style={{ flex: "1 1 220px", minWidth: "200px", maxWidth: "260px", textAlign: "center" }}>
+                    <div className="layout-column-project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -404,7 +332,7 @@ function App() {
                         Web Developer: Beginner Commerce Webpage
                       </h2>
                     </div>
-                    <div className="column2" style={{ flex: "1 1 220px", minWidth: "200px", maxWidth: "260px", textAlign: "center" }}>
+                    <div className="layout-column-project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -420,48 +348,18 @@ function App() {
                   </div>
                 </div>
               </article>
-              <article className="Home-Page-Personal-Projects" style={{
-                  overflow: "hidden",
-                  marginTop: "25px",
-                  paddingLeft: "10px",
-                  paddingRight: "10px",
-                  borderStyle: "solid",
-                  borderWidth: "1px",
-                  backgroundColor: "white",
-                  maxHeight: "350px"
-              }}>
+              <article id="Home-Page-Personal-Projects" className="Home-Page-Article Home-Page-Article--panel">
                 <h1>Personal Projects</h1>
               </article>
-              <article className="Home-Page-Example-Work"
-                style={{
-                  overflow: "hidden",
-                  marginTop: "25px",
-                  paddingLeft: "10px",
-                  paddingRight: "10px",
-                  borderStyle: "solid",
-                  borderWidth: "1px",
-                  whiteSpace: "normal",
-                  height: "1100px",
-                  borderStyle: "solid",
-                  backgroundColor: "white",
-                  }}>
+              <article id="Home-Page-Example-Work" className="Home-Page-Article Home-Page-Article--example-work">
                 <h1 style={{ marginLeft: "10px" }}><u>Example Work</u></h1>
 
-                <div id="Examples" style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
+                <div style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
                   <p>More examples of my work can be seen at my Github.</p>
                 </div>
               </article>
 
-              <article style={{
-                  overflow: "hidden",
-                  marginTop: "25px",
-                  paddingLeft: "10px",
-                  paddingRight: "10px",
-                  borderStyle: "solid",
-                  borderWidth: "1px",
-                  backgroundColor: "white",
-                  maxHeight: "350px"
-              }}>
+                <article id="Home-Page-Afterword" className="Home-Page-Article Home-Page-Article--afterword">
                 <h2>Afterword</h2>
                 <p>
                   Thank you for taking the time to review my portfolio.
