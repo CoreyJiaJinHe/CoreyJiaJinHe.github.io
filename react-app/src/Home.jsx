@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import './Home.css'
 import ToggleableSwitchComponent from './components/ToggleComponent'
+import LeftBar from './components/LeftBar'
+
 function App() {
   const [activeProject, setActiveProject] = useState('')
   const [hoveredProject, setHoveredProject] = useState('')
@@ -11,6 +13,13 @@ function App() {
     const isHovered = hoveredProject === projectKey
     const isActive = activeProject === projectKey
 
+    const defaultTextColor = nightMode ? "#e5e7eb" : "#1f2937"
+    const hoverTextColor = nightMode ? "#86efac" : "#0a7a2f"
+    const activeTextColor = nightMode ? "#93c5fd" : "#0b5ed7"
+    const hoverBackground = nightMode ? "#1f3a2a" : "#dcfce7"
+    const activeBackground = nightMode ? "#1e3a5f" : "#dbeafe"
+    const borderColor = nightMode ? "#6b7280" : "#9ca3af"
+
     return {
       marginBottom: "8px",
       cursor: "pointer",
@@ -19,9 +28,9 @@ function App() {
       overflowWrap: "anywhere",
       wordBreak: "break-word",
       lineHeight: "1.25",
-      color: isActive ? "#0b5ed7" : isHovered ? "#0a7a2f" : "#1f2937",
-      backgroundColor: isActive ? "#dbeafe" : isHovered ? "#dcfce7" : "transparent",
-      border: isActive || isHovered ? "1px solid #9ca3af" : "1px solid transparent",
+      color: isActive ? activeTextColor : isHovered ? hoverTextColor : defaultTextColor,
+      backgroundColor: isActive ? activeBackground : isHovered ? hoverBackground : "transparent",
+      border: isActive || isHovered ? `1px solid ${borderColor}` : "1px solid transparent",
       borderRadius: "8px",
       padding: "8px",
       transition: "all 150ms ease"
@@ -44,23 +53,20 @@ function App() {
   }, [nightMode])
 
   function displayExamples(input) {
-    document.getElementById('Examples').innerHTML = ''
+    document.getElementById('Function-Examples').innerHTML = ''
     if (input == 'UIDesign') {
-
-      document.getElementById('Examples').innerHTML = '<div id=UIDesign></div><div id=UIText></div>';
+      document.getElementById('Function-Examples').innerHTML = '<div id=UIDesign></div><div id=UIText></div>';
       document.getElementById('UIDesign').innerHTML = '<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);float:right;margin-left:10px" width="500" height="1000" src="https://www.figma.com/embed?embed_host=share&url=https%3A%2F%2Fwww.figma.com%2Fproto%2FvHRd2rFSbrHCOWYhcU7LEv%2FQE-App%3Fnode-id%3D13-8%26starting-point-node-id%3D13%3A8%26mode%3Ddesign%26t%3DZSk7Py5u25OnznfH-1" allowfullscreen></iframe>';
-
       document.getElementById('UIText').innerHTML = '<div><p>This is a high-fidelity prototype UI design for a mobile food ordering app. <br><br> Designed using Figma, this prototype simulates what the end-user would interact with and go through the process of using the app for its intended purpose, in this case ordering food.</p></div>';
-
     }
     else if (input == 'Webpage') {
-      document.getElementById('Examples').innerHTML = '<p>Here is the front-end of a website I made to learn HTML, CSS, JS and PHP.</p><object type="text/html" data="src/assets/FinalsAssignment/HomePage.html" style="object-fit:contain;width:100%;height:1000px"></object>';
+      document.getElementById('Function-Examples').innerHTML = '<p>Here is the front-end of a website I made to learn HTML, CSS, JS and PHP.</p><object type="text/html" data="src/assets/FinalsAssignment/HomePage.html" style="object-fit:contain;width:100%;height:1000px"></object>';
     }
     else if (input == 'Analyse') {
-      document.getElementById('Examples').innerHTML = '<p>Raw Dataset found here: <a href="archive.ics.uci.edu/dataset/529/early+stage+diabetes+risk+prediction+data/"> Early Stage Diabetes Risk Prediction Dataset</a><br><br> Full report can be read from this <a href="https://docs.google.com/document/d/1xrk8EbClqNyVbGpnO0y5ip0V2DVDw0DN/edit?usp=sharing&ouid=111487749005686481730&rtpof=true&sd=true">link</a><br><br>Summary: Analysis of a Dataset filled with Patient Data to create a model to detect the onset of diabetes in their early stages through a number of associated symptoms. <br><br>Importance: Early diagnosis of diabetic patients can allow doctors to help their patients before they enter the late-stages of diabetes which is significantly more dangerous and life threatening.</p>';
+      document.getElementById('Function-Examples').innerHTML = '<p>Raw Dataset found here: <a href="archive.ics.uci.edu/dataset/529/early+stage+diabetes+risk+prediction+data/"> Early Stage Diabetes Risk Prediction Dataset</a><br><br> Full report can be read from this <a href="https://docs.google.com/document/d/1xrk8EbClqNyVbGpnO0y5ip0V2DVDw0DN/edit?usp=sharing&ouid=111487749005686481730&rtpof=true&sd=true">link</a><br><br>Summary: Analysis of a Dataset filled with Patient Data to create a model to detect the onset of diabetes in their early stages through a number of associated symptoms. <br><br>Importance: Early diagnosis of diabetic patients can allow doctors to help their patients before they enter the late-stages of diabetes which is significantly more dangerous and life threatening.</p>';
     }
     else if (input == 'Database') {
-      document.getElementById('Examples').innerHTML = '<div id="DatabaseImg"><img src="src/assets/AP ITEC 4220 Database Diagram.png" style="float:right;height:300px;"></img></div><div id="Databasetext"></div>';
+      document.getElementById('Function-Examples').innerHTML = '<div id="DatabaseImg"><img src="src/assets/AP ITEC 4220 Database Diagram.png" style="float:right;height:300px;"></img></div><div id="Databasetext"></div>';
       document.getElementById('Databasetext').innerHTML = '<div><p style="margin-right:10px">The Class Diagram of the final design of a University Database using object-relational database management principles.<br><br>Spool File of Logical Schema Code implemented in Oracle Database down below:</p><iframe src="src/assets/SpoolFile.txt" style="object-fit:contain;float:right;height:634px;width:99%"></iframe></div>';
     }
   }
@@ -82,49 +88,7 @@ function App() {
     <>
       <body>
         <div className={`Home-Page-Background ${nightMode ? 'Home-Page-Background--night' : 'Home-Page-Background--day'}`}>
-          <div className="Left-Bar" style={{
-            position: "fixed",
-            top: "16px",
-            left: "0",
-            width: "150px",
-            backgroundColor: nightMode ? "#111827" : "#e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            padding: "16px",
-            border: "1px solid #9ca3af",
-            borderLeft: "none",
-            borderRadius: "0 12px 12px 0",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-            zIndex: "1000",
-            transform: isLeftBarOpen ? "translateX(0)" : "translateX(calc(-100% + 20px))",
-            transition: "transform 220ms ease"
-          }}>
-            <button className ="Left-Bar-Toggle-Button"
-              type="button"
-              aria-label={isLeftBarOpen ? "Close left bar" : "Open left bar"}
-              onClick={() => setIsLeftBarOpen((current) => !current)}
-              style={{
-                position: "absolute",
-                top: "16px",
-                right: "-18px",
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                border: "1px solid #6b7280",
-                backgroundColor: nightMode ? "#0f172a" : "#ffffff",
-                color: nightMode ? "#f9fafb" : "#1f2937",
-                cursor: "pointer",
-                fontSize: "18px",
-                fontWeight: "bold",
-                lineHeight: "1"
-              }}
-            >
-              {isLeftBarOpen ? "\u00d7" : "\u2630"}
-            </button>
-            <div className="Component-Night-Mode-Toggle">
-              <ToggleableSwitchComponent setNightMode={setNightMode} nightMode={nightMode} />
-            </div>
-          </div>
+          <LeftBar isLeftBarOpen={isLeftBarOpen} setIsLeftBarOpen={setIsLeftBarOpen} nightMode={nightMode} setNightMode={setNightMode} />
           <div className="Home-Page-Contact-Header">
             <div className="Home-Page-Contact-Right">
               <address>
@@ -354,7 +318,7 @@ function App() {
               <article id="Home-Page-Example-Work" className="Home-Page-Article Home-Page-Article--example-work">
                 <h1 style={{ marginLeft: "10px" }}><u>Example Work</u></h1>
 
-                <div style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
+                <div id="Function-Examples" style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
                   <p>More examples of my work can be seen at my Github.</p>
                 </div>
               </article>

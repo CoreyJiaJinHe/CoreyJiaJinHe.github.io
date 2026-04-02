@@ -1,8 +1,10 @@
+/* Page shell */
+
 .Home-Page-Background {
-	white-space: nowrap;
-	background-size: cover;
-	background-repeat: no-repeat;
 	background-attachment: fixed;
+	background-repeat: no-repeat;
+	background-size: cover;
+	white-space: nowrap;
 }
 
 .Home-Page-Background--day {
@@ -14,10 +16,10 @@
 }
 
 .Home-Page-Contact-Header {
-	padding: 30px;
-	object-fit: contain;
 	height: 100px;
+	object-fit: contain;
 	overflow: hidden;
+	padding: 30px;
 }
 
 .Home-Page-Contact-Right {
@@ -36,60 +38,62 @@
 .Home-Page-Main-Content {
 	background-color: transparent;
 	border-style: hidden;
-	width: 100%;
 	height: auto;
 	margin-top: 20px;
+	width: 100%;
 }
 
 .Home-Page-Portrait-Image {
-	float: right;
-	width: 33%;
 	border-style: hidden;
+	float: right;
 	margin-right: 2%;
 	margin-top: 2%;
+	width: 33%;
 }
 
 .Home-Page-Portrait-Image-Img {
-	width: 100%;
 	object-fit: fill;
+	width: 100%;
 }
 
+/* Article cards */
+
 .Home-Page-Article {
-	overflow: hidden;
-	margin-top: 25px;
-	padding-left: 10px;
-	padding-right: 10px;
+	background-color: white;
 	border-style: solid;
 	border-width: 1px;
-	background-color: white;
+	margin-top: 25px;
+	overflow: hidden;
+	padding-left: 10px;
+	padding-right: 10px;
 }
 
 .Home-Page-Article--personal-details {
+	background-color: transparent;
+	border: none;
+	display: flow-root;
 	margin: auto;
 	margin-bottom: 20px;
-	text-align: center;
-	display: flow-root;
 	overflow: visible;
-	border: none;
-	background-color: transparent;
 	padding-left: 0;
 	padding-right: 0;
+	text-align: center;
 }
 
 .Home-Page-Article--education {
 	clear: both;
-	min-width: 50px;
-	width: auto;
-	max-width: fit-content;
 	height: 100px;
+	margin-top: 0;
+	max-width: fit-content;
+	min-width: 50px;
 	padding-left: 20px;
 	padding-right: 20px;
-	margin-top: 0;
+	width: auto;
 }
 
 .Home-Page-Article--personal-life {
-	width: 50%;
 	margin-top: 10px;
+	width: 50%;
 }
 
 .Home-Page-Article--skills {
@@ -101,37 +105,41 @@
 }
 
 .Home-Page-Article--afterword {
-	overflow: visible;
 	max-height: none;
+	overflow: visible;
 	white-space: normal;
 }
 
 .Home-Page-Article--example-work {
-	white-space: normal;
 	height: 1100px;
+	white-space: normal;
 }
 
-.layout-generic-panel{
-    background-color: white;
-    border-style: solid;
-    border-width: 1px;
-    width: 25%;
-    overflow: hidden;
-    margin-bottom: 10px;
+/* Shared panels */
+
+.layout-generic-panel {
+	background-color: white;
+	border-style: solid;
+	border-width: 1px;
+	margin-bottom: 10px;
+	overflow: hidden;
+	width: 25%;
 }
 
-.layout-generic-panel--two{
-    background-color: white;
-    border-style: solid;
-    border-width: 1px;
-    width: 25%;
-    min-height: 100px;
-    height: auto;
-    float: left;
-    margin-bottom: 10px;
-    overflow: hidden;
-    padding-bottom: 10px;
+.layout-generic-panel--two {
+	background-color: white;
+	border-style: solid;
+	border-width: 1px;
+	float: left;
+	height: auto;
+	margin-bottom: 10px;
+	min-height: 100px;
+	overflow: hidden;
+	padding-bottom: 10px;
+	width: 25%;
 }
+
+/* Generic layout */
 
 .layout-row-skills {
 	display: flex;
@@ -145,11 +153,11 @@
 }
 
 .layout-row-projects {
+	align-items: stretch;
 	display: flex;
 	flex-wrap: wrap;
-	justify-content: space-evenly;
 	gap: 16px;
-	align-items: stretch;
+	justify-content: space-evenly;
 }
 
 .layout-column-skills {
@@ -161,13 +169,33 @@
 .layout-column-project {
 	box-sizing: border-box;
 	flex: 1 1 220px;
-	min-width: 200px;
 	max-width: 260px;
+	min-width: 200px;
 	text-align: center;
 }
 
 .layout-section {
 	float: left;
 	min-width: 150px;
+}
+
+/* Night mode overrides */
+
+.Home-Page-Background--night .Home-Page-Article {
+	background-color: #1f2937;
+	border-color: #4b5563;
+	color: #f3f4f6;
+}
+
+.Home-Page-Background--night .Home-Page-Article--personal-details {
+	background-color: transparent;
+	border-color: transparent;
+}
+
+.Home-Page-Background--night .layout-generic-panel,
+.Home-Page-Background--night .layout-generic-panel--two {
+	background-color: #1f2937;
+	border-color: #4b5563;
+	color: #f3f4f6;
 }
 
