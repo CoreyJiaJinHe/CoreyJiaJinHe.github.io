@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import './Home.css'
-import ToggleableSwitchComponent from './components/ToggleComponent'
 import LeftBar from './components/LeftBar'
 
 function App() {
@@ -8,6 +7,7 @@ function App() {
   const [hoveredProject, setHoveredProject] = useState('')
   const [nightMode, setNightMode] = useState(false)
   const [isLeftBarOpen, setIsLeftBarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const getProjectHeadingStyle = (projectKey) => {
     const isHovered = hoveredProject === projectKey
@@ -52,6 +52,20 @@ function App() {
     document.body.style.color = nightMode ? "#f3f4f6" : "#1f2937"
   }, [nightMode])
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)')
+    const updateIsMobile = (event) => {
+      setIsMobile(event.matches)
+    }
+
+    setIsMobile(mediaQuery.matches)
+    mediaQuery.addEventListener('change', updateIsMobile)
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateIsMobile)
+    }
+  }, [])
+
   function displayExamples(input) {
     document.getElementById('Function-Examples').innerHTML = ''
     if (input == 'UIDesign') {
@@ -71,32 +85,19 @@ function App() {
     }
   }
 
-  // <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js">
-  //     $(document).ready(function){
-  //         $(window).resize();
-  //     }
-  //     $(window).resize(function{
-  //         var windowWidth=$(window).width();
-  //         var mainContainerWidth=windowWidth-100;
-  //         $("maincontainer").css({"width":mainCOntainerWidth+"px"});
-  //     })
-
-  // </script>
-
-
   return (
     <>
       <body>
-        <div className={`Home-Page-Background ${nightMode ? 'Home-Page-Background--night' : 'Home-Page-Background--day'}`}>
+        <div className={`Home-Page-Background ${nightMode ? 'Home-Page-Background--night' : 'Home-Page-Background--day'} ${isMobile ? 'Home-Page--mobile' : ''}`}>
           <LeftBar isLeftBarOpen={isLeftBarOpen} setIsLeftBarOpen={setIsLeftBarOpen} nightMode={nightMode} setNightMode={setNightMode} />
           <div className="Home-Page-Contact-Header">
+            <div className="Home-Page-Primary-Contact-Left">
+              <h1>Preferred Contact: Email</h1>
+            </div>
             <div className="Home-Page-Contact-Right">
               <address>
                 <h1>Email: corey72he@gmail.com</h1>
               </address>
-            </div>
-            <div className="Home-Page-Primary-Contact-Left">
-              <h1>Preferred Contact: Email</h1>
             </div>
           </div>
           <div className="Home-Page-Main-Container">
@@ -124,11 +125,9 @@ function App() {
               </article>
 
               <article id="Home-Page-Education" className="Home-Page-Article Home-Page-Article--education">
-                <div style={{ overflow: "hidden" }}>
                   <h2 style={{ marginTop: "4px", marginBottom: "1px" }}>Education</h2>
                   <h4 style={{ marginTop: "1px", marginBottom: "1px" }}>Information Technology, BA (Hons)</h4>
                   <p style={{ marginTop: "10px", overflow: "hidden" }}>York University, Toronto</p>
-                </div>
               </article>
 
               <article id="Home-Page-Personal-Life" className="Home-Page-Article Home-Page-Article--personal-life">
