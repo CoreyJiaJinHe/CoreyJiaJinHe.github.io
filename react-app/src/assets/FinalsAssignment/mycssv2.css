@@ -43,7 +43,6 @@ border:2px solid black;
 background-color:teal;
 color:white;
 height:auto;
-text-color:white;
 left: 0;
 bottom: 0;
 width: 100%;
@@ -124,7 +123,7 @@ height:200px;
 width:150px;
 object-fit:fit;
 position:absolute;
-zIndex:1;
+z-index:1;
 }
 
 .loginbox{
@@ -140,7 +139,7 @@ padding:5px;
 }
 
 
-$checkBtn{
+#checkBtn{
 width:50px;
 margin-top:20px;
 height:30px;
