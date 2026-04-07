@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import './mycssv2.css';
 
 const BACKEND_BASE_URL = "http://localhost/OasisWorkshop";
+const LEGACY_USER_STORAGE_KEY = "legacyUser";
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 // Migrated from login.php
 const ACCOUNT_USERNAMES = ["admin", "test", "12345", "CC"];
@@ -36,6 +38,12 @@ function LoginPage() {
     const [backendAvailable, setBackendAvailable] = useState(null);
     const [suggestions, setSuggestions] = useState([]);
 
+    function clearLegacySession() {
+        localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
+        document.cookie = "username=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+        setIsLoggedIn(false);
+    }
+
     function clearRedirectTimers() {
         if (redirectIntervalRef.current) {
             clearInterval(redirectIntervalRef.current);
@@ -59,11 +67,32 @@ function LoginPage() {
     }, [])
 
     function checkCookie() {
+        try {
+            const storedUserRaw = localStorage.getItem(LEGACY_USER_STORAGE_KEY);
+            if (storedUserRaw) {
+                const storedUser = JSON.parse(storedUserRaw);
+                const isExpired = !storedUser?.loggedInAt || (Date.now() - storedUser.loggedInAt > SESSION_MAX_AGE_MS);
+                if (isExpired) {
+                    clearLegacySession();
+                    setStatusMessage("Session expired. Please log in again.");
+                    return;
+                }
+
+                if (storedUser?.username) {
+                    setUsername(storedUser.username);
+                    setIsLoggedIn(true);
+                    setStatusMessage("Welcome, " + storedUser.username);
+                    return;
+                }
+            }
+        }
+        catch (error) {
+            clearLegacySession();
+        }
+
         let cookieUsername = getCookie("username");
         if (cookieUsername !== "") {
-            setUsername(cookieUsername);
-            setIsLoggedIn(true);
-            setStatusMessage("Welcome, " + cookieUsername);
+            clearLegacySession();
         }
     }
     function getCookie(cname) {
@@ -173,6 +202,10 @@ function LoginPage() {
 
         if (isValid) {
             document.cookie = "username=" + username;
+            localStorage.setItem(
+                LEGACY_USER_STORAGE_KEY,
+                JSON.stringify({ username, loggedInAt: Date.now() })
+            );
             setIsLoggedIn(true);
             var num = 5;
 
