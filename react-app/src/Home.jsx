@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './Home.css'
 import LeftBar from './components/LeftBar'
 import LoginPage from './assets/FinalsAssignment/login.jsx'
+import ProductPage from './assets/FinalsAssignment/ProductPage.jsx'
 
 function App() {
   const [activeProject, setActiveProject] = useState('')
@@ -11,6 +12,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(false)
   const [showLoginPreview, setShowLoginPreview] = useState(false)
   const [projectContent, setProjectContent] = useState('')
+  const [previewMode, setPreviewMode] = useState('none') // 'none' | 'login' | 'product'
 
   const getProjectHeadingStyle = (projectKey) => {
     const isHovered = hoveredProject === projectKey
@@ -72,6 +74,7 @@ function App() {
   function displayExamples(input) {
     setShowLoginPreview(false)
     setProjectContent('')
+    setPreviewMode('none')
 
     if (input === 'UIDesign') {
       setProjectContent(
@@ -81,6 +84,7 @@ function App() {
       )
     } else if (input === 'Webpage') {
       setShowLoginPreview(true)
+      setPreviewMode('login')
     } else if (input === 'Analyse') {
       setProjectContent(
         '<p>Raw Dataset found here: <a href="archive.ics.uci.edu/dataset/529/early+stage+diabetes+risk+prediction+data/"> Early Stage Diabetes Risk Prediction Dataset</a><br><br>' +
@@ -332,7 +336,8 @@ function App() {
                 <div style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
                   {!showLoginPreview && !projectContent && <p>More examples of my work can be seen at my Github.</p>}
                   {projectContent && <div dangerouslySetInnerHTML={{ __html: projectContent }} />}
-                  {showLoginPreview && <LoginPage />}
+                  {showLoginPreview && previewMode === 'login' && <LoginPage onNavigate={setPreviewMode} />}
+                  {showLoginPreview && previewMode === 'product' && <ProductPage onNavigate={setPreviewMode} />}
                 </div>
               </article>
 

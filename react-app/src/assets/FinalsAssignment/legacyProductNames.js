@@ -1,0 +1,15 @@
+export const LEGACY_PRODUCT_NAMES = [
+    'dining chair',
+    'dining table',
+    'office desk',
+    'short bench',
+    'long bench',
+    'dresser',
+    'drawer',
+    'end table',
+    'floor cabinet',
+    'wall cabinet',
+    'bedframe',
+    'bed headboard',
+    'flower stand',
+];

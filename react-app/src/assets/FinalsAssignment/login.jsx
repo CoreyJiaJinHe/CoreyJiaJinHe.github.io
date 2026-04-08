@@ -1,33 +1,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import './mycssv2.css';
+import {
+    checkLegacySessionOnLoad,
+    clearLegacySessionStorageAndCookie,
+    persistLegacySessionUser,
+} from './LegacySessionContext';
+import LegacyNavbar from './LegacyNavbar';
+import LegacyPageLayout from './LegacyPageLayout';
+import { LEGACY_PRODUCT_NAMES } from './legacyProductNames';
 
 const BACKEND_BASE_URL = "http://localhost/OasisWorkshop";
-const LEGACY_USER_STORAGE_KEY = "legacyUser";
-const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 // Migrated from login.php
 const ACCOUNT_USERNAMES = ["admin", "test", "12345", "CC"];
 const ACCOUNT_PASSWORDS = ["password", "test", "12345", "Password123*"];
 
-// Migrated from products.php
-const PRODUCT_NAMES = [
-    "dining chair",
-    "dining table",
-    "office desk",
-    "short bench",
-    "long bench",
-    "dresser",
-    "drawer",
-    "end table",
-    "floor cabinet",
-    "wall cabinet",
-    "bedframe",
-    "bed headboard",
-    "flower stand"
-];
-
-function LoginPage() {
+function LoginPage({ onNavigate }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [statusMessage, setStatusMessage] = useState("");
@@ -36,13 +25,10 @@ function LoginPage() {
     const redirectIntervalRef = useRef(null);
     const redirectTimeoutRef = useRef(null);
     const [backendAvailable, setBackendAvailable] = useState(null);
+    const [searchInput, setSearchInput] = useState("");
     const [suggestions, setSuggestions] = useState([]);
 
-    function clearLegacySession() {
-        localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
-        document.cookie = "username=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-        setIsLoggedIn(false);
-    }
+
 
     function clearRedirectTimers() {
         if (redirectIntervalRef.current) {
@@ -57,7 +43,16 @@ function LoginPage() {
     }
 
     useEffect(() => {
-        checkCookie();
+        const { user, expired } = checkLegacySessionOnLoad();
+        if (user?.username) {
+            setUsername(user.username);
+            setIsLoggedIn(true);
+            setStatusMessage("Welcome, " + user.username);
+        } else if (expired) {
+            setStatusMessage("Session expired. Please log in again.");
+            setIsLoggedIn(false);
+        }
+
         fetch(`${BACKEND_BASE_URL}/login.php?id=test,test`, { method: "GET" })
             .then((response) => setBackendAvailable(response.ok))
             .catch(() => setBackendAvailable(false));
@@ -66,54 +61,10 @@ function LoginPage() {
         };
     }, [])
 
-    function checkCookie() {
-        try {
-            const storedUserRaw = localStorage.getItem(LEGACY_USER_STORAGE_KEY);
-            if (storedUserRaw) {
-                const storedUser = JSON.parse(storedUserRaw);
-                const isExpired = !storedUser?.loggedInAt || (Date.now() - storedUser.loggedInAt > SESSION_MAX_AGE_MS);
-                if (isExpired) {
-                    clearLegacySession();
-                    setStatusMessage("Session expired. Please log in again.");
-                    return;
-                }
-
-                if (storedUser?.username) {
-                    setUsername(storedUser.username);
-                    setIsLoggedIn(true);
-                    setStatusMessage("Welcome, " + storedUser.username);
-                    return;
-                }
-            }
-        }
-        catch (error) {
-            clearLegacySession();
-        }
-
-        let cookieUsername = getCookie("username");
-        if (cookieUsername !== "") {
-            clearLegacySession();
-        }
-    }
-    function getCookie(cname) {
-        let name = cname + "=";
-        let decodedCookie = decodeURIComponent(document.cookie);
-        let ca = decodedCookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) == ' ') {
-                c = c.substring(1);
-            }
-            if (c.indexOf(name) == 0) {
-                return c.substring(name.length, c.length);
-            }
-        }
-        return "";
-    }
-
 
     async function getSuggestions(str) {
         var input = str || "";
+        setSearchInput(input);
         setSuggestions([]);
         if (input === "") {
             return;
@@ -141,7 +92,7 @@ function LoginPage() {
 
     function buildSuggestionList(input) {
         var pattern = new RegExp(input, "i");
-        var matches = PRODUCT_NAMES.filter(function (name) {
+        var matches = LEGACY_PRODUCT_NAMES.filter(function (name) {
             return pattern.test(name);
         });
 
@@ -202,10 +153,7 @@ function LoginPage() {
 
         if (isValid) {
             document.cookie = "username=" + username;
-            localStorage.setItem(
-                LEGACY_USER_STORAGE_KEY,
-                JSON.stringify({ username, loggedInAt: Date.now() })
-            );
+            persistLegacySessionUser(username);
             setIsLoggedIn(true);
             var num = 5;
 
@@ -223,6 +171,8 @@ function LoginPage() {
             }, 5000);
         } else {
             setStatusMessage("Invalid username or password");
+            clearLegacySessionStorageAndCookie();
+            setIsLoggedIn(false);
         }
     }
 
@@ -230,43 +180,38 @@ function LoginPage() {
 
     return (
         <>
-            <div style={{ backgroundColor: "black" }}>
-                <div className="header">
-                    <div className="namebar">
-                        <img src="Images/img_saw.png" alt="Image of Logo" style={{ float: "left", height: "120px", width: "120px", objectFit: "contain" }}></img>
-                        <img src="Images/img_saw.png" alt="Image of Logo" style={{ float: "right", height: "120px", width: "120px", objectFit: "contain" }}></img>
-                        <div style={{ color: "white", fontSize: "30px" }}>
-                            <h1>Oasis Woodworks</h1>
-                        </div>
-                    </div>
-                    <div style={{ backgroundColor: "white", width: "100%", height: "10px" }}>
-                    </div>
-
-                    <div style={{ paddingTop: "10px", paddingBottom: "10px", backgroundColor: "black", height: "25px" }}>
-                        <div className="navbar">
-                            <div className="dropdown">
-                                <input list="suggestions" type="text" id="search" placeholder="Search" style={{ width: "164px" }} onKeyUp={(e) => getSuggestions(e.target.value)} />
-                                <datalist id="suggestions">
-                                    {suggestions.slice(0, 9).map((s, i) => <option key={i} value={s} />)}
-                                </datalist>
-                                <button type="button" onClick={() => getSuggestions(document.getElementById('search').value)} style={{ width: "5%", minWidth: "75px" }}>Search</button>
-
-
-                                <button type="button" onClick={() => { window.location.href = 'HomePage.html'; }} className="button button1">Home Page </button>
-                                <button id="ProductPage" onClick={() => { window.location.href = 'ProductPage.html'; }} className="button button1">Finished Wood</button>
-                                <button type="button" onClick={() => { window.location.href = 'ErrorPage.html'; }} className="button button1">Furniture</button>
-                                <button id="login" type="button" onClick={() => { window.location.href = 'login.html'; }} className="button button1" disabled={isLoggedIn}>{isLoggedIn ? `Welcome,${username}` : 'Login'}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="content" style={{ height: "500px", border: "2px solid black" }}>
+            <LegacyPageLayout
+            
+                navbar={(
+                    <LegacyNavbar
+                        searchInput={searchInput}
+                        onSearchInputChange={getSuggestions}
+                        onSearchClick={getSuggestions}
+                        suggestions={suggestions}
+                        onGoHome={() => { window.location.href = 'HomePage.html'; }}
+                        onGoProduct={() => {
+                            if (onNavigate) {
+                                onNavigate('product');
+                                return;
+                            }
+                        }}
+                        onGoFurniture={() => { window.location.href = 'ErrorPage.html'; }}
+                        onGoLogin={() => { if (onNavigate) {
+                            onNavigate('login');
+                            return;
+                        }
+                    }}
+                    loginLabel={isLoggedIn ? `Welcome,${username}` : 'Login'}
+                    isLoginDisabled={isLoggedIn}
+                />
+            )}
+            contentStyle={{ height: '500px', border: '2px solid black' }}
+            >
                     <div className="loginbox">
                         <form onSubmit={handleLoginClick}>
                             <p id="status">{statusMessage}</p>
                             <p>Username <input type="text" name="username" id="username" size="3" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
                             </p>
-                            <br></br>
                             <p>
                                 Password <input type="password" name="password" id="password" size="3" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
                             </p>
@@ -281,26 +226,7 @@ function LoginPage() {
                         <br></br>
                         <label>Password is:Password123*</label>
                     </div>
-                </div>
-
-
-                <div id="footer" style={{ marginLeft: "auto", marginRight: "auto", width: "1000px" }}>
-                    <table className="footer">
-                        <tbody>
-                            <tr>
-                                <td className="footer"><label><a href="ErrorPage.html">FAQ</a></label></td>
-                                <td className="footer"><label><a href="ErrorPage.html">Support</a></label></td>
-                                <td className="footer"><label><a href="ErrorPage.html">Contact Us</a></label></td>
-                            </tr>
-                            <tr>
-                                <td className="footer"><label><a href="ErrorPage.html">Terms of Service</a></label></td>
-                                <td className="footer"><label><a href="ErrorPage.html">Privacy Policy</a></label></td>
-                                <td className="footer"><label><a href="ErrorPage.html">Cookie Policy</a></label></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </LegacyPageLayout>
         </>
     )
 
