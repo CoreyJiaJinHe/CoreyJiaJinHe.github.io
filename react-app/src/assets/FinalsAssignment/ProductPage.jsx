@@ -3,7 +3,6 @@ import './mycssv2.css';
 import { checkLegacySessionOnLoad } from './LegacySessionContext';
 import LegacyNavbar from './LegacyNavbar';
 import LegacyPageLayout from './LegacyPageLayout';
-import { LEGACY_PRODUCT_NAMES } from './legacyProductNames';
 
 const BACKEND_BASE_URL = 'http://localhost/FinalsAssignment';
 
@@ -80,8 +79,6 @@ function ProductPage({ onNavigate }) {
 
     const [backendAvailable, setBackendAvailable] = useState(false);
     const [loginLabel, setLoginLabel] = useState('Login');
-    const [searchInput, setSearchInput] = useState('');
-    const [suggestions, setSuggestions] = useState([]);
     const [selectedWood, setSelectedWood] = useState('Cedar');
     const [selectedSize, setSelectedSize] = useState('');
     const [selectedLength, setSelectedLength] = useState('');
@@ -122,36 +119,6 @@ function ProductPage({ onNavigate }) {
     useEffect(() => {
         calculatePrice();
     }, [selectedWood, selectedSize, selectedLength, quantity, backendAvailable]);
-
-    async function getSuggestions(inputValue) {
-        const input = inputValue || '';
-        setSearchInput(input);
-        if (input.trim() === '') {
-            setSuggestions([]);
-            return;
-        }
-
-        if (backendAvailable) {
-            try {
-                const response = await fetch(`${BACKEND_BASE_URL}/products.php?input=${encodeURIComponent(input)}`, { method: 'GET' });
-                if (response.ok) {
-                    const text = (await response.text()).trim();
-                    if (!text || text === 'No valid products') {
-                        setSuggestions(['No valid products']);
-                    } else {
-                        setSuggestions(text.split(','));
-                    }
-                    return;
-                }
-            } catch {
-                // Use local fallback when backend call fails.
-            }
-        }
-
-        const pattern = new RegExp(input, 'i');
-        const local = LEGACY_PRODUCT_NAMES.filter((name) => pattern.test(name));
-        setSuggestions(local.length ? local : ['No valid products']);
-    }
 
     async function getProperties(imgId) {
         if (backendAvailable) {
@@ -281,10 +248,8 @@ function ProductPage({ onNavigate }) {
         <LegacyPageLayout
             navbar={(
                 <LegacyNavbar
-                    searchInput={searchInput}
-                    onSearchInputChange={getSuggestions}
-                    onSearchClick={getSuggestions}
-                    suggestions={suggestions}
+                    backendAvailable={backendAvailable}
+                    backendBaseUrl={BACKEND_BASE_URL}
                     onGoHome={() => {
                         window.location.href = 'HomePage.html';
                     }}

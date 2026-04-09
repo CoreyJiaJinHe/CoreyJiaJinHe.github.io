@@ -8,9 +8,8 @@ import {
 } from './LegacySessionContext';
 import LegacyNavbar from './LegacyNavbar';
 import LegacyPageLayout from './LegacyPageLayout';
-import { LEGACY_PRODUCT_NAMES } from './legacyProductNames';
 
-const BACKEND_BASE_URL = "http://localhost/OasisWorkshop";
+const BACKEND_BASE_URL = "http://localhost/FinalsAssignment";
 
 // Migrated from login.php
 const ACCOUNT_USERNAMES = ["admin", "test", "12345", "CC"];
@@ -25,8 +24,6 @@ function LoginPage({ onNavigate }) {
     const redirectIntervalRef = useRef(null);
     const redirectTimeoutRef = useRef(null);
     const [backendAvailable, setBackendAvailable] = useState(null);
-    const [searchInput, setSearchInput] = useState("");
-    const [suggestions, setSuggestions] = useState([]);
 
 
 
@@ -62,42 +59,7 @@ function LoginPage({ onNavigate }) {
     }, [])
 
 
-    async function getSuggestions(str) {
-        var input = str || "";
-        setSearchInput(input);
-        setSuggestions([]);
-        if (input === "") {
-            return;
-        }
-        if (backendAvailable) {
-            try {
-                var response = await fetch(`${BACKEND_BASE_URL}/products.php?input=${encodeURIComponent(input)}`, {
-                    method: "GET"
-                });
 
-                if (response.ok) {
-                    var text = (await response.text()).trim();
-                    var backendSuggestions = text === "" ? [] : text.split(",");
-                    setSuggestions(backendSuggestions.length ? backendSuggestions : ["No valid products"]);
-                    return;
-                }
-            }
-            catch (e) {
-                // Fall back to in-memory suggestions when backend request fails.
-                console.log(e);
-            }
-        }
-        setSuggestions(buildSuggestionList(input));
-    }
-
-    function buildSuggestionList(input) {
-        var pattern = new RegExp(input, "i");
-        var matches = LEGACY_PRODUCT_NAMES.filter(function (name) {
-            return pattern.test(name);
-        });
-
-        return matches.length === 0 ? ["No valid products"] : matches;
-    }
 
 
 
@@ -181,13 +143,10 @@ function LoginPage({ onNavigate }) {
     return (
         <>
             <LegacyPageLayout
-            
                 navbar={(
                     <LegacyNavbar
-                        searchInput={searchInput}
-                        onSearchInputChange={getSuggestions}
-                        onSearchClick={getSuggestions}
-                        suggestions={suggestions}
+                        backendAvailable={backendAvailable}
+                        backendBaseUrl={BACKEND_BASE_URL}
                         onGoHome={() => { window.location.href = 'HomePage.html'; }}
                         onGoProduct={() => {
                             if (onNavigate) {
@@ -201,10 +160,10 @@ function LoginPage({ onNavigate }) {
                             return;
                         }
                     }}
-                    loginLabel={isLoggedIn ? `Welcome,${username}` : 'Login'}
-                    isLoginDisabled={isLoggedIn}
-                />
-            )}
+                        loginLabel={isLoggedIn ? `Welcome,${username}` : 'Login'}
+                        isLoginDisabled={isLoggedIn}
+                    />
+                )}
             contentStyle={{ height: '500px', border: '2px solid black' }}
             >
                     <div className="loginbox">
