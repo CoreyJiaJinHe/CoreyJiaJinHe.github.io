@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import './Home.css'
 import LeftBar from './components/LeftBar'
-import LoginPage from './assets/FinalsAssignment/login.jsx'
-import ProductPage from './assets/FinalsAssignment/ProductPage.jsx'
+import WoodWorkshopWrapper from './components/WoodWorkshopWrapper.jsx'
+import LoginPage from './assets/FinalsAssignment/LoginPage.jsx'
+import ProductPage from './assets/FinalsAssignment/productpage.jsx'
+import HomePage from './assets/FinalsAssignment/homepage.jsx'
 
 function App() {
   const [activeProject, setActiveProject] = useState('')
@@ -12,7 +14,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(false)
   const [showLoginPreview, setShowLoginPreview] = useState(false)
   const [projectContent, setProjectContent] = useState('')
-  const [previewMode, setPreviewMode] = useState('none') // 'none' | 'login' | 'product'
+  const [previewMode, setPreviewMode] = useState('none') // 'none' | 'home' | 'login' | 'product' | 'furniture'
 
   const getProjectHeadingStyle = (projectKey) => {
     const isHovered = hoveredProject === projectKey
@@ -336,8 +338,36 @@ function App() {
                 <div style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
                   {!showLoginPreview && !projectContent && <p>More examples of my work can be seen at my Github.</p>}
                   {projectContent && <div dangerouslySetInnerHTML={{ __html: projectContent }} />}
-                  {showLoginPreview && previewMode === 'login' && <LoginPage onNavigate={setPreviewMode} />}
-                  {showLoginPreview && previewMode === 'product' && <ProductPage onNavigate={setPreviewMode} />}
+                  {showLoginPreview && previewMode === 'home' && (
+                    <WoodWorkshopWrapper onNavigate={setPreviewMode}>
+                      <HomePage onNavigate={setPreviewMode} />
+                    </WoodWorkshopWrapper>
+                  )}
+                  {showLoginPreview && previewMode === 'login' && (
+                    <WoodWorkshopWrapper onNavigate={setPreviewMode} contentStyle={{ height: '500px', border: '2px solid black' }}>
+                      {({ backendAvailable, setNavbarLoginState }) => (
+                        <LoginPage
+                          backendAvailable={backendAvailable}
+                          onNavbarLoginStateChange={setNavbarLoginState}
+                        />
+                      )}
+                    </WoodWorkshopWrapper>
+                  )}
+                  {showLoginPreview && previewMode === 'product' && (
+                    <WoodWorkshopWrapper onNavigate={setPreviewMode}>
+                      {({ backendAvailable }) => (
+                        <ProductPage onNavigate={setPreviewMode} backendAvailable={backendAvailable} />
+                      )}
+                    </WoodWorkshopWrapper>
+                  )}
+                  {showLoginPreview && previewMode === 'furniture' && (
+                    <WoodWorkshopWrapper onNavigate={setPreviewMode}>
+                      <div style={{ margin: '20px' }}>
+                        <h1>Furniture</h1>
+                        <p>This section is not implemented yet. Use the navigation buttons above to continue.</p>
+                      </div>
+                    </WoodWorkshopWrapper>
+                  )}
                 </div>
               </article>
 

@@ -6,8 +6,6 @@ import {
     clearLegacySessionStorageAndCookie,
     persistLegacySessionUser,
 } from './LegacySessionContext';
-import LegacyNavbar from './LegacyNavbar';
-import LegacyPageLayout from './LegacyPageLayout';
 
 const BACKEND_BASE_URL = "http://localhost/FinalsAssignment";
 
@@ -15,7 +13,7 @@ const BACKEND_BASE_URL = "http://localhost/FinalsAssignment";
 const ACCOUNT_USERNAMES = ["admin", "test", "12345", "CC"];
 const ACCOUNT_PASSWORDS = ["password", "test", "12345", "Password123*"];
 
-function LoginPage({ onNavigate }) {
+function LoginPage({ backendAvailable = false, onNavbarLoginStateChange }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [statusMessage, setStatusMessage] = useState("");
@@ -23,9 +21,6 @@ function LoginPage({ onNavigate }) {
     const [showForgotHint, setShowForgotHint] = useState(false);
     const redirectIntervalRef = useRef(null);
     const redirectTimeoutRef = useRef(null);
-    const [backendAvailable, setBackendAvailable] = useState(null);
-
-
 
     function clearRedirectTimers() {
         if (redirectIntervalRef.current) {
@@ -45,18 +40,22 @@ function LoginPage({ onNavigate }) {
             setUsername(user.username);
             setIsLoggedIn(true);
             setStatusMessage("Welcome, " + user.username);
+            onNavbarLoginStateChange?.({
+                loginLabel: `Welcome,${user.username}`,
+                isLoginDisabled: true,
+            });
         } else if (expired) {
             setStatusMessage("Session expired. Please log in again.");
             setIsLoggedIn(false);
+            onNavbarLoginStateChange?.({
+                loginLabel: 'Login',
+                isLoginDisabled: false,
+            });
         }
-
-        fetch(`${BACKEND_BASE_URL}/login.php?id=test,test`, { method: "GET" })
-            .then((response) => setBackendAvailable(response.ok))
-            .catch(() => setBackendAvailable(false));
         return () => {
             clearRedirectTimers();
         };
-    }, [])
+    }, [onNavbarLoginStateChange])
 
 
 
@@ -117,6 +116,10 @@ function LoginPage({ onNavigate }) {
             document.cookie = "username=" + username;
             persistLegacySessionUser(username);
             setIsLoggedIn(true);
+            onNavbarLoginStateChange?.({
+                loginLabel: `Welcome,${username}`,
+                isLoginDisabled: true,
+            });
             var num = 5;
 
             redirectIntervalRef.current = setInterval(function () {
@@ -135,6 +138,10 @@ function LoginPage({ onNavigate }) {
             setStatusMessage("Invalid username or password");
             clearLegacySessionStorageAndCookie();
             setIsLoggedIn(false);
+            onNavbarLoginStateChange?.({
+                loginLabel: 'Login',
+                isLoginDisabled: false,
+            });
         }
     }
 
@@ -142,50 +149,25 @@ function LoginPage({ onNavigate }) {
 
     return (
         <>
-            <LegacyPageLayout
-                navbar={(
-                    <LegacyNavbar
-                        backendAvailable={backendAvailable}
-                        backendBaseUrl={BACKEND_BASE_URL}
-                        onGoHome={() => { window.location.href = 'HomePage.html'; }}
-                        onGoProduct={() => {
-                            if (onNavigate) {
-                                onNavigate('product');
-                                return;
-                            }
-                        }}
-                        onGoFurniture={() => { window.location.href = 'ErrorPage.html'; }}
-                        onGoLogin={() => { if (onNavigate) {
-                            onNavigate('login');
-                            return;
-                        }
-                    }}
-                        loginLabel={isLoggedIn ? `Welcome,${username}` : 'Login'}
-                        isLoginDisabled={isLoggedIn}
-                    />
-                )}
-            contentStyle={{ height: '500px', border: '2px solid black' }}
-            >
-                    <div className="loginbox">
-                        <form onSubmit={handleLoginClick}>
-                            <p id="status">{statusMessage}</p>
-                            <p>Username <input type="text" name="username" id="username" size="3" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
-                            </p>
-                            <p>
-                                Password <input type="password" name="password" id="password" size="3" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                            </p>
-                            <button id="checkBtn" type="submit">Login</button>
-                        </form>
-                        <button id="forget" type="button" style={{ background: "none", border: "none" }} onClick={showForgotPasswordHint}>Forgot your password?</button>
+            <div className="loginbox">
+                <form onSubmit={handleLoginClick}>
+                    <p id="status">{statusMessage}</p>
+                    <p>Username <input type="text" name="username" id="username" size="3" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+                    </p>
+                    <p>
+                        Password <input type="password" name="password" id="password" size="3" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    </p>
+                    <button id="checkBtn" type="submit">Login</button>
+                </form>
+                <button id="forget" type="button" style={{ background: "none", border: "none" }} onClick={showForgotPasswordHint}>Forgot your password?</button>
 
-                    </div>
+            </div>
 
-                    <div id="hiddendiv" style={{ visibility: showForgotHint ? 'visible' : 'hidden' }}>
-                        <label>Username is:CC</label>
-                        <br></br>
-                        <label>Password is:Password123*</label>
-                    </div>
-            </LegacyPageLayout>
+            <div id="hiddendiv" style={{ visibility: showForgotHint ? 'visible' : 'hidden' }}>
+                <label>Username is:CC</label>
+                <br></br>
+                <label>Password is:Password123*</label>
+            </div>
         </>
     )
 

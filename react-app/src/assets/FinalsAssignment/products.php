@@ -45,26 +45,6 @@ foreach ($a as $name){
 
 }
 echo $hint==""? "No valid products": $hint;
-
-
-
-
-
-/*	$p=substr($name,0,$len);
-//	$c=false;
-//if (strstr($q, $p,$c))
-//	{
-//		if ($hint==""){
-//			$hint=$name;
-//		}
-//		else{
-//		$hint ="$hint,$name";
-//		}	
-//	}
-
-
-//products
-*/
 ?>
 
 
