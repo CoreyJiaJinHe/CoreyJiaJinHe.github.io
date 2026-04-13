@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { checkLegacySessionOnLoad } from '../assets/FinalsAssignment/LegacySessionContext.jsx'
-import LegacyNavbar from '../assets/FinalsAssignment/LegacyNavbar.jsx'
-import LegacyPageLayout from '../assets/FinalsAssignment/LegacyPageLayout.jsx'
+import { checkLegacySessionOnLoad } from '../assets/Workshop/LegacySessionContext.jsx'
+import LegacyNavbar from '../assets/Workshop/LegacyNavbar.jsx'
+import LegacyPageLayout from '../assets/Workshop/LegacyPageLayout.jsx'
 
 const BACKEND_BASE_URL = 'http://localhost/FinalsAssignment'
 const DEFAULT_CONTENT_STYLE = { height: '100%', minHeight: '1000px' }

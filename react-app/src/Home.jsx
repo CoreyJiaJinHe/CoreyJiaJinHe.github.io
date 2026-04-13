@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import './Home.css'
 import LeftBar from './components/LeftBar'
 import WoodWorkshopWrapper from './components/WoodWorkshopWrapper.jsx'
-import LoginPage from './assets/FinalsAssignment/LoginPage.jsx'
-import ProductPage from './assets/FinalsAssignment/productpage.jsx'
-import HomePage from './assets/FinalsAssignment/homepage.jsx'
+import LoginPage from './assets/Workshop/LoginPage.jsx'
+import ProductPage from './assets/Workshop/productpage.jsx'
+import HomePage from './assets/Workshop/homepage.jsx'
+import UIDesignExample from './assets/examples/UIDesignExample.jsx'
+import AnalyseExample from './assets/examples/AnalyseExample.jsx'
+import DatabaseExample from './assets/examples/DatabaseExample.jsx'
 
 function App() {
   const [activeProject, setActiveProject] = useState('')
@@ -13,7 +16,7 @@ function App() {
   const [isLeftBarOpen, setIsLeftBarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [showLoginPreview, setShowLoginPreview] = useState(false)
-  const [projectContent, setProjectContent] = useState('')
+  const [selectedExample, setSelectedExample] = useState('none') // 'none' | 'uidesign' | 'analyse' | 'database'
   const [previewMode, setPreviewMode] = useState('none') // 'none' | 'home' | 'login' | 'product' | 'furniture'
 
   const getProjectHeadingStyle = (projectKey) => {
@@ -75,32 +78,18 @@ function App() {
 
   function displayExamples(input) {
     setShowLoginPreview(false)
-    setProjectContent('')
+    setSelectedExample('none')
     setPreviewMode('none')
 
     if (input === 'UIDesign') {
-      setProjectContent(
-        '<iframe style="border:1px solid rgba(0,0,0,0.1);float:right;margin-left:10px" width="500" height="1000"' +
-        ' src="https://www.figma.com/embed?embed_host=share&url=https%3A%2F%2Fwww.figma.com%2Fproto%2FvHRd2rFSbrHCOWYhcU7LEv%2FQE-App%3Fnode-id%3D13-8%26starting-point-node-id%3D13%3A8%26mode%3Ddesign%26t%3DZSk7Py5u25OnznfH-1" allowfullscreen></iframe>' +
-        '<div><p>This is a high-fidelity prototype UI design for a mobile food ordering app.<br><br>Designed using Figma, this prototype simulates what the end-user would interact with and go through the process of using the app for its intended purpose, in this case ordering food.</p></div>'
-      )
+      setSelectedExample('uidesign')
     } else if (input === 'Webpage') {
       setShowLoginPreview(true)
-      setPreviewMode('login')
+      setPreviewMode('home')
     } else if (input === 'Analyse') {
-      setProjectContent(
-        '<p>Raw Dataset found here: <a href="archive.ics.uci.edu/dataset/529/early+stage+diabetes+risk+prediction+data/"> Early Stage Diabetes Risk Prediction Dataset</a><br><br>' +
-        'Full report can be read from this <a href="https://docs.google.com/document/d/1xrk8EbClqNyVbGpnO0y5ip0V2DVDw0DN/edit?usp=sharing&ouid=111487749005686481730&rtpof=true&sd=true">link</a><br><br>' +
-        'Summary: Analysis of a Dataset filled with Patient Data to create a model to detect the onset of diabetes in their early stages through a number of associated symptoms.<br><br>' +
-        'Importance: Early diagnosis of diabetic patients can allow doctors to help their patients before they enter the late-stages of diabetes which is significantly more dangerous and life threatening.</p>'
-      )
+      setSelectedExample('analyse')
     } else if (input === 'Database') {
-      setProjectContent(
-        '<div><img src="src/assets/AP ITEC 4220 Database Diagram.png" style="float:right;height:300px;"></div>' +
-        '<div><p style="margin-right:10px">The Class Diagram of the final design of a University Database using object-relational database management principles.<br><br>' +
-        'Spool File of Logical Schema Code implemented in Oracle Database down below:</p>' +
-        '<iframe src="src/assets/SpoolFile.txt" style="object-fit:contain;float:right;height:634px;width:99%"></iframe></div>'
-      )
+      setSelectedExample('database')
     }
   }
 
@@ -336,8 +325,10 @@ function App() {
                 <h1 style={{ marginLeft: "10px" }}><u>Example Work</u></h1>
 
                 <div style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
-                  {!showLoginPreview && !projectContent && <p>More examples of my work can be seen at my Github.</p>}
-                  {projectContent && <div dangerouslySetInnerHTML={{ __html: projectContent }} />}
+                  {!showLoginPreview && selectedExample === 'none' && <p>More examples of my work can be seen at my Github.</p>}
+                  {selectedExample === 'uidesign' && <UIDesignExample />}
+                  {selectedExample === 'analyse' && <AnalyseExample />}
+                  {selectedExample === 'database' && <DatabaseExample />}
                   {showLoginPreview && previewMode === 'home' && (
                     <WoodWorkshopWrapper onNavigate={setPreviewMode}>
                       <HomePage onNavigate={setPreviewMode} />
