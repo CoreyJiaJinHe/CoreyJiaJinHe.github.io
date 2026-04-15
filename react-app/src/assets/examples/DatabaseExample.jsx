@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import {
     ReactFlow,
     Background,
@@ -6,19 +6,189 @@ import {
     MiniMap,
     useNodesState,
     useEdgesState,
+    BaseEdge,
+    EdgeLabelRenderer,
+    getBezierPath,
     MarkerType,
+    Position,
+    Handle,
+    useStore
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+
+
+
+const TableNode = memo(({ data }) => {
+    return (
+        <div
+            style={{
+                width: 220,
+                border: '1px solid #333',
+                borderRadius: 6,
+                background: '#fff',
+                padding: '6px 8px',
+            }}
+        >
+            <Handle type="target" position={Position.Top} style={{ opacity: 0, pointerEvents: 'none' }} />
+            <Handle type="source" position={Position.Bottom} style={{ opacity: 0, pointerEvents: 'none' }} />
+            {data.label}
+        </div>
+    )
+})
+
+function getNodeRect(node) {
+    const measuredW = Number(node?.measured?.width)
+    const measuredH = Number(node?.measured?.height)
+    const nodeW = Number(node?.width)
+    const nodeH = Number(node?.height)
+    const styleW = Number(node?.style?.width)
+    const styleH = Number(node?.style?.height)
+
+    const width = measuredW > 0 ? measuredW : nodeW > 0 ? nodeW : styleW > 0 ? styleW : 220
+    const height = measuredH > 0 ? measuredH : nodeH > 0 ? nodeH : styleH > 0 ? styleH : 120
+
+    const x = node.positionAbsolute?.x ?? node.position.x
+    const y = node.positionAbsolute?.y ?? node.position.y
+
+    return {
+        x,
+        y,
+        width,
+        height,
+        cx: x + width / 2,
+        cy: y + height / 2,
+    }
+}
+
+function getIntersectionPoint(sourceRect, targetRect) {
+    const x1 = sourceRect.cx
+    const y1 = sourceRect.cy
+    const x2 = targetRect.cx
+    const y2 = targetRect.cy
+
+    const dx = x2 - x1
+    const dy = y2 - y1
+
+    // Protect against divide-by-zero
+    const safeDx = dx === 0 ? 0.0001 : dx
+    const safeDy = dy === 0 ? 0.0001 : dy
+
+    const halfW = sourceRect.width / 2
+    const halfH = sourceRect.height / 2
+
+    // Scale ray to hit rectangle boundary
+    const tx = halfW / Math.abs(safeDx)
+    const ty = halfH / Math.abs(safeDy)
+    const t = Math.min(tx, ty)
+
+    return {
+        x: x1 + dx * t,
+        y: y1 + dy * t,
+    }
+}
+
+function getEdgeSide(point, rect) {
+    const left = Math.abs(point.x - rect.x)
+    const right = Math.abs(point.x - (rect.x + rect.width))
+    const top = Math.abs(point.y - rect.y)
+    const bottom = Math.abs(point.y - (rect.y + rect.height))
+    const min = Math.min(left, right, top, bottom)
+
+    if (min === left) return Position.Left
+    if (min === right) return Position.Right
+    if (min === top) return Position.Top
+    return Position.Bottom
+}
+
+// 2) Floating edge
+const FloatingEdge = memo((props) => {
+    const { id, source, target, markerEnd, style, label } = props
+
+    const { sNode, tNode } = useStore((state) => ({
+        sNode: state.nodeLookup.get(source),
+        tNode: state.nodeLookup.get(target),
+    }))
+
+    if (!sNode || !tNode) return null
+
+    const sRect = getNodeRect(sNode)
+    const tRect = getNodeRect(tNode)
+
+    const sourcePoint = getIntersectionPoint(sRect, tRect)
+    const targetPoint = getIntersectionPoint(tRect, sRect)
+
+    const sourcePosition = getEdgeSide(sourcePoint, sRect)
+    const targetPosition = getEdgeSide(targetPoint, tRect)
+
+    const [edgePath, labelX, labelY] = getBezierPath({
+        sourceX: sourcePoint.x,
+        sourceY: sourcePoint.y,
+        targetX: targetPoint.x,
+        targetY: targetPoint.y,
+        sourcePosition,
+        targetPosition,
+    })
+
+    return (
+        <>
+            <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
+
+            <rect
+                x={sourcePoint.x - 4}
+                y={sourcePoint.y - 4}
+                width={8}
+                height={8}
+                fill="#1a192b"
+                stroke="#1a192b"
+            />
+
+            <rect
+                x={targetPoint.x - 4}
+                y={targetPoint.y - 4}
+                width={8}
+                height={8}
+                fill="#1a192b"
+                stroke="#1a192b"
+            />
+            {label ? (
+                <EdgeLabelRenderer>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+                            fontSize: 11,
+                            background: '#fff',
+                            border: '1px solid #ccc',
+                            padding: '2px 4px',
+                            borderRadius: 4,
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        {label}
+                    </div>
+                </EdgeLabelRenderer>
+            ) : null}
+        </>
+    )
+})
 
 
 function DatabaseExample() {
     const DEV_MODE_ENABLED = true
     const databaseDiagramSrc = new URL('../AP ITEC 4220 Database Diagram.png', import.meta.url).href
     const spoolFileSrc = new URL('../SpoolFile.txt', import.meta.url).href
+
+
+    const nodeTypes = { TableNode: TableNode }
+    const edgeTypes = { floating: FloatingEdge }
+
+
+
     const initialNodes = [
         {
-            id: 'person',
-            position: { x: 580, y: 20 },
+            id: 'Person',
+            type: 'TableNode',
+            position: { x: 521, y: -165 },
             data: {
                 label: (
                     <div>
@@ -32,48 +202,48 @@ function DatabaseExample() {
                         <div>Banking Information</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
-            id: 'student',
-            position: { x: 120, y: 150 },
+            id: 'Student',
+            type: 'TableNode',
+            position: { x: -206, y: -19 },
             data: {
                 label: (
                     <div>
                         <u><strong>Student</strong></u>
-                        <div>studentId (PK)</div>
+                        <div>Student ID (PK)</div>
                         <div>SIN (FK)</div>
                         <div>Grad Status</div>
                         <div>Faculty ID</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Program Affiliation',
-            position: { x: 300, y: 300 },
+            type: 'TableNode',
+            position: { x: -635, y: 285 },
             data: {
                 label: (
                     <div>
                         <u><strong>Program Affiliation</strong></u>
-                        <div>StudentId (FK)</div>
-                        <div>Program Id (PK)</div>
+                        <div>Student ID (FK)</div>
+                        <div>Program ID (PK)</div>
                         <div>College ID (FK)</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Degree Program',
-            position: { x: 580, y: 300 },
+            type: 'TableNode',
+            position: { x: -633, y: 573 },
             data: {
                 label: (
                     <div>
                         <u><strong>Degree Program</strong></u>
-                        <div>Program Id (PK)</div>
+                        <div>Program ID (PK)</div>
                         <div>Program Name</div>
                         <div>Degree Type</div>
                         <div>Faculty ID</div>
@@ -81,12 +251,27 @@ function DatabaseExample() {
                         <div>Degree Prerequisites</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
+            id: 'Degree Prerequisites',
+            type: 'TableNode',
+            position: { x: -198, y: 573 },
+            data: {
+                label: (
+                    <div>
+                        <u><strong>Degree Prerequisites</strong></u>
+                        <div>Program ID (FK)</div>
+                        <div>Course ID (PK)</div>
+                    </div>
+                ),
+            }
+        }
+        ,
+        {
             id: 'Active Course List',
-            position: { x: 860, y: 300 },
+            type: 'TableNode',
+            position: { x: -198, y: 262 },
             data: {
                 label: (
                     <div>
@@ -96,12 +281,12 @@ function DatabaseExample() {
                         <div>Grade</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Course',
-            position: { x: 860, y: 150 },
+            type: 'TableNode',
+            position: { x: 607, y: 457 },
             data: {
                 label: (
                     <div>
@@ -118,12 +303,12 @@ function DatabaseExample() {
                         <div>Credits</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Additional Resources',
-            position: { x: 120, y: 300 },
+            type: 'TableNode',
+            position: { x: 333, y: 827 },
             data: {
                 label: (
                     <div>
@@ -138,12 +323,12 @@ function DatabaseExample() {
                         <div>Book (ISBN, Author) (FK)</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Book',
-            position: { x: 300, y: 150 },
+            type: 'TableNode',
+            position: { x: 101, y: 860 },
             data: {
                 label: (
                     <div>
@@ -155,12 +340,12 @@ function DatabaseExample() {
                         <div>Publication Year</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Course Prerequisites',
-            position: { x: 580, y: 150 },
+            type: 'TableNode',
+            position: { x: 553, y: 906 },
             data: {
                 label: (
                     <div>
@@ -169,12 +354,12 @@ function DatabaseExample() {
                         <div>Prerequisite Course ID (PK)</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Past Course History',
-            position: { x: 300, y: 450 },
+            type: 'TableNode',
+            position: { x: 787, y: 881 },
             data: {
                 label: (
                     <div>
@@ -186,12 +371,12 @@ function DatabaseExample() {
                         <div>Term</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Section',
-            position: { x: 860, y: 450 },
+            type: 'TableNode',
+            position: { x: 1358, y: 755 },
             data: {
                 label: (
                     <div>
@@ -210,12 +395,12 @@ function DatabaseExample() {
                         <div>Enrolled Capacity</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Course Types',
-            position: { x: 120, y: 450 },
+            type: 'TableNode',
+            position: { x: 90, y: 482 },
             data: {
                 label: (
                     <div>
@@ -225,12 +410,12 @@ function DatabaseExample() {
                         <div>Course Type Description</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Room',
-            position: { x: 300, y: 450 },
+            type: 'TableNode',
+            position: { x: 1910, y: 987 },
             data: {
                 label: (
                     <div>
@@ -242,37 +427,310 @@ function DatabaseExample() {
                         <div>Resources Available</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
         {
             id: 'Dean',
-            position: { x: 580, y: 450 },
+            type: 'TableNode',
+            position: { x: 2032, y: 328 },
             data: {
                 label: (
                     <div>
                         <u><strong>Dean</strong></u>
                         <div>Dean ID (PK)</div>
-                        <div>Name</div>
                         <div>Office Location</div>
-                        <div>Phone Number</div>
-                        <div>Email</div>
+                        <div>Office Number</div>
+                        <div>Office Email</div>
                     </div>
                 ),
-            },
-            style: { width: 220, border: '1px solid #333', borderRadius: 6, background: '#fff' },
+            }
         },
+        {
+            id: 'Professor',
+            type: 'TableNode',
+            position: { x: 1361, y: 332 },
+            data: {
+                label: (
+                    <div>
+                        <u><strong>Professor</strong></u>
+                        <div>Professor ID (PK)</div>
+                        <div>Tenure</div>
+                        <div>Department ID (FK)</div>
+                    </div>
+                ),
+            }
+        },
+        {
+            id: 'Teaching Assistant',
+            type: 'TableNode',
+            position: { x: 522, y: 179 },
+            data: {
+                label: (
+                    <div>
+                        <u><strong>Teaching Assistant</strong></u>
+                        <div>TA ID (PK)</div>
+                        <div>Student ID (FK)</div>
+                        <div>Department ID (FK)</div>
+                        <div>Supervisor</div>
+                    </div>
+                ),
+            }
+        },
+        {
+            id: 'Department',
+            type: 'TableNode',
+            position: { x: 1712, y: 598 },
+            data: {
+                label: (
+                    <div>
+                        <u><strong>Department</strong></u>
+                        <div>Department ID (PK)</div>
+                        <div>Department Name</div>
+                        <div>Department Description</div>
+                        <div>Dean ID (FK)</div>
+                    </div>
+                ),
+            }
+        },
+        {
+            id: 'Faculty',
+            type: 'TableNode',
+            position: { x: 1715, y: 332 },
+            data: {
+                label: (
+                    <div>
+                        <u><strong>Faculty</strong></u>
+                        <div>Faculty ID (PK)</div>
+                        <div>Faculty Name</div>
+                        <div>Faculty Description</div>
+                    </div>
+                ),
+            }
+        },
+        {
+            id: 'Staff',
+            type: 'TableNode',
+            position: { x: 1539, y: -127 },
+            data: {
+                label: (
+                    <div>
+                        <u><strong>Staff</strong></u>
+                        <div>Staff ID (PK)</div>
+                        <div>Position</div>
+                        <div>Faculty ID (FK)</div>
+                        <div>Department ID (FK)</div>
+                    </div>
+                ),
+            }
+        }
 
     ]
 
     const initialEdges = [
         {
             id: 'student-person',
-            source: 'student',
-            target: 'person',
+            type: 'floating',
+            source: 'Student',
+            target: 'Person',
             label: 'FK: SIN',
             markerEnd: { type: MarkerType.ArrowClosed },
         },
+        {
+            id: 'program affiliation-student',
+            type: 'floating',
+            source: 'Program Affiliation',
+            target: 'Student',
+            label: 'FK: Student ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'student degree program',
+            type: 'floating',
+            source: 'Degree Program',
+            target: 'Student',
+            label: 'FK: Faculty ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'program affiliation degree program',
+            type: 'floating',
+            source: 'Program Affiliation',
+            type: 'floating',
+            target: 'Degree Program',
+            label: 'FK: Program ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'program affiliation college',
+            type: 'floating',
+            source: 'Program Affiliation',
+            target: 'Faculty',
+            label: 'FK: College ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'degree program degree program prerequisites',
+            type: 'floating',
+            source: 'Degree Program',
+            target: 'Degree Prerequisites',
+            label: 'FK: Degree Program Prerequisites',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+
+        {
+            id: 'degree program prerequisites course',
+            type: 'floating',
+            source: 'Degree Prerequisites',
+            target: 'Course',
+            label: 'FK: Course ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'active course list-student',
+            type: 'floating',
+            source: 'Active Course List',
+            target: 'Student',
+            label: 'FK: Student ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'active course list-course',
+            type: 'floating',
+            source: 'Active Course List',
+            target: 'Course',
+            label: 'FK: Course ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'course-course prerequisites',
+            type: 'floating',
+            source: 'Course',
+            target: 'Course Prerequisites',
+            label: 'FK: Course ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'course past course history',
+            type: 'floating',
+            source: 'Course',
+            target: 'Past Course History',
+            label: 'FK: Course ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'course additional resources',
+            type: 'floating',
+            source: 'Course',
+            target: 'Additional Resources',
+            label: 'FK: Program ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'additional resources book',
+            type: 'floating',
+            source: 'Additional Resources',
+            target: 'Book',
+            label: 'FK: Book (ISBN, Author)',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'section course',
+            type: 'floating',
+            source: 'Section',
+            target: 'Course',
+            label: 'FK: Course ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'section professor',
+            type: 'floating',
+            source: 'Section',
+            target: 'Professor',
+            label: 'FK: Instructor ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'section room',
+            type: 'floating',
+            source: 'Section',
+            target: 'Room',
+            label: 'FK: Room ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'course types course',
+            type: 'floating',
+            source: 'Course Types',
+            target: 'Course',
+            label: 'FK: Course Type ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'professor department',
+            type: 'floating',
+            source: 'Professor',
+            target: 'Department',
+            label: 'FK: Department ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'teaching assistant student',
+            type: 'floating',
+            source: 'Teaching Assistant',
+            target: 'Student',
+            label: 'FK: Student ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'teaching assistant professor',
+            type: 'floating',
+            source: 'Teaching Assistant',
+            target: 'Professor',
+            label: 'FK: Supervisor',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'department faculty',
+            type: 'floating',
+            source: 'Department',
+            target: 'Faculty',
+            label: 'FK: Faculty ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'staff faculty',
+            type: 'floating',
+            source: 'Staff',
+            target: 'Faculty',
+            label: 'FK: Faculty ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'dean faculty',
+            type: 'floating',
+            source: 'Dean',
+            target: 'Faculty',
+            label: 'FK: Faculty ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'staff person',
+            type: 'floating',
+            source: 'Staff',
+            target: 'Person',
+            label: 'FK: SIN',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        },
+        {
+            id: 'dean staff',
+            type: 'floating',
+            source: 'Dean',
+            target: 'Staff',
+            label: 'FK: Staff ID',
+            markerEnd: { type: MarkerType.ArrowClosed },
+        }
+
+
     ]
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
@@ -296,102 +754,108 @@ function DatabaseExample() {
             <div>
                 <p style={{ marginRight: '10px' }}>
                     The Class Diagram of the final design of a University Database using object-relational database management principles.
-                    <br /><br />
-                    <div style={{ height: '400px', width: '100%', position: 'relative', border: '1px solid #333', borderRadius: 6 }}>
-                        <ReactFlow nodes={nodes} edges={edges}
-                            onNodesChange={onNodesChange}
-                            onEdgesChange={onEdgesChange}
-                            fitView >
-                            <Background />
-                            <Controls />
-                            <MiniMap />
-                        </ReactFlow>
+                </p>
+
+                <div style={{ height: '800px', width: '100%', position: 'relative', border: '1px solid #333', borderRadius: 6 }}>
+                    <ReactFlow nodes={nodes} edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        fitView
+                        nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
+                    >
+                        <Background />
+                        <Controls />
+                        <MiniMap />
+                    </ReactFlow>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '12px',
+                            right: '12px',
+                            zIndex: 10,
+                            backgroundColor: 'white',
+                            border: '1px solid #333',
+                            borderRadius: '6px',
+                            padding: '8px 10px',
+                            minWidth: '150px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                            fontSize: '12px',
+                            lineHeight: '1.4',
+                        }}
+                    >
+                        <div style={{ fontWeight: 700, marginBottom: '6px' }}>Legend</div>
+                        <div><strong>PK</strong>: Primary Key</div>
+                        <div><strong>FK</strong>: Foreign Key</div>
+                        <div style={{ marginTop: '6px' }}>
+                            <span style={{ display: 'inline-block', width: '18px', borderTop: '2px solid #333', marginRight: '6px', verticalAlign: 'middle' }} />
+                            Relationship
+                        </div>
+                    </div>
+
+                    {DEV_MODE_ENABLED && isDevPanelVisible && (
                         <div
                             style={{
                                 position: 'absolute',
                                 top: '12px',
-                                right: '12px',
+                                left: '12px',
                                 zIndex: 10,
                                 backgroundColor: 'white',
                                 border: '1px solid #333',
                                 borderRadius: '6px',
                                 padding: '8px 10px',
-                                minWidth: '150px',
+                                width: '320px',
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                                 fontSize: '12px',
                                 lineHeight: '1.4',
                             }}
                         >
-                            <div style={{ fontWeight: 700, marginBottom: '6px' }}>Legend</div>
-                            <div><strong>PK</strong>: Primary Key</div>
-                            <div><strong>FK</strong>: Foreign Key</div>
-                            <div style={{ marginTop: '6px' }}>
-                                <span style={{ display: 'inline-block', width: '18px', borderTop: '2px solid #333', marginRight: '6px', verticalAlign: 'middle' }} />
-                                Relationship
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <button type="button" onClick={handleCaptureCoordinates}>Capture Node Coordinates</button>
+                                <button type="button" onClick={() => setIsDevPanelVisible(false)}>Hide Frame</button>
                             </div>
+                            <div style={{ marginTop: '8px', fontWeight: 700 }}>Captured (id, x, y):</div>
+                            <textarea
+                                readOnly
+                                value={capturedPositions}
+                                placeholder="Drag nodes, then click Capture Node Coordinates"
+                                style={{
+                                    marginTop: '6px',
+                                    width: '100%',
+                                    height: '140px',
+                                    minHeight: '140px',
+                                    maxHeight: '140px',
+                                    resize: 'none',
+                                    fontFamily: 'monospace',
+                                    fontSize: '11px',
+                                }}
+                            />
                         </div>
-
-                        {DEV_MODE_ENABLED && isDevPanelVisible && (
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: '12px',
-                                    left: '12px',
-                                    zIndex: 10,
-                                    backgroundColor: 'white',
-                                    border: '1px solid #333',
-                                    borderRadius: '6px',
-                                    padding: '8px 10px',
-                                    width: '320px',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                    fontSize: '12px',
-                                    lineHeight: '1.4',
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                    <button type="button" onClick={handleCaptureCoordinates}>Capture Node Coordinates</button>
-                                    <button type="button" onClick={() => setIsDevPanelVisible(false)}>Hide Frame</button>
-                                </div>
-                                <div style={{ marginTop: '8px', fontWeight: 700 }}>Captured (id, x, y):</div>
-                                <textarea
-                                    readOnly
-                                    value={capturedPositions}
-                                    placeholder="Drag nodes, then click Capture Node Coordinates"
-                                    style={{
-                                        marginTop: '6px',
-                                        width: '100%',
-                                        height: '140px',
-                                        minHeight: '140px',
-                                        maxHeight: '140px',
-                                        resize: 'none',
-                                        fontFamily: 'monospace',
-                                        fontSize: '11px',
-                                    }}
-                                />
-                            </div>
-                        )}
-
-                        {DEV_MODE_ENABLED && !isDevPanelVisible && (
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: '12px',
-                                    left: '12px',
-                                    zIndex: 10,
-                                    backgroundColor: 'white',
-                                    border: '1px solid #333',
-                                    borderRadius: '6px',
-                                    padding: '8px 10px',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                }}
-                            >
-                                <button type="button" onClick={() => setIsDevPanelVisible(true)}>Show Dev Frame</button>
-                            </div>
-                        )}
+                    )}
+                    {DEV_MODE_ENABLED && !isDevPanelVisible && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '12px',
+                            zIndex: 10,
+                            backgroundColor: 'white',
+                            border: '1px solid #333',
+                            borderRadius: '6px',
+                            padding: '8px 10px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                        }}
+                    >
+                        <button type="button" onClick={() => setIsDevPanelVisible(true)}>Show Dev Frame</button>
                     </div>
-                    Spool File of Logical Schema Code implemented in Oracle Database down below:
-                </p>
+                )}
+                </div>
+
+                
             </div>
+            <p>
+                Spool File of Logical Schema Code implemented in Oracle Database down below:
+            </p>
             <div>
                 <img src={databaseDiagramSrc} style={{ float: 'right', height: '300px' }} alt="Database diagram" />
             </div>
