@@ -14,6 +14,7 @@ import {
     useStore
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import './DatabaseExample.css'
 
 const EDGE_MARKERS = {
     NONE: 'none',
@@ -26,17 +27,9 @@ const EDGE_MARKERS = {
 
 const TableNode = memo(({ data }) => {
     return (
-        <div
-            style={{
-                width: 220,
-                border: '1px solid #333',
-                borderRadius: 6,
-                background: '#fff',
-                padding: '6px 8px',
-            }}
-        >
-            <Handle type="target" position={Position.Top} style={{ opacity: 0, pointerEvents: 'none' }} />
-            <Handle type="source" position={Position.Bottom} style={{ opacity: 0, pointerEvents: 'none' }} />
+        <div className="table-node">
+            <Handle type="target" position={Position.Top} className="table-node__handle" />
+            <Handle type="source" position={Position.Bottom} className="table-node__handle" />
             {data.label}
         </div>
     )
@@ -231,14 +224,10 @@ const RelationshipEdge = memo((props) => {
             {data?.sourceCardinality ? (
                 <EdgeLabelRenderer>
                     <div
+                        className="relationship-edge__cardinality"
                         style={{
-                            position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${sourceCardinalityPosition.x}px, ${sourceCardinalityPosition.y}px)`,
-                            fontSize: 11,
-                            background: '#fff',
-                            padding: '1px 3px',
-                            borderRadius: 3,
-                            pointerEvents: 'none',
+                            '--edge-label-x': `${sourceCardinalityPosition.x}px`,
+                            '--edge-label-y': `${sourceCardinalityPosition.y}px`,
                         }}
                     >
                         {data.sourceCardinality}
@@ -249,14 +238,10 @@ const RelationshipEdge = memo((props) => {
             {data?.targetCardinality ? (
                 <EdgeLabelRenderer>
                     <div
+                        className="relationship-edge__cardinality"
                         style={{
-                            position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${targetCardinalityPosition.x}px, ${targetCardinalityPosition.y}px)`,
-                            fontSize: 11,
-                            background: '#fff',
-                            padding: '1px 3px',
-                            borderRadius: 3,
-                            pointerEvents: 'none',
+                            '--edge-label-x': `${targetCardinalityPosition.x}px`,
+                            '--edge-label-y': `${targetCardinalityPosition.y}px`,
                         }}
                     >
                         {data.targetCardinality}
@@ -267,15 +252,10 @@ const RelationshipEdge = memo((props) => {
             {label ? (
                 <EdgeLabelRenderer>
                     <div
+                        className="relationship-edge__label"
                         style={{
-                            position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-                            fontSize: 11,
-                            background: '#fff',
-                            border: '1px solid #ccc',
-                            padding: '2px 4px',
-                            borderRadius: 4,
-                            pointerEvents: 'none',
+                            '--edge-label-x': `${labelX}px`,
+                            '--edge-label-y': `${labelY}px`,
                         }}
                     >
                         {label}
@@ -665,6 +645,8 @@ function DatabaseExample() {
             data: {
                 startMarker: EDGE_MARKERS.NONE,
                 endMarker: EDGE_MARKERS.NONE,
+                sourceCardinality: '0..n',
+                targetCardinality: '1',
             },
         },
         {
@@ -687,6 +669,8 @@ function DatabaseExample() {
             data: {
                 startMarker: EDGE_MARKERS.NONE,
                 endMarker: EDGE_MARKERS.NONE,
+                sourceCardinality: '0..n',
+                targetCardinality: '1',
             },
         },
         {
@@ -732,6 +716,8 @@ function DatabaseExample() {
             data: {
                 startMarker: EDGE_MARKERS.NONE,
                 endMarker: EDGE_MARKERS.NONE,
+                sourceCardinality: '0..n',
+                targetCardinality: '1',
             },
         },
         {
@@ -743,6 +729,8 @@ function DatabaseExample() {
             data: {
                 startMarker: EDGE_MARKERS.NONE,
                 endMarker: EDGE_MARKERS.NONE,
+                sourceCardinality: '0..n',
+                targetCardinality: '1',
             },
         },
         {
@@ -798,6 +786,8 @@ function DatabaseExample() {
             data: {
                 startMarker: EDGE_MARKERS.NONE,
                 endMarker: EDGE_MARKERS.NONE,
+                sourceCardinality: '0..n',
+                targetCardinality: '1',
             },
         },
         {
@@ -944,11 +934,11 @@ function DatabaseExample() {
 
 
             <div>
-                <p style={{ marginRight: '10px' }}>
+                <p className="database-example__intro">
                     The Class Diagram of the final design of a University Database using object-relational database management principles.
                 </p>
 
-                <div style={{ height: '800px', width: '100%', position: 'relative', border: '1px solid #333', borderRadius: 6 }}>
+                <div className="database-example__canvas">
                     <ReactFlow nodes={nodes} edges={edges}
                         onNodesChange={onNodesChange}
                         onEdgesChange={onEdgesChange}
@@ -960,84 +950,33 @@ function DatabaseExample() {
                         <Controls />
                         <MiniMap />
                     </ReactFlow>
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: '12px',
-                            right: '12px',
-                            zIndex: 10,
-                            backgroundColor: 'white',
-                            border: '1px solid #333',
-                            borderRadius: '6px',
-                            padding: '8px 10px',
-                            minWidth: '150px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                            fontSize: '12px',
-                            lineHeight: '1.4',
-                        }}
-                    >
-                        <div style={{ fontWeight: 700, marginBottom: '6px' }}>Legend</div>
+                    <div className="database-example__floating-panel database-example__legend">
+                        <div className="database-example__legend-title">Legend</div>
                         <div><strong>PK</strong>: Primary Key</div>
                         <div><strong>FK</strong>: Foreign Key</div>
-                        <div style={{ marginTop: '6px' }}>
-                            <span style={{ display: 'inline-block', width: '18px', borderTop: '2px solid #333', marginRight: '6px', verticalAlign: 'middle' }} />
+                        <div className="database-example__legend-relationship">
+                            <span className="database-example__legend-line" />
                             Relationship
                         </div>
                     </div>
 
                     {DEV_MODE_ENABLED && isDevPanelVisible && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '12px',
-                                left: '12px',
-                                zIndex: 10,
-                                backgroundColor: 'white',
-                                border: '1px solid #333',
-                                borderRadius: '6px',
-                                padding: '8px 10px',
-                                width: '320px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                fontSize: '12px',
-                                lineHeight: '1.4',
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div className="database-example__floating-panel database-example__dev-panel">
+                            <div className="database-example__dev-actions">
                                 <button type="button" onClick={handleCaptureCoordinates}>Capture Node Coordinates</button>
                                 <button type="button" onClick={() => setIsDevPanelVisible(false)}>Hide Frame</button>
                             </div>
-                            <div style={{ marginTop: '8px', fontWeight: 700 }}>Captured (id, x, y):</div>
+                            <div className="database-example__dev-title">Captured (id, x, y):</div>
                             <textarea
+                                className="database-example__textarea"
                                 readOnly
                                 value={capturedPositions}
                                 placeholder="Drag nodes, then click Capture Node Coordinates"
-                                style={{
-                                    marginTop: '6px',
-                                    width: '100%',
-                                    height: '140px',
-                                    minHeight: '140px',
-                                    maxHeight: '140px',
-                                    resize: 'none',
-                                    fontFamily: 'monospace',
-                                    fontSize: '11px',
-                                }}
                             />
                         </div>
                     )}
                     {DEV_MODE_ENABLED && !isDevPanelVisible && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '12px',
-                                left: '12px',
-                                zIndex: 10,
-                                backgroundColor: 'white',
-                                border: '1px solid #333',
-                                borderRadius: '6px',
-                                padding: '8px 10px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                            }}
-                        >
+                        <div className="database-example__floating-panel database-example__dev-toggle">
                             <button type="button" onClick={() => setIsDevPanelVisible(true)}>Show Dev Frame</button>
                         </div>
                     )}
@@ -1049,10 +988,10 @@ function DatabaseExample() {
                 Spool File of Logical Schema Code implemented in Oracle Database down below:
             </p>
             <div>
-                <img src={databaseDiagramSrc} style={{ float: 'right', height: '300px' }} alt="Database diagram" />
+                <img src={databaseDiagramSrc} className="database-example__diagram-image" alt="Database diagram" />
             </div>
             <div>
-                <iframe src={spoolFileSrc} style={{ objectFit: 'contain', float: 'right', height: '634px', width: '99%' }} title="Spool file" />
+                <iframe src={spoolFileSrc} className="database-example__spool-frame" title="Spool file" />
             </div>
         </>
     )

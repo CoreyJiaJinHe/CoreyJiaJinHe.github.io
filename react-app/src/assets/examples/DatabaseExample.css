@@ -1,0 +1,132 @@
+.table-node {
+    width: 220px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #fff;
+    padding: 6px 8px;
+}
+
+.table-node__handle {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.relationship-edge__cardinality,
+.relationship-edge__label {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, -50%) translate(var(--edge-label-x), var(--edge-label-y));
+}
+
+.relationship-edge__cardinality {
+    font-size: 11px;
+    background: #fff;
+    padding: 1px 3px;
+    border-radius: 3px;
+}
+
+.relationship-edge__label {
+    font-size: 11px;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.database-example__intro {
+    margin-right: 10px;
+}
+
+.database-example__canvas {
+    height: 800px;
+    width: 100%;
+    position: relative;
+    border: 1px solid #333;
+    border-radius: 6px;
+}
+
+.database-example__floating-panel {
+    position: absolute;
+    z-index: 10;
+    background-color: #fff;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 8px 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.database-example__legend {
+    top: 12px;
+    right: 12px;
+    min-width: 150px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.database-example__legend-title,
+.database-example__dev-title {
+    font-weight: 700;
+}
+
+.database-example__legend-title {
+    margin-bottom: 6px;
+}
+
+.database-example__legend-relationship {
+    margin-top: 6px;
+}
+
+.database-example__legend-line {
+    display: inline-block;
+    width: 18px;
+    border-top: 2px solid #333;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.database-example__dev-panel {
+    top: 12px;
+    left: 12px;
+    width: 320px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.database-example__dev-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.database-example__dev-title {
+    margin-top: 8px;
+}
+
+.database-example__textarea {
+    margin-top: 6px;
+    width: 100%;
+    height: 140px;
+    min-height: 140px;
+    max-height: 140px;
+    resize: none;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.database-example__dev-toggle {
+    top: 12px;
+    left: 12px;
+}
+
+.database-example__diagram-image {
+    float: right;
+    height: 300px;
+}
+
+.database-example__spool-frame {
+    object-fit: contain;
+    float: right;
+    height: 634px;
+    width: 99%;
+}
