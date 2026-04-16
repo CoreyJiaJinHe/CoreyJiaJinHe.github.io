@@ -9,13 +9,19 @@ import {
     BaseEdge,
     EdgeLabelRenderer,
     getBezierPath,
-    MarkerType,
     Position,
     Handle,
     useStore
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
+const EDGE_MARKERS = {
+    NONE: 'none',
+    DIAMOND_FILLED: 'diamond-filled',
+    DIAMOND_HOLLOW: 'diamond-hollow',
+    ARROW_FILLED: 'arrow-filled',
+    TRIANGLE_HOLLOW: 'triangle-hollow',
+}
 
 
 const TableNode = memo(({ data }) => {
@@ -100,9 +106,78 @@ function getEdgeSide(point, rect) {
     return Position.Bottom
 }
 
-// 2) Floating edge
-const FloatingEdge = memo((props) => {
-    const { id, source, target, markerEnd, style, label } = props
+function rotatePoint(x, y, cx, cy, angle) {
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
+
+    const dx = x - cx
+    const dy = y - cy
+
+    return {
+        x: cx + dx * cos - dy * sin,
+        y: cy + dx * sin + dy * cos,
+    }
+}
+function getCardinalityPosition(point, otherPoint) {
+    const dx = otherPoint.x - point.x
+    const dy = otherPoint.y - point.y
+    const length = Math.hypot(dx, dy) || 1
+
+    const ux = dx / length
+    const uy = dy / length
+
+    const px = -uy
+    const py = ux
+
+    const alongOffset = 18
+    const perpendicularOffset = 12
+
+    return {
+        x: point.x + ux * alongOffset + px * perpendicularOffset,
+        y: point.y + uy * alongOffset + py * perpendicularOffset,
+    }
+}
+
+function renderRelationshipMarker(kind, point, angle, size = 10) {
+    if (!kind || kind === EDGE_MARKERS.NONE) {
+        return null
+    }
+
+    if (kind === EDGE_MARKERS.DIAMOND_FILLED || kind === EDGE_MARKERS.DIAMOND_HOLLOW) {
+        const p1 = rotatePoint(point.x - size, point.y, point.x, point.y, angle)
+        const p2 = rotatePoint(point.x, point.y - size, point.x, point.y, angle)
+        const p3 = rotatePoint(point.x + size, point.y, point.x, point.y, angle)
+        const p4 = rotatePoint(point.x, point.y + size, point.x, point.y, angle)
+
+        return (
+            <polygon
+                points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                fill={kind === EDGE_MARKERS.DIAMOND_FILLED ? '#1a192b' : '#fff'}
+                stroke="#1a192b"
+                strokeWidth={1.5}
+            />
+        )
+    }
+
+    if (kind === EDGE_MARKERS.ARROW_FILLED || kind === EDGE_MARKERS.TRIANGLE_HOLLOW) {
+        const tip = point
+        const backTop = rotatePoint(point.x - size, point.y - size / 2, point.x, point.y, angle)
+        const backBottom = rotatePoint(point.x - size, point.y + size / 2, point.x, point.y, angle)
+
+        return (
+            <polygon
+                points={`${tip.x},${tip.y} ${backTop.x},${backTop.y} ${backBottom.x},${backBottom.y}`}
+                fill={kind === EDGE_MARKERS.ARROW_FILLED ? '#1a192b' : '#fff'}
+                stroke="#1a192b"
+                strokeWidth={1.5}
+            />
+        )
+    }
+
+    return null
+}
+const RelationshipEdge = memo((props) => {
+    const { id, source, target, style, label, data } = props
 
     const { sNode, tNode } = useStore((state) => ({
         sNode: state.nodeLookup.get(source),
@@ -129,27 +204,66 @@ const FloatingEdge = memo((props) => {
         targetPosition,
     })
 
+    const angle = Math.atan2(targetPoint.y - sourcePoint.y, targetPoint.x - sourcePoint.x)
+
+    const sourceMarker = renderRelationshipMarker(
+        data?.startMarker,
+        sourcePoint,
+        angle + Math.PI
+    )
+
+    const targetMarker = renderRelationshipMarker(
+        data?.endMarker,
+        targetPoint,
+        angle
+    )
+
+    const sourceCardinalityPosition = getCardinalityPosition(sourcePoint, targetPoint)
+    const targetCardinalityPosition = getCardinalityPosition(targetPoint, sourcePoint)
+
     return (
         <>
-            <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
+            <BaseEdge id={id} path={edgePath} style={style} />
 
-            <rect
-                x={sourcePoint.x - 4}
-                y={sourcePoint.y - 4}
-                width={8}
-                height={8}
-                fill="#1a192b"
-                stroke="#1a192b"
-            />
+            {sourceMarker}
+            {targetMarker}
 
-            <rect
-                x={targetPoint.x - 4}
-                y={targetPoint.y - 4}
-                width={8}
-                height={8}
-                fill="#1a192b"
-                stroke="#1a192b"
-            />
+            {data?.sourceCardinality ? (
+                <EdgeLabelRenderer>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            transform: `translate(-50%, -50%) translate(${sourceCardinalityPosition.x}px, ${sourceCardinalityPosition.y}px)`,
+                            fontSize: 11,
+                            background: '#fff',
+                            padding: '1px 3px',
+                            borderRadius: 3,
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        {data.sourceCardinality}
+                    </div>
+                </EdgeLabelRenderer>
+            ) : null}
+
+            {data?.targetCardinality ? (
+                <EdgeLabelRenderer>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            transform: `translate(-50%, -50%) translate(${targetCardinalityPosition.x}px, ${targetCardinalityPosition.y}px)`,
+                            fontSize: 11,
+                            background: '#fff',
+                            padding: '1px 3px',
+                            borderRadius: 3,
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        {data.targetCardinality}
+                    </div>
+                </EdgeLabelRenderer>
+            ) : null}
+
             {label ? (
                 <EdgeLabelRenderer>
                     <div
@@ -180,7 +294,9 @@ function DatabaseExample() {
 
 
     const nodeTypes = { TableNode: TableNode }
-    const edgeTypes = { floating: FloatingEdge }
+    const edgeTypes = {
+        relationship: RelationshipEdge,
+    }
 
 
 
@@ -529,205 +645,281 @@ function DatabaseExample() {
     const initialEdges = [
         {
             id: 'student-person',
-            type: 'floating',
+            type: 'relationship',
             source: 'Student',
             target: 'Person',
             label: 'FK: SIN',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.TRIANGLE_HOLLOW,
+                sourceCardinality: '1',
+                targetCardinality: '1',
+            },
         },
         {
             id: 'program affiliation-student',
-            type: 'floating',
+            type: 'relationship',
             source: 'Program Affiliation',
             target: 'Student',
             label: 'FK: Student ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'student degree program',
-            type: 'floating',
+            type: 'relationship',
             source: 'Degree Program',
             target: 'Student',
             label: 'FK: Faculty ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'program affiliation degree program',
-            type: 'floating',
+            type: 'relationship',
             source: 'Program Affiliation',
-            type: 'floating',
             target: 'Degree Program',
             label: 'FK: Program ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'program affiliation college',
-            type: 'floating',
+            type: 'relationship',
             source: 'Program Affiliation',
             target: 'Faculty',
             label: 'FK: College ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'degree program degree program prerequisites',
-            type: 'floating',
+            type: 'relationship',
             source: 'Degree Program',
             target: 'Degree Prerequisites',
             label: 'FK: Degree Program Prerequisites',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
 
         {
             id: 'degree program prerequisites course',
-            type: 'floating',
+            type: 'relationship',
             source: 'Degree Prerequisites',
             target: 'Course',
             label: 'FK: Course ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'active course list-student',
-            type: 'floating',
+            type: 'relationship',
             source: 'Active Course List',
             target: 'Student',
             label: 'FK: Student ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'active course list-course',
-            type: 'floating',
+            type: 'relationship',
             source: 'Active Course List',
             target: 'Course',
             label: 'FK: Course ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'course-course prerequisites',
-            type: 'floating',
+            type: 'relationship',
             source: 'Course',
             target: 'Course Prerequisites',
             label: 'FK: Course ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'course past course history',
-            type: 'floating',
+            type: 'relationship',
             source: 'Course',
             target: 'Past Course History',
             label: 'FK: Course ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'course additional resources',
-            type: 'floating',
+            type: 'relationship',
             source: 'Course',
             target: 'Additional Resources',
             label: 'FK: Program ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'additional resources book',
-            type: 'floating',
+            type: 'relationship',
             source: 'Additional Resources',
             target: 'Book',
             label: 'FK: Book (ISBN, Author)',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'section course',
-            type: 'floating',
+            type: 'relationship',
             source: 'Section',
             target: 'Course',
             label: 'FK: Course ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'section professor',
-            type: 'floating',
+            type: 'relationship',
             source: 'Section',
             target: 'Professor',
             label: 'FK: Instructor ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'section room',
-            type: 'floating',
+            type: 'relationship',
             source: 'Section',
             target: 'Room',
             label: 'FK: Room ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'course types course',
-            type: 'floating',
+            type: 'relationship',
             source: 'Course Types',
             target: 'Course',
             label: 'FK: Course Type ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'professor department',
-            type: 'floating',
+            type: 'relationship',
             source: 'Professor',
             target: 'Department',
             label: 'FK: Department ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'teaching assistant student',
-            type: 'floating',
+            type: 'relationship',
             source: 'Teaching Assistant',
             target: 'Student',
             label: 'FK: Student ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'teaching assistant professor',
-            type: 'floating',
+            type: 'relationship',
             source: 'Teaching Assistant',
             target: 'Professor',
             label: 'FK: Supervisor',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'department faculty',
-            type: 'floating',
+            type: 'relationship',
             source: 'Department',
             target: 'Faculty',
             label: 'FK: Faculty ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'staff faculty',
-            type: 'floating',
+            type: 'relationship',
             source: 'Staff',
             target: 'Faculty',
             label: 'FK: Faculty ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'dean faculty',
-            type: 'floating',
+            type: 'relationship',
             source: 'Dean',
             target: 'Faculty',
             label: 'FK: Faculty ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'staff person',
-            type: 'floating',
+            type: 'relationship',
             source: 'Staff',
             target: 'Person',
             label: 'FK: SIN',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         },
         {
             id: 'dean staff',
-            type: 'floating',
+            type: 'relationship',
             source: 'Dean',
             target: 'Staff',
             label: 'FK: Staff ID',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            data: {
+                startMarker: EDGE_MARKERS.NONE,
+                endMarker: EDGE_MARKERS.NONE,
+            },
         }
 
 
@@ -833,25 +1025,25 @@ function DatabaseExample() {
                         </div>
                     )}
                     {DEV_MODE_ENABLED && !isDevPanelVisible && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: '12px',
-                            left: '12px',
-                            zIndex: 10,
-                            backgroundColor: 'white',
-                            border: '1px solid #333',
-                            borderRadius: '6px',
-                            padding: '8px 10px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                        }}
-                    >
-                        <button type="button" onClick={() => setIsDevPanelVisible(true)}>Show Dev Frame</button>
-                    </div>
-                )}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '12px',
+                                left: '12px',
+                                zIndex: 10,
+                                backgroundColor: 'white',
+                                border: '1px solid #333',
+                                borderRadius: '6px',
+                                padding: '8px 10px',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                            }}
+                        >
+                            <button type="button" onClick={() => setIsDevPanelVisible(true)}>Show Dev Frame</button>
+                        </div>
+                    )}
                 </div>
 
-                
+
             </div>
             <p>
                 Spool File of Logical Schema Code implemented in Oracle Database down below:
