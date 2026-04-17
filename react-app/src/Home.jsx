@@ -9,6 +9,8 @@ import UIDesignExample from './assets/examples/UIDesignExample.jsx'
 import AnalyseExample from './assets/examples/AnalyseExample.jsx'
 import DatabaseExample from './assets/examples/DatabaseExample.jsx'
 
+import FrameGame1 from './Frame-Game-1.jsx'
+
 function App() {
   const [activeProject, setActiveProject] = useState('')
   const [hoveredProject, setHoveredProject] = useState('')
@@ -18,6 +20,7 @@ function App() {
   const [showLoginPreview, setShowLoginPreview] = useState(false)
   const [selectedExample, setSelectedExample] = useState('none') // 'none' | 'uidesign' | 'analyse' | 'database'
   const [previewMode, setPreviewMode] = useState('none') // 'none' | 'home' | 'login' | 'product' | 'furniture'
+  const [isFrameOpen, setIsFrameOpen] = useState(false)
 
   const getProjectHeadingStyle = (projectKey) => {
     const isHovered = hoveredProject === projectKey
@@ -95,8 +98,33 @@ function App() {
 
   return (
     <>
-      <div className={`Home-Page-Background ${nightMode ? 'Home-Page-Background--night' : 'Home-Page-Background--day'} ${isMobile ? 'Home-Page--mobile' : ''}`}>
-          <LeftBar isLeftBarOpen={isLeftBarOpen} setIsLeftBarOpen={setIsLeftBarOpen} nightMode={nightMode} setNightMode={setNightMode} />
+      <div className={`Home-Page-Background ${nightMode ? 'Home-Page-Background-Night' : 'Home-Page-Background-Day'} ${isMobile ? 'Home-Page-Mobile' : ''}`}>
+          <LeftBar
+            isLeftBarOpen={isLeftBarOpen}
+            setIsLeftBarOpen={setIsLeftBarOpen}
+            nightMode={nightMode}
+            setNightMode={setNightMode}
+            isFrameOpen={isFrameOpen}
+            setIsFrameOpen={setIsFrameOpen}
+          />
+
+          {isFrameOpen ? (
+            <div className="Home-Page-Frame-Overlay" role="dialog" aria-modal="true" aria-label="Popup frame">
+              <div className={`Home-Page-Frame ${nightMode ? 'night-mode' : 'day-mode'}`}>
+                <button
+                  type="button"
+                  className="Home-Page-Frame-Close-Button"
+                  aria-label="Close popup frame"
+                  onClick={() => setIsFrameOpen(false)}
+                >
+                  ×
+                </button>
+                <h2>Popup Frame</h2>
+                <FrameGame1 />
+              </div>
+            </div>
+          ) : null}
+
           <div className="Home-Page-Contact-Header">
             <div className="Home-Page-Primary-Contact-Left">
               <h1>Preferred Contact: Email</h1>
@@ -112,11 +140,11 @@ function App() {
               <div className="Home-Page-Portrait-Image">
                 <img src="person.jpg" alt="Default Avatar" className="Home-Page-Portrait-Image-Img" />
               </div>
-              <article id="Home-Page-Personal-Details" className="Home-Page-Article Home-Page-Article--personal-details">
-                <div className ="layout-generic-panel">
+              <article id="Home-Page-Personal-Details" className="Home-Page-Article Home-Page-Article-Personal-Details">
+                <div className="Layout-Generic-Panel">
                   <h1>Corey He</h1>
                 </div>
-                <div className ="layout-generic-panel layout-generic-panel--two">
+                <div className="Layout-Generic-Panel Layout-Generic-Panel-Two">
                   <h2>Address: </h2>
                   <address>
                     <ul style={{
@@ -131,13 +159,13 @@ function App() {
                 </div>
               </article>
 
-              <article id="Home-Page-Education" className="Home-Page-Article Home-Page-Article--education">
+              <article id="Home-Page-Education" className="Home-Page-Article Home-Page-Article-Education">
                   <h2 style={{ marginTop: "4px", marginBottom: "1px" }}>Education</h2>
                   <h4 style={{ marginTop: "1px", marginBottom: "1px" }}>Information Technology, BA (Hons)</h4>
                   <p style={{ marginTop: "10px", overflow: "hidden" }}>York University, Toronto</p>
               </article>
 
-              <article id="Home-Page-Personal-Life" className="Home-Page-Article Home-Page-Article--personal-life">
+              <article id="Home-Page-Personal-Life" className="Home-Page-Article Home-Page-Article-Personal-Life">
                 <h2>About Me</h2>
                 <p style={{ whiteSpace: "normal" }}>Detail-oriented IT graduate with hands-on experience building full-stack
                   web applications and desktop software using Python, FastAPI, React, and MongoDB.
@@ -146,10 +174,10 @@ function App() {
                   Seeking an entry-level IT or software development role to contribute technical and analytical skills.</p>
               </article>
 
-              <article id="Home-Page-Skills" className="Home-Page-Article Home-Page-Article--skills">
+              <article id="Home-Page-Skills" className="Home-Page-Article Home-Page-Article-Skills">
                 <h2 style={{ paddingBottom: "0px", marginBottom: "0px" }}>Skills</h2>
-                <div className="layout-row-skills">
-                  <div className="layout-column-skills">
+                <div className="Layout-Row-Skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>Leadership</li>
                       <li>Communication</li>
@@ -157,7 +185,7 @@ function App() {
                       <li>Multitasking</li>
                     </ul>
                   </div>
-                  <div className="layout-column-skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>Problem Solving</li>
                       <li>Critical Thinking</li>
@@ -165,7 +193,7 @@ function App() {
                       <li>Quick Learner</li>
                     </ul>
                   </div>
-                  <div className="layout-column-skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>SDLC Knowledge</li>
                       <li>Technical Requirements</li>
@@ -173,7 +201,7 @@ function App() {
                       <li>UI and Graphics Requirements</li>
                     </ul>
                   </div>
-                  <div className="layout-column-skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>Systems Design</li>
                       <li>System Architecture</li>
@@ -181,7 +209,7 @@ function App() {
                       <li>Software Testing</li>
                     </ul>
                   </div>
-                  <div className="layout-column-skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>Software Development</li>
                       <li>Web Development</li>
@@ -189,7 +217,7 @@ function App() {
                       <li>API Development</li>
                     </ul>
                   </div>
-                  <div className="layout-column-skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>Version Control</li>
                       <li>Git</li>
@@ -197,7 +225,7 @@ function App() {
                       <li>CI/CD</li>
                     </ul>
                   </div>
-                  <div className="layout-column-skills">
+                  <div className="Layout-Column-Skills">
                     <ul>
                       <li>AI Prompt Engineering</li>
                       <li>AI Code Generation</li>
@@ -207,13 +235,13 @@ function App() {
               </article>
 
 
-              <article id="Home-Page-Expertise" className="Home-Page-Article Home-Page-Article--panel">
+              <article id="Home-Page-Expertise" className="Home-Page-Article Home-Page-Article-Panel">
                 <div className="Header">
                   <h1>Expertise</h1>
                 </div>
                 <h2>Programmer</h2>
-                <div className="layout-row-expertise">
-                  <div className="layout-section">
+                <div className="Layout-Row-Expertise">
+                  <div className="Layout-Section">
                     <p style={{ marginLeft: "10px" }}>Languages:</p>
                     <ul>
                       <li>Java</li>
@@ -224,7 +252,7 @@ function App() {
                       <li>XML</li>
                     </ul>
                   </div>
-                  <div className="layout-section">
+                  <div className="Layout-Section">
                     <p style={{ marginLeft: "10px" }}>Web Technologies:</p>
                     <ul>
                       <li>HTML</li>
@@ -236,7 +264,7 @@ function App() {
                       <li>VITE</li>
                     </ul>
                   </div>
-                  <div className="layout-section">
+                  <div className="Layout-Section">
                     <p style={{ marginLeft: "10px" }}>Frameworks and Libraries:</p>
                     <ul>
                       <li>React</li>
@@ -248,7 +276,7 @@ function App() {
                       <li>Matplotlib</li>
                     </ul>
                   </div>
-                  <div className="layout-section" >
+                  <div className="Layout-Section" >
                     <p style={{ marginLeft: "10px" }}>Databases:</p>
                     <ul>
                       <li>MongoDB</li>
@@ -257,13 +285,13 @@ function App() {
                   </div>
                 </div>
               </article>
-              <article id="Home-Page-School-Projects" className="Home-Page-Article Home-Page-Article--panel">
+              <article id="Home-Page-School-Projects" className="Home-Page-Article Home-Page-Article-Panel">
                 <div>
                   <h1>School Projects</h1>
                   <p>Click the headings to open the project details.</p>
-                  <div className="layout-row-projects">
+                  <div className="Layout-Row-Projects">
 
-                    <div className="layout-column-project">
+                    <div className="Layout-Column-Project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -276,7 +304,7 @@ function App() {
                         Data Analyst: Diabetes Risk Prediction
                       </h2>
                     </div>
-                    <div className="layout-column-project">
+                    <div className="Layout-Column-Project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -289,7 +317,7 @@ function App() {
                         UI Designer: Mobile App Design
                       </h2>
                     </div>
-                    <div className="layout-column-project">
+                    <div className="Layout-Column-Project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -302,7 +330,7 @@ function App() {
                         Web Developer: Beginner Commerce Webpage
                       </h2>
                     </div>
-                    <div className="layout-column-project">
+                    <div className="Layout-Column-Project">
                       <h2
                         role="button"
                         tabIndex={0}
@@ -318,10 +346,10 @@ function App() {
                   </div>
                 </div>
               </article>
-              <article id="Home-Page-Personal-Projects" className="Home-Page-Article Home-Page-Article--panel">
+              <article id="Home-Page-Personal-Projects" className="Home-Page-Article Home-Page-Article-Panel">
                 <h1>Personal Projects</h1>
               </article>
-              <article id="Home-Page-Example-Work" className="Home-Page-Article Home-Page-Article--example-work">
+              <article id="Home-Page-Example-Work" className="Home-Page-Article Home-Page-Article-Example-Work">
                 <h1 style={{ marginLeft: "10px" }}><u>Example Work</u></h1>
 
                 <div style={{ paddingLeft: "10px", paddingRight: "10px", overflow: "hidden" }}>
@@ -362,7 +390,7 @@ function App() {
                 </div>
               </article>
 
-                <article id="Home-Page-Afterword" className="Home-Page-Article Home-Page-Article--afterword">
+                <article id="Home-Page-Afterword" className="Home-Page-Article Home-Page-Article-Afterword">
                 <h2>Afterword</h2>
                 <p>
                   Thank you for taking the time to review my portfolio.

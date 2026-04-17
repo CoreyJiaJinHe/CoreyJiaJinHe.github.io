@@ -7,11 +7,11 @@
 	white-space: nowrap;
 }
 
-.Home-Page-Background--day {
+.Home-Page-Background-Day {
 	background-color: lightgrey;
 }
 
-.Home-Page-Background--night {
+.Home-Page-Background-Night {
 	background-color: #111827;
 }
 
@@ -69,7 +69,7 @@
 	padding-right: 10px;
 }
 
-.Home-Page-Article--personal-details {
+.Home-Page-Article-Personal-Details {
 	background-color: transparent;
 	border: none;
 	display: flow-root;
@@ -81,7 +81,7 @@
 	text-align: center;
 }
 
-.Home-Page-Article--education {
+.Home-Page-Article-Education {
 	clear: both;
 	height: 100px;
 	margin-top: 0;
@@ -92,33 +92,82 @@
 	width: auto;
 }
 
-.Home-Page-Article--personal-life {
+.Home-Page-Article-Personal-Life {
 	margin-top: 10px;
 	width: 50%;
 }
 
-.Home-Page-Article--skills {
+.Home-Page-Article-Skills {
 	max-height: 200px;
 }
 
-.Home-Page-Article--panel {
+.Home-Page-Frame-Overlay {
+	position: fixed;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2000;
+	padding: 24px;
+	box-sizing: border-box;
+}
+
+.Home-Page-Frame {
+	position: relative;
+	width: min(90vw, 1000px);
+	height: min(82vh, 720px);
+	border-radius: 14px;
+	padding: 28px 24px;
+	overflow: auto;
+	box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+	border: 1px solid #9ca3af;
+}
+
+.Home-Page-Frame.day-mode {
+	background-color: #f9fafb;
+	color: #111827;
+}
+
+.Home-Page-Frame.night-mode {
+	background-color: #111827;
+	color: #f3f4f6;
+	border-color: #374151;
+}
+
+.Home-Page-Frame-Close-Button {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	width: 34px;
+	height: 34px;
+	border-radius: 999px;
+	border: 1px solid #6b7280;
+	background-color: #ffffff;
+	color: #111827;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.Home-Page-Article-Panel {
 	max-height: 350px;
 }
 
-.Home-Page-Article--afterword {
+.Home-Page-Article-Afterword {
 	max-height: none;
 	overflow: visible;
 	white-space: normal;
 }
 
-.Home-Page-Article--example-work {
+.Home-Page-Article-Example-Work {
 	height: 1100px;
 	white-space: normal;
 }
 
 /* Shared panels */
 
-.layout-generic-panel {
+.Layout-Generic-Panel {
 	background-color: white;
 	border-style: solid;
 	border-width: 1px;
@@ -128,7 +177,7 @@
 	width: 25%;
 }
 
-.layout-generic-panel--two {
+.Layout-Generic-Panel-Two {
 	float: left;
 	height: auto;
 	min-height: 100px;
@@ -137,18 +186,18 @@
 
 /* Generic layout */
 
-.layout-row-skills {
+.Layout-Row-Skills {
 	display: flex;
 	flex-wrap: wrap;
 	overflow: hidden;
 }
 
-.layout-row-expertise {
+.Layout-Row-Expertise {
 	display: flex;
 	flex-wrap: wrap;
 }
 
-.layout-row-projects {
+.Layout-Row-Projects {
 	align-items: stretch;
 	display: flex;
 	flex-wrap: wrap;
@@ -156,13 +205,13 @@
 	justify-content: space-evenly;
 }
 
-.layout-column-skills {
+.Layout-Column-Skills {
 	box-sizing: border-box;
 	flex: 1 1 200px;
 	min-width: 180px;
 }
 
-.layout-column-project {
+.Layout-Column-Project {
 	box-sizing: border-box;
 	flex: 1 1 220px;
 	max-width: 260px;
@@ -170,25 +219,25 @@
 	text-align: center;
 }
 
-.layout-section {
+.Layout-Section {
 	float: left;
 	min-width: 150px;
 }
 
 /* Night mode overrides */
 
-.Home-Page-Background--night .Home-Page-Article {
+.Home-Page-Background-Night .Home-Page-Article {
 	background-color: #1f2937;
 	border-color: #4b5563;
 	color: #f3f4f6;
 }
 
-.Home-Page-Background--night .Home-Page-Article--personal-details {
+.Home-Page-Background-Night .Home-Page-Article-Personal-Details {
 	background-color: transparent;
 	border-color: transparent;
 }
 
-.Home-Page-Background--night .layout-generic-panel {
+.Home-Page-Background-Night .Layout-Generic-Panel {
 	background-color: #1f2937;
 	border-color: #4b5563;
 	color: #f3f4f6;
@@ -196,11 +245,11 @@
 
 /* Mobile overrides */
 
-.Home-Page--mobile {
+.Home-Page-Mobile {
 	white-space: normal;
 }
 
-.Home-Page--mobile .Home-Page-Contact-Header {
+.Home-Page-Mobile .Home-Page-Contact-Header {
 	align-items: center;
 	display: flex;
 	flex-direction: column;
@@ -211,26 +260,26 @@
 }
 
 
-.Home-Page--mobile .Home-Page-Main-Container {
+.Home-Page-Mobile .Home-Page-Main-Container {
 	margin-left: 5%;
 	margin-right: 5%;
 }
 
-.Home-Page--mobile .Home-Page-Portrait-Image {
+.Home-Page-Mobile .Home-Page-Portrait-Image {
 	margin-top: 0;
 	margin-right: 0;
 	min-width: 120px;
 	width: 38%;
 }
 
-.Home-Page--mobile .layout-generic-panel {
+.Home-Page-Mobile .Layout-Generic-Panel {
 	box-sizing: border-box;
 	max-width: 180px;
 	min-width: 140px;
 	width: 42%;
 }
 
-.Home-Page--mobile .Home-Page-Article:not(.Home-Page-Article--personal-details) {
+.Home-Page-Mobile .Home-Page-Article:not(.Home-Page-Article-Personal-Details) {
 	box-sizing: border-box;
 	margin-left: auto;
 	margin-right: auto;
@@ -240,13 +289,13 @@
 }
 
 
-.Home-Page--mobile .Home-Page-Article--panel,
-.Home-Page--mobile .Home-Page-Article--skills {
+.Home-Page-Mobile .Home-Page-Article-Panel,
+.Home-Page-Mobile .Home-Page-Article-Skills {
 	max-height: none;
 	padding-bottom: 12px;
 }
 
-.Home-Page--mobile :is(.layout-row-skills, .layout-row-expertise, .layout-row-projects) {
+.Home-Page-Mobile :is(.Layout-Row-Skills, .Layout-Row-Expertise, .Layout-Row-Projects) {
 	display: grid;
 	grid-auto-flow: column;
 	justify-content: start;
@@ -256,12 +305,12 @@
 	scroll-snap-type: x proximity;
 }
 
-.Home-Page--mobile .layout-row-skills {
+.Home-Page-Mobile .Layout-Row-Skills {
 	gap: 12px;
 	grid-auto-columns: minmax(180px, 78%);
 }
 
-.Home-Page--mobile :is(.layout-row-expertise, .layout-row-projects) {
+.Home-Page-Mobile :is(.Layout-Row-Expertise, .Layout-Row-Projects) {
 	gap: 12px;
 	grid-auto-columns: minmax(220px, 82%);
 }

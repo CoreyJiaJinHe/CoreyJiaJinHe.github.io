@@ -4,7 +4,9 @@
     left: 0;
     width: 150px;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
     padding: 16px;
     border: 1px solid #9ca3af;
     border-left: none;
@@ -56,6 +58,28 @@
     color: #1f2937;
 }
 
-.Left-Bar .component-toggle-container {
+.Left-Bar .Component-Toggle-Container {
     margin-bottom: 0;
+}
+
+.Left-Bar-Frame-Button {
+    margin-left: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #6b7280;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.Left-Bar-Frame-Button.day-mode {
+    background-color: #ffffff;
+    color: #1f2937;
+}
+
+.Left-Bar-Frame-Button.night-mode {
+    background-color: #0f172a;
+    color: #f9fafb;
+    border-color: #4b5563;
 }

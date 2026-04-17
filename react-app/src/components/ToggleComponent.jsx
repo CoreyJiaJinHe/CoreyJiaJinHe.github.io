@@ -6,10 +6,10 @@ function ToggleableSwitchComponent({attachFunction, booleanForFunction, label}){
 
 return (
 <>
-<div className="component-toggle-container">
-<label className="component-toggle">
-    <span className="component-toggle-text">{label}</span>
-    <span className="component-toggle-switch">
+<div className="Component-Toggle-Container">
+<label className="Component-Toggle">
+    <span className="Component-Toggle-Text">{label}</span>
+    <span className="Component-Toggle-Switch">
         <input
             type="checkbox"
             role="switch"
@@ -17,7 +17,7 @@ return (
             checked={booleanForFunction}
             onChange={(e) => attachFunction(e.target.checked)}
         />
-        <span className="component-toggle-slider" aria-hidden="true" />
+        <span className="Component-Toggle-Slider" aria-hidden="true" />
     </span>
 </label>
 </div>

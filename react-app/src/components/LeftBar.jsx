@@ -1,7 +1,14 @@
 import './LeftBar.css'
 import ToggleableSwitchComponent from './ToggleComponent'
 
-function LeftBar({isLeftBarOpen, setIsLeftBarOpen, nightMode, setNightMode}) {
+function LeftBar({
+    isLeftBarOpen,
+    setIsLeftBarOpen,
+    nightMode,
+    setNightMode,
+    isFrameOpen,
+    setIsFrameOpen,
+}) {
     return (
         <>
             <div className={`Left-Bar ${isLeftBarOpen ? 'open' : ''} ${nightMode ? 'night-mode' : 'day-mode'}`}>
@@ -14,6 +21,16 @@ function LeftBar({isLeftBarOpen, setIsLeftBarOpen, nightMode, setNightMode}) {
                 </button>
                 <div className="Component-Night-Mode-Toggle">
                     <ToggleableSwitchComponent attachFunction={setNightMode} booleanForFunction={nightMode} label="Night Mode" />
+                </div>
+                <div>
+                <button
+                    className={`Left-Bar-Frame-Button ${nightMode ? 'night-mode' : 'day-mode'}`}
+                    type="button"
+                    aria-label={isFrameOpen ? 'Close frame overlay' : 'Open frame overlay'}
+                    onClick={() => setIsFrameOpen((current) => !current)}
+                >
+                    {isFrameOpen ? 'Hide Frame' : 'Show Frame'}
+                </button>
                 </div>
             </div>
         </>

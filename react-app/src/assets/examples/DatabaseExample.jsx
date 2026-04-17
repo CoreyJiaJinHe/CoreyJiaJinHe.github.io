@@ -27,9 +27,9 @@ const EDGE_MARKERS = {
 
 const TableNode = memo(({ data }) => {
     return (
-        <div className="table-node">
-            <Handle type="target" position={Position.Top} className="table-node__handle" />
-            <Handle type="source" position={Position.Bottom} className="table-node__handle" />
+        <div className="Table-Node">
+            <Handle type="target" position={Position.Top} className="Table-Node-Handle" />
+            <Handle type="source" position={Position.Bottom} className="Table-Node-Handle" />
             {data.label}
         </div>
     )
@@ -224,7 +224,7 @@ const RelationshipEdge = memo((props) => {
             {data?.sourceCardinality ? (
                 <EdgeLabelRenderer>
                     <div
-                        className="relationship-edge__cardinality"
+                        className="Relationship-Edge-Cardinality"
                         style={{
                             '--edge-label-x': `${sourceCardinalityPosition.x}px`,
                             '--edge-label-y': `${sourceCardinalityPosition.y}px`,
@@ -238,7 +238,7 @@ const RelationshipEdge = memo((props) => {
             {data?.targetCardinality ? (
                 <EdgeLabelRenderer>
                     <div
-                        className="relationship-edge__cardinality"
+                        className="Relationship-Edge-Cardinality"
                         style={{
                             '--edge-label-x': `${targetCardinalityPosition.x}px`,
                             '--edge-label-y': `${targetCardinalityPosition.y}px`,
@@ -252,7 +252,7 @@ const RelationshipEdge = memo((props) => {
             {label ? (
                 <EdgeLabelRenderer>
                     <div
-                        className="relationship-edge__label"
+                        className="Relationship-Edge-Label"
                         style={{
                             '--edge-label-x': `${labelX}px`,
                             '--edge-label-y': `${labelY}px`,
@@ -934,11 +934,11 @@ function DatabaseExample() {
 
 
             <div>
-                <p className="database-example__intro">
+                <p className="Database-Example-Intro">
                     The Class Diagram of the final design of a University Database using object-relational database management principles.
                 </p>
 
-                <div className="database-example__canvas">
+                <div className="Database-Example-Canvas">
                     <ReactFlow nodes={nodes} edges={edges}
                         onNodesChange={onNodesChange}
                         onEdgesChange={onEdgesChange}
@@ -950,25 +950,25 @@ function DatabaseExample() {
                         <Controls />
                         <MiniMap />
                     </ReactFlow>
-                    <div className="database-example__floating-panel database-example__legend">
-                        <div className="database-example__legend-title">Legend</div>
+                    <div className="Database-Example-Floating-Panel Database-Example-Legend">
+                        <div className="Database-Example-Legend-Title">Legend</div>
                         <div><strong>PK</strong>: Primary Key</div>
                         <div><strong>FK</strong>: Foreign Key</div>
-                        <div className="database-example__legend-relationship">
-                            <span className="database-example__legend-line" />
+                        <div className="Database-Example-Legend-Relationship">
+                            <span className="Database-Example-Legend-Line" />
                             Relationship
                         </div>
                     </div>
 
                     {DEV_MODE_ENABLED && isDevPanelVisible && (
-                        <div className="database-example__floating-panel database-example__dev-panel">
-                            <div className="database-example__dev-actions">
+                        <div className="Database-Example-Floating-Panel Database-Example-Dev-Panel">
+                            <div className="Database-Example-Dev-Actions">
                                 <button type="button" onClick={handleCaptureCoordinates}>Capture Node Coordinates</button>
                                 <button type="button" onClick={() => setIsDevPanelVisible(false)}>Hide Frame</button>
                             </div>
-                            <div className="database-example__dev-title">Captured (id, x, y):</div>
+                            <div className="Database-Example-Dev-Title">Captured (id, x, y):</div>
                             <textarea
-                                className="database-example__textarea"
+                                className="Database-Example-Textarea"
                                 readOnly
                                 value={capturedPositions}
                                 placeholder="Drag nodes, then click Capture Node Coordinates"
@@ -976,7 +976,7 @@ function DatabaseExample() {
                         </div>
                     )}
                     {DEV_MODE_ENABLED && !isDevPanelVisible && (
-                        <div className="database-example__floating-panel database-example__dev-toggle">
+                        <div className="Database-Example-Floating-Panel Database-Example-Dev-Toggle">
                             <button type="button" onClick={() => setIsDevPanelVisible(true)}>Show Dev Frame</button>
                         </div>
                     )}
@@ -988,10 +988,10 @@ function DatabaseExample() {
                 Spool File of Logical Schema Code implemented in Oracle Database down below:
             </p>
             <div>
-                <img src={databaseDiagramSrc} className="database-example__diagram-image" alt="Database diagram" />
+                <img src={databaseDiagramSrc} className="Database-Example-Diagram-Image" alt="Database diagram" />
             </div>
             <div>
-                <iframe src={spoolFileSrc} className="database-example__spool-frame" title="Spool file" />
+                <iframe src={spoolFileSrc} className="Database-Example-Spool-Frame" title="Spool file" />
             </div>
         </>
     )
