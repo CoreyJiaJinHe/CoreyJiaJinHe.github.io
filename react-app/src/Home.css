@@ -161,7 +161,8 @@
 }
 
 .Home-Page-Article-Example-Work {
-	height: 1100px;
+	min-height: 1100px;
+	height:auto;
 	white-space: normal;
 }
 

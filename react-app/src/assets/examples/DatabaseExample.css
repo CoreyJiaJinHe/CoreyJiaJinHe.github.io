@@ -120,8 +120,8 @@
 }
 
 .Database-Example-Diagram-Image {
-    float: right;
-    height: 300px;
+    height:auto;
+    width:100%;
 }
 
 .Database-Example-Spool-Frame {

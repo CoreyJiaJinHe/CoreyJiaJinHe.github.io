@@ -1,4 +1,4 @@
-.Left-Bar{
+.Left-Bar {
     position: fixed;
     top: 16px;
     left: 0;
@@ -22,7 +22,7 @@
     border: 1px solid #374151;
 }
 
-.Left-Bar.day-mode{
+.Left-Bar.day-mode {
     background-color: #e5e7eb;
     border: 1px solid #9ca3af;
 }
@@ -31,7 +31,7 @@
     transform: translateX(0);
 }
 
-.Left-Bar-Toggle-Button{
+.Left-Bar-Toggle-Button {
     position: absolute;
     top: 50%;
     right: -18px;
@@ -62,8 +62,17 @@
     margin-bottom: 0;
 }
 
+
+.Component-Frame-Toggle {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
 .Left-Bar-Frame-Button {
-    margin-left: 12px;
+    width: auto;
+    box-sizing: border-box;
     padding: 8px 10px;
     border-radius: 8px;
     border: 1px solid #6b7280;

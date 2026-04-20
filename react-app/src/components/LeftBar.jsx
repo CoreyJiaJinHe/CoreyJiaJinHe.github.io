@@ -22,14 +22,14 @@ function LeftBar({
                 <div className="Component-Night-Mode-Toggle">
                     <ToggleableSwitchComponent attachFunction={setNightMode} booleanForFunction={nightMode} label="Night Mode" />
                 </div>
-                <div>
+                <div className="Component-Frame-Toggle">
                 <button
                     className={`Left-Bar-Frame-Button ${nightMode ? 'night-mode' : 'day-mode'}`}
                     type="button"
                     aria-label={isFrameOpen ? 'Close frame overlay' : 'Open frame overlay'}
                     onClick={() => setIsFrameOpen((current) => !current)}
                 >
-                    {isFrameOpen ? 'Hide Frame' : 'Show Frame'}
+                    {isFrameOpen ? 'Hide Game Frame' : 'Show Game Frame'}
                 </button>
                 </div>
             </div>
