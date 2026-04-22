@@ -150,6 +150,8 @@
 	cursor: pointer;
 }
 
+
+
 .Home-Page-Article-Panel {
 	max-height: 350px;
 }
@@ -316,3 +318,22 @@
 	grid-auto-columns: minmax(220px, 82%);
 }
 
+
+
+
+
+
+.Frame-Close-Button {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	width: 34px;
+	height: 34px;
+	border-radius: 999px;
+	border: 1px solid #6b7280;
+	background-color: #ffffff;
+	color: #111827;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+}
