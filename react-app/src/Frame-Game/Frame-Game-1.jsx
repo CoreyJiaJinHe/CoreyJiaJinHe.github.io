@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
-import useEnemySystem from './hooks/useEnemySystem';
-import { PROFILE } from './utils/difficultyProfiles.js';
-
+//import difficultyRef from './Difficulty-Scaling';
 
 function FrameGame1() {
     const canvasRef = useRef(null);
@@ -17,27 +15,6 @@ function FrameGame1() {
     });
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
 
-    const {
-        enemiesRef,
-        killsRef,
-        enemySpawnConfigRef,
-
-        killsView,
-        scaledEnemiesEnabled,
-        pacingProfile,
-
-        updateEnemyPopulation,
-        getDifficultyFromKills,
-
-        setKillsView,
-        setScaledEnemiesEnabledSync,
-        setPacingProfileSync,
-
-        createEnemy,
-        pacingProfileRef,
-        scaledEnemiesEnabledRef,
-        difficultyProfilesRef,
-    } = useEnemySystem(playerRef);
 
 
     const materialsRef = useRef(0);
@@ -45,10 +22,83 @@ function FrameGame1() {
     const advancedDropsRef = useRef([]);
 
     const tabPressedRef = useRef(false);
-    
+    const enemiesRef = useRef([]);
+    const enemySpawnConfigRef = useRef({
+        startCount: 5,
+        maxActive: 10,
+        spawnInterval: 1.5, // seconds between refill spawns
+    });
+
+    const enemySpawnTimerRef = useRef(0);
+    const killsRef = useRef(0);
+    const [killsView, setKillsView] = useState(0);
+
+    function getDifficultyFromKills(kills) {
+        const d = difficultyProfilesRef.current[pacingProfileRef.current];
+        const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0;
+
+        const extraActive = Math.floor(effectiveKills / d.killsPerExtraActive);
+        const profileMaxActive = Math.min(d.maxActiveCap, d.maxActiveBase + extraActive);
+
+        const spawnStepCount = Math.floor(effectiveKills / d.killsPerSpawnStep);
+        const profileSpawnInterval = Math.max(
+            d.spawnIntervalMin,
+            d.spawnIntervalBase - spawnStepCount * d.spawnStep
+        );
+
+        const hp = d.enemyHpBase + Math.floor(effectiveKills / d.killsPerHpStep) * d.hpStep;
+        const atk = d.enemyAtkBase + Math.floor(effectiveKills / d.killsPerAtkStep) * d.atkStep;
+        const def = d.enemyDefBase + Math.floor(effectiveKills / d.killsPerDefStep) * d.defStep;
+
+        // Global hard bounds
+        const maxActive = Math.min(enemySpawnConfigRef.current.maxActive, profileMaxActive);
+        const spawnInterval = Math.max(enemySpawnConfigRef.current.spawnInterval, profileSpawnInterval);
+
+        return { maxActive, spawnInterval, hp, atk, def };
+    }
+
+    function createEnemy(canvasWidth, canvasHeight, player, statOverrides = {}) {
+        const halfSize = 18;
+        let x = 0;
+        let y = 0;
+        let attempts = 0;
+
+        do {
+            x = randomBetween(halfSize, canvasWidth - halfSize);
+            y = randomBetween(halfSize, canvasHeight - halfSize);
+            attempts += 1;
+        } while (
+            Math.hypot(x - player.x, y - player.y) < 140 &&
+            attempts < 50
+        );
+
+        return {
+            id: crypto.randomUUID(),
+            x,
+            y,
+            halfSize: 18,
+            hp: statOverrides.hp ?? 10,
+            maxHp: statOverrides.hp ?? 10,
+            atk: statOverrides.atk ?? 1,
+            def: statOverrides.def ?? 2,
+            alive: true,
+            damagePlayerCooldown: 0,
+            takeDamageCooldown: 0,
+        };
+    }
+    function getActiveEnemyCount() {
+        return enemiesRef.current.reduce((count, enemy) => {
+            return count + (enemy.alive ? 1 : 0);
+        }, 0);
+    }
+
+
+    function randomBetween(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
 
     const keysRef = useRef(new Set());
-    const [mouseSeekEnabled, setMouseSeekEnabled] = useState(false);
     const mouseSeekModeRef = useRef(false);
     const mouseRef = useRef({ x: 0, y: 0, inside: false });
 
@@ -73,8 +123,92 @@ function FrameGame1() {
             });
     }
 
-    
 
+    const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
+    const scaledEnemiesEnabledRef = useRef(false);
+
+    
+    function setScaledEnemiesEnabledSync(nextValue) {
+        const resolved =
+            typeof nextValue === 'function'
+                ? nextValue(scaledEnemiesEnabledRef.current)
+                : nextValue;
+
+        scaledEnemiesEnabledRef.current = resolved;
+        setScaledEnemiesEnabled(resolved);
+    }
+
+
+    const PROFILE = {
+    P1: 'p1', // slow
+    P2: 'p2', // default
+    P3: 'p3', // chaos
+    };
+    const [pacingProfile, setPacingProfile] = useState(PROFILE.P2);
+    const pacingProfileRef = useRef(PROFILE.P2);
+    
+    function setPacingProfileSync(nextValue) {
+        const resolved =
+            typeof nextValue === 'function'
+                ? nextValue(pacingProfileRef.current)
+                : nextValue;
+
+        pacingProfileRef.current = resolved;
+        setPacingProfile(resolved);
+    }
+
+
+    const difficultyProfilesRef = useRef({
+        [PROFILE.P1]: {
+            maxActiveBase: 8, maxActiveCap: 14, killsPerExtraActive: 18,
+            spawnIntervalBase: 1.8, spawnIntervalMin: 0.9, killsPerSpawnStep: 24, spawnStep: 0.08,
+            enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
+            killsPerHpStep: 10, hpStep: 1,
+            killsPerAtkStep: 24, atkStep: 1,
+            killsPerDefStep: 32, defStep: 1,
+        },
+        [PROFILE.P2]: {
+            maxActiveBase: 10, maxActiveCap: 20, killsPerExtraActive: 12,
+            spawnIntervalBase: 1.5, spawnIntervalMin: 0.45, killsPerSpawnStep: 18, spawnStep: 0.1,
+            enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
+            killsPerHpStep: 6, hpStep: 2,
+            killsPerAtkStep: 14, atkStep: 1,
+            killsPerDefStep: 22, defStep: 1,
+        },
+        [PROFILE.P3]: {
+            maxActiveBase: 12, maxActiveCap: 28, killsPerExtraActive: 8,
+            spawnIntervalBase: 1.2, spawnIntervalMin: 0.25, killsPerSpawnStep: 12, spawnStep: 0.12,
+            enemyHpBase: 12, enemyAtkBase: 2, enemyDefBase: 2,
+            killsPerHpStep: 4, hpStep: 2,
+            killsPerAtkStep: 10, atkStep: 1,
+            killsPerDefStep: 18, defStep: 1,
+        },
+    });
+
+    function updateEnemyPopulation(dt, canvas) {
+        const y = killsRef.current;
+        const scaled = getDifficultyFromKills(y);
+        const activeCount = getActiveEnemyCount();
+
+        if (activeCount >= scaled.maxActive) {
+            enemySpawnTimerRef.current = 0;
+            return;
+        }
+
+        enemySpawnTimerRef.current += dt;
+
+        if (enemySpawnTimerRef.current >= scaled.spawnInterval) {
+            enemySpawnTimerRef.current = 0;
+
+            enemiesRef.current.push(
+                createEnemy(canvas.width, canvas.height, playerRef.current, {
+                    hp: scaled.hp,
+                    atk: scaled.atk,
+                    def: scaled.def,
+                })
+            );
+        }
+    }
 
     const bossConfigRef = useRef({
         killsPerBoss: 50,
