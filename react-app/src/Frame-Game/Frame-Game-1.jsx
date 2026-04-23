@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import ToggleableSwitchComponent from './components/ToggleComponent'
-
+import ToggleableSwitchComponent from '../components/ToggleComponent'
+//import difficultyRef from './Difficulty-Scaling';
 
 function FrameGame1() {
     const canvasRef = useRef(null);
@@ -15,18 +15,49 @@ function FrameGame1() {
     });
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
 
-    
+
 
     const materialsRef = useRef(0);
     const [materialsView, setMaterialsView] = useState(0);
     const advancedDropsRef = useRef([]);
 
-    const targetEnemyIdRef = useRef(null);
-    const [targetEnemyIdView, setTargetEnemyIdView] = useState(null);
     const tabPressedRef = useRef(false);
     const enemiesRef = useRef([]);
+    const enemySpawnConfigRef = useRef({
+        startCount: 5,
+        maxActive: 10,
+        spawnInterval: 1.5, // seconds between refill spawns
+    });
 
-    function createEnemy(canvasWidth, canvasHeight, player) {
+    const enemySpawnTimerRef = useRef(0);
+    const killsRef = useRef(0);
+    const [killsView, setKillsView] = useState(0);
+
+    function getDifficultyFromKills(kills) {
+        const d = difficultyProfilesRef.current[pacingProfileRef.current];
+        const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0;
+
+        const extraActive = Math.floor(effectiveKills / d.killsPerExtraActive);
+        const profileMaxActive = Math.min(d.maxActiveCap, d.maxActiveBase + extraActive);
+
+        const spawnStepCount = Math.floor(effectiveKills / d.killsPerSpawnStep);
+        const profileSpawnInterval = Math.max(
+            d.spawnIntervalMin,
+            d.spawnIntervalBase - spawnStepCount * d.spawnStep
+        );
+
+        const hp = d.enemyHpBase + Math.floor(effectiveKills / d.killsPerHpStep) * d.hpStep;
+        const atk = d.enemyAtkBase + Math.floor(effectiveKills / d.killsPerAtkStep) * d.atkStep;
+        const def = d.enemyDefBase + Math.floor(effectiveKills / d.killsPerDefStep) * d.defStep;
+
+        // Global hard bounds
+        const maxActive = Math.min(enemySpawnConfigRef.current.maxActive, profileMaxActive);
+        const spawnInterval = Math.max(enemySpawnConfigRef.current.spawnInterval, profileSpawnInterval);
+
+        return { maxActive, spawnInterval, hp, atk, def };
+    }
+
+    function createEnemy(canvasWidth, canvasHeight, player, statOverrides = {}) {
         const halfSize = 18;
         let x = 0;
         let y = 0;
@@ -45,17 +76,21 @@ function FrameGame1() {
             id: crypto.randomUUID(),
             x,
             y,
-            halfSize,
-            hp: 10,
-            maxHp: 10,
-            atk: 1,
-            def: 2,
+            halfSize: 18,
+            hp: statOverrides.hp ?? 10,
+            maxHp: statOverrides.hp ?? 10,
+            atk: statOverrides.atk ?? 1,
+            def: statOverrides.def ?? 2,
             alive: true,
             damagePlayerCooldown: 0,
             takeDamageCooldown: 0,
         };
     }
-
+    function getActiveEnemyCount() {
+        return enemiesRef.current.reduce((count, enemy) => {
+            return count + (enemy.alive ? 1 : 0);
+        }, 0);
+    }
 
 
     function randomBetween(min, max) {
@@ -68,11 +103,15 @@ function FrameGame1() {
     const mouseRef = useRef({ x: 0, y: 0, inside: false });
 
     function setMouseSeekMode(nextValue) {
-        mouseSeekModeRef.current =
+        const resolved =
             typeof nextValue === 'function'
                 ? nextValue(mouseSeekModeRef.current)
                 : nextValue;
+
+        mouseSeekModeRef.current = resolved;
+        setMouseSeekEnabled(resolved);
     }
+
     function getAliveEnemiesSortedByDistance() {
         const p = playerRef.current;
         return enemiesRef.current
@@ -83,6 +122,180 @@ function FrameGame1() {
                 return da - db; // closest first
             });
     }
+
+
+    const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
+    const scaledEnemiesEnabledRef = useRef(false);
+
+    
+    function setScaledEnemiesEnabledSync(nextValue) {
+        const resolved =
+            typeof nextValue === 'function'
+                ? nextValue(scaledEnemiesEnabledRef.current)
+                : nextValue;
+
+        scaledEnemiesEnabledRef.current = resolved;
+        setScaledEnemiesEnabled(resolved);
+    }
+
+
+    const PROFILE = {
+    P1: 'p1', // slow
+    P2: 'p2', // default
+    P3: 'p3', // chaos
+    };
+    const [pacingProfile, setPacingProfile] = useState(PROFILE.P2);
+    const pacingProfileRef = useRef(PROFILE.P2);
+    
+    function setPacingProfileSync(nextValue) {
+        const resolved =
+            typeof nextValue === 'function'
+                ? nextValue(pacingProfileRef.current)
+                : nextValue;
+
+        pacingProfileRef.current = resolved;
+        setPacingProfile(resolved);
+    }
+
+
+    const difficultyProfilesRef = useRef({
+        [PROFILE.P1]: {
+            maxActiveBase: 8, maxActiveCap: 14, killsPerExtraActive: 18,
+            spawnIntervalBase: 1.8, spawnIntervalMin: 0.9, killsPerSpawnStep: 24, spawnStep: 0.08,
+            enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
+            killsPerHpStep: 10, hpStep: 1,
+            killsPerAtkStep: 24, atkStep: 1,
+            killsPerDefStep: 32, defStep: 1,
+        },
+        [PROFILE.P2]: {
+            maxActiveBase: 10, maxActiveCap: 20, killsPerExtraActive: 12,
+            spawnIntervalBase: 1.5, spawnIntervalMin: 0.45, killsPerSpawnStep: 18, spawnStep: 0.1,
+            enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
+            killsPerHpStep: 6, hpStep: 2,
+            killsPerAtkStep: 14, atkStep: 1,
+            killsPerDefStep: 22, defStep: 1,
+        },
+        [PROFILE.P3]: {
+            maxActiveBase: 12, maxActiveCap: 28, killsPerExtraActive: 8,
+            spawnIntervalBase: 1.2, spawnIntervalMin: 0.25, killsPerSpawnStep: 12, spawnStep: 0.12,
+            enemyHpBase: 12, enemyAtkBase: 2, enemyDefBase: 2,
+            killsPerHpStep: 4, hpStep: 2,
+            killsPerAtkStep: 10, atkStep: 1,
+            killsPerDefStep: 18, defStep: 1,
+        },
+    });
+
+    function updateEnemyPopulation(dt, canvas) {
+        const y = killsRef.current;
+        const scaled = getDifficultyFromKills(y);
+        const activeCount = getActiveEnemyCount();
+
+        if (activeCount >= scaled.maxActive) {
+            enemySpawnTimerRef.current = 0;
+            return;
+        }
+
+        enemySpawnTimerRef.current += dt;
+
+        if (enemySpawnTimerRef.current >= scaled.spawnInterval) {
+            enemySpawnTimerRef.current = 0;
+
+            enemiesRef.current.push(
+                createEnemy(canvas.width, canvas.height, playerRef.current, {
+                    hp: scaled.hp,
+                    atk: scaled.atk,
+                    def: scaled.def,
+                })
+            );
+        }
+    }
+
+    const bossConfigRef = useRef({
+        killsPerBoss: 50,
+        spawnDelay: 2.0,
+        nextBossAt: 50,
+        maxSimultaneousBosses: {
+            [PROFILE.P1]: 1,
+            [PROFILE.P2]: 1,
+            [PROFILE.P3]: 3,
+        },
+        pendingBossSpawn: false,
+    });
+    const bossSpawnTimerRef = useRef(0);
+    const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
+    const bossesDefeatedRef = useRef(0);
+
+    function createBoss(canvas, player, scaled) {
+        return {
+            ...createEnemy(canvas.width, canvas.height, player, {
+                hp: Math.floor(scaled.hp * 6),
+                atk: Math.max(2, Math.floor(scaled.atk * 2)),
+                def: Math.max(2, scaled.def + 2),
+            }),
+            halfSize: 30,
+            isBoss: true,
+        };
+    }
+
+    function updateBossSpawn(dt, canvas) {
+        const cfg = bossConfigRef.current;
+        const kills = killsRef.current;
+        const profile = pacingProfileRef.current;
+
+        if (kills < cfg.nextBossAt) {
+            bossSpawnTimerRef.current = 0;
+            cfg.pendingBossSpawn = false;
+            return;
+        }
+
+        const maxAllowed = cfg.maxSimultaneousBosses[profile];
+        const aliveBosSCount = enemiesRef.current.filter((e) => e.alive && e.isBoss).length;
+
+        if (aliveBosSCount >= maxAllowed) {
+            // Queue the spawn, don't proceed
+            cfg.pendingBossSpawn = true;
+            bossSpawnTimerRef.current = 0;
+            return;
+        }
+
+        cfg.pendingBossSpawn = false;
+        bossSpawnTimerRef.current += dt;
+        if (bossSpawnTimerRef.current >= cfg.spawnDelay) {
+            bossSpawnTimerRef.current = 0;
+            const scaled = getDifficultyFromKills(kills);
+            enemiesRef.current.push(createBoss(canvas, playerRef.current, scaled));
+            cfg.nextBossAt += cfg.killsPerBoss;
+        }
+    }
+
+
+    const targetEnemyIdRef = useRef(null);
+    const [targetEnemyIdView, setTargetEnemyIdView] = useState(null);
+
+
+    function cycleTargetReverseClosestToFarthest() {
+        const sorted = getAliveEnemiesSortedByDistance();
+
+        if (sorted.length === 0) {
+            setTargetEnemyId(null);
+            return;
+        }
+
+        const closestId = sorted[0].id;
+        const currentId = targetEnemyIdRef.current;
+        const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
+
+        // Re-anchor to closest if current target is missing or no longer closest.
+        if (currentIndex === -1 || currentId !== closestId) {
+            setTargetEnemyId(closestId);
+            return;
+        }
+
+        // Reverse cycle from closest: closest -> farthest -> ...
+        const prevIndex = (currentIndex - 1 + sorted.length) % sorted.length;
+        setTargetEnemyId(sorted[prevIndex].id);
+    }
+
 
     function cycleTargetClosestToFarthest() {
         const sorted = getAliveEnemiesSortedByDistance();
@@ -114,7 +327,8 @@ function FrameGame1() {
     function onEnemyKilled(enemy) {
         enemy.hp = 0;
         enemy.alive = false;
-
+        killsRef.current += 1;
+        setKillsView(killsRef.current);
         // Basic material: auto-loot
         grantMaterials(1);
 
@@ -123,6 +337,11 @@ function FrameGame1() {
 
         if (enemy.id === targetEnemyIdRef.current) {
             setTargetEnemyId(null);
+        }
+
+        if (enemy.isBoss) {
+            bossesDefeatedRef.current += 1;
+            setBossesDefeatedView(bossesDefeatedRef.current);
         }
     }
     function grantMaterials(amount) {
@@ -198,6 +417,7 @@ function FrameGame1() {
         alignTolerance: 0.12,
         fireCooldown: 0,
         fireInterval: 0.35,
+        projectileSpeed: 420,
     });
 
     const projectilesRef = useRef([]);
@@ -235,12 +455,6 @@ function FrameGame1() {
             y: p.y + Math.sin(turret.angle) * muzzleDistance,
         };
     }
-    function getDistanceFromMuzzleToTarget(target) {
-        const muzzle = getTurretMuzzlePosition();
-        const dx = target.x - muzzle.x;
-        const dy = target.y - muzzle.y;
-        return Math.hypot(dx, dy);
-    }
 
     function spawnProjectileTowardTarget() {
         const target = getTargetEnemy();
@@ -259,7 +473,7 @@ function FrameGame1() {
             return false;
         }
 
-        const speed = 420;
+        const speed = turretRef.current.projectileSpeed;
         const dirX = dx / distance;
         const dirY = dy / distance;
 
@@ -303,13 +517,13 @@ function FrameGame1() {
         const isAligned = remainingDelta <= turret.alignTolerance;
 
         if (fireRequestRef.current && isAligned && turret.fireCooldown <= 0) {
-        const fired = spawnProjectileTowardTarget();
-        fireRequestRef.current = false;
+            const fired = spawnProjectileTowardTarget();
+            fireRequestRef.current = false;
 
-        if (fired) {
-            turret.fireCooldown = turret.fireInterval;
+            if (fired) {
+                turret.fireCooldown = turret.fireInterval;
+            }
         }
-    }
     }
 
     function updateProjectiles(dt, canvas) {
@@ -381,7 +595,7 @@ function FrameGame1() {
 
     }
 
-    function setupInput(canvas, handlers) {
+    function setupInput(canvas) {
         const onMouseMove = (e) => {
             const rect = canvas.getBoundingClientRect();
             mouseRef.current.x = e.clientX - rect.left;
@@ -403,7 +617,11 @@ function FrameGame1() {
             if (e.key === 'Tab') {
                 e.preventDefault();
                 if (!tabPressedRef.current) {
-                    cycleTargetClosestToFarthest();
+                    if (e.shiftKey) {
+                        cycleTargetReverseClosestToFarthest();
+                    } else {
+                        cycleTargetClosestToFarthest();
+                    }
                     tabPressedRef.current = true;
                 }
             }
@@ -541,7 +759,7 @@ function FrameGame1() {
         ctx.stroke();
 
         ctx.restore();
-        
+
         for (const projectile of projectilesRef.current) {
             ctx.fillStyle = '#ffd54a';
             ctx.beginPath();
@@ -602,15 +820,29 @@ function FrameGame1() {
             ctx.stroke();
         }
     }
+
+
+
+
+
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
 
         const cleanupCanvas = setupCanvas(canvas);
 
-        const p = playerRef.current;
-        enemiesRef.current = Array.from({ length: 5 }, () =>
-            createEnemy(canvas.width, canvas.height, p)
+        const { startCount } = enemySpawnConfigRef.current;
+
+
+        const y = killsRef.current;
+        const scaled = getDifficultyFromKills(y);
+
+        enemiesRef.current = Array.from({ length: startCount }, () =>
+            createEnemy(canvas.width, canvas.height, playerRef.current, {
+                hp: scaled.hp,
+                atk: scaled.atk,
+                def: scaled.def,
+            })
         );
         const firstSorted = getAliveEnemiesSortedByDistance();
         setTargetEnemyId(firstSorted.length ? firstSorted[0].id : null);
@@ -623,15 +855,18 @@ function FrameGame1() {
         function loop(timestamp) {
             const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
             lastTime = timestamp;
-            
+
             if (!shopOpenRef.current) {
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
                 updateTurret(dt);
                 updateCombat(dt);
                 updateProjectiles(dt, canvas);
+                updateEnemyPopulation(dt, canvas);
+                updateBossSpawn(dt, canvas);
             }
             drawScene(ctx, canvas);
+
 
             animFrameId = requestAnimationFrame(loop);
         }
@@ -644,6 +879,23 @@ function FrameGame1() {
             cleanupCanvas();
         };
     }, []);
+
+    function squareOverlapsCircle(square, circle) {
+        const closestX = Math.max(
+            square.x - square.halfSize,
+            Math.min(circle.x, square.x + square.halfSize)
+        );
+        const closestY = Math.max(
+            square.y - square.halfSize,
+            Math.min(circle.y, square.y + square.halfSize)
+        );
+
+        const dx = circle.x - closestX;
+        const dy = circle.y - closestY;
+
+        return dx * dx + dy * dy <= circle.radius * circle.radius;
+    }
+
 
     function squaresOverlap(a, b) {
         return (
@@ -732,16 +984,13 @@ function FrameGame1() {
 
 
 
+    const [developerMode, setDeveloperMode] = useState(true);
 
-
-
-
-
-
+    const liveDifficulty = getDifficultyFromKills(killsRef.current);
     return (
         <>
             <div className="Frame-Game-1-UI-Row" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                     <ToggleableSwitchComponent
                         attachFunction={setMouseSeekMode}
                         onToggle={() => {
@@ -749,10 +998,42 @@ function FrameGame1() {
                         }}
                         label="Mouse Seek: "
                     />
+                    <ToggleableSwitchComponent
+                        attachFunction={setScaledEnemiesEnabledSync}
+                        booleanForFunction={scaledEnemiesEnabled}
+                        label="Scaled Enemies: "
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>Pacing:</span>
+                        <select
+                            value={pacingProfile}
+                            onChange={(e) => setPacingProfileSync(e.target.value)}
+                        >
+                            <option value={PROFILE.P1}>P1 (Slow)</option>
+                            <option value={PROFILE.P2}>P2 (Default)</option>
+                            <option value={PROFILE.P3}>P3 (Chaos)</option>
+                        </select>
+                    </label>
                     <button onClick={() => setShopOpenSync((current) => !current)}>
                         {shopOpen ? 'Close Shop' : 'Open Shop'}
                     </button>
                 </div>
+
+                {developerMode ?
+                        (
+                            <>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+                                <div>MAX ACTIVE: {liveDifficulty.maxActive}</div>
+                                <div>SPAWN RATE: {liveDifficulty.spawnInterval.toFixed(2)}s</div>
+                                <div>SCALED: {scaledEnemiesEnabled ? 'ON' : 'OFF'}</div>
+                                <div>PROFILE: {pacingProfile.toUpperCase()}</div>
+                                <div>KILLS/BOSS: {bossConfigRef.current.killsPerBoss}</div>
+                                <div>BOSSES DEFEATED: {bossesDefeatedView}</div>
+                            </div>
+                            </>
+                        )
+                        : null
+                    }
                 <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>HP:</span>
@@ -780,6 +1061,8 @@ function FrameGame1() {
                         TARGET: {targetEnemyIdView ? 'LOCKED' : 'NONE'}
                     </div>
                     <div>MATERIALS: {materialsView}</div>
+                    <div>KILLS: {killsView}</div>
+                    
                 </div>
 
             </div>
@@ -789,52 +1072,52 @@ function FrameGame1() {
                     width: '100%',
                     height: 'min(65vh, 560px)',
                 }}
-                >
+            >
                 <canvas
                     ref={canvasRef}
                     style={{
-                    border: "1px solid #000000",
-                    display: "block",
-                    width: "100%",
-                    height: "100%",
+                        border: "1px solid #000000",
+                        display: "block",
+                        width: "100%",
+                        height: "100%",
                     }}
                 />
 
                 {shopOpen && (
                     <div
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: 'rgba(20, 20, 20, 0.92)',
-                        color: '#ffffff',
-                        border: '2px solid #888',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        zIndex: 10,
-                        boxSizing: 'border-box',
-                    }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(20, 20, 20, 0.92)',
+                            color: '#ffffff',
+                            border: '2px solid #888',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            zIndex: 10,
+                            boxSizing: 'border-box',
+                        }}
                     >
-                    <button
-                    type="button"
-                    className="Frame-Close-Button"
-                    aria-label="Close popup frame"
-                    onClick={() => setShopOpenSync(false)}
-                    >
-                    ×
-                    </button>
-                    <h3>Shop</h3>
-                    <div>MATERIALS: {materialsView}</div>
+                        <button
+                            type="button"
+                            className="Frame-Close-Button"
+                            aria-label="Close popup frame"
+                            onClick={() => setShopOpenSync(false)}
+                        >
+                            ×
+                        </button>
+                        <h3>Shop</h3>
+                        <div>MATERIALS: {materialsView}</div>
 
-                    <button onClick={buyRangeUpgrade}>+20 Range (5)</button>
-                    <button onClick={buyAttackUpgrade}>+1 ATK (5)</button>
-                    <button onClick={buyDefenseUpgrade}>+1 DEF (5)</button>
-                    <button onClick={buyMaxHpUpgrade}>+2 Max HP (5)</button>
-                    <button onClick={buySpeedUpgrade}>+20 Speed (5)</button>
-                </div>
-            )}</div>
+                        <button onClick={buyRangeUpgrade}>+20 Range (5)</button>
+                        <button onClick={buyAttackUpgrade}>+1 ATK (5)</button>
+                        <button onClick={buyDefenseUpgrade}>+1 DEF (5)</button>
+                        <button onClick={buyMaxHpUpgrade}>+2 Max HP (5)</button>
+                        <button onClick={buySpeedUpgrade}>+20 Speed (5)</button>
+                    </div>
+                )}</div>
         </>
     );
 }

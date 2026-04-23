@@ -9,7 +9,7 @@ import UIDesignExample from './assets/examples/UIDesignExample.jsx'
 import AnalyseExample from './assets/examples/AnalyseExample.jsx'
 import DatabaseExample from './assets/examples/DatabaseExample.jsx'
 
-import FrameGame1 from './Frame-Game-1.jsx'
+import FrameGame1 from './Frame-Game/Frame-Game-1.jsx'
 
 function App() {
   const [activeProject, setActiveProject] = useState('')
