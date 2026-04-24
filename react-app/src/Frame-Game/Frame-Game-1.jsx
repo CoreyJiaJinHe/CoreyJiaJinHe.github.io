@@ -852,7 +852,31 @@ function FrameGame1() {
             ctx.stroke();
         }
 
-        drawOffscreenDropMarkers(ctx, canvas);
+
+        const markerTargets = [
+            ...advancedDropsRef.current
+                .filter((drop) => drop.alive)
+                .map((drop) => ({
+                    id: drop.id,
+                    x: drop.x,
+                    y: drop.y,
+                    color: '#f59e0b',  // drop marker
+                    ringOffset: 44,
+                    size: 12,
+                })),
+
+            ...enemiesRef.current
+                .filter((enemy) => enemy.alive && enemy.isBoss)
+                .map((boss) => ({
+                    id: boss.id,
+                    x: boss.x,
+                    y: boss.y,
+                    color: '#ef4444',  // boss marker
+                    ringOffset: 64,
+                    size: 14,
+                })),
+        ];
+        drawOffscreenMarkers(ctx, canvas, markerTargets);
 
     }
 
@@ -892,44 +916,36 @@ function FrameGame1() {
         );
     }
 
-        
-    function drawOffscreenDropMarkers(ctx, canvas) {
+    
+    
+
+    function drawOffscreenMarkers(ctx, canvas, targets) {
         const p = playerRef.current;
         const { sx: playerSx, sy: playerSy } = worldToScreen(p.x, p.y, canvas);
 
-        const markerRingRadius = p.halfSize + 44; // circle around player
-        const markerSize = 12;
+        for (const target of targets) {
+            const { sx: targetSx, sy: targetSy } = worldToScreen(target.x, target.y, canvas);
+            if (isOnScreen(targetSx, targetSy, canvas)) continue;
 
-        for (const drop of advancedDropsRef.current) {
-            if (!drop.alive) continue;
-
-            const { sx: dropSx, sy: dropSy } = worldToScreen(drop.x, drop.y, canvas);
-
-            // If drop is visible, no marker.
-            if (isOnScreen(dropSx, dropSy, canvas)) continue;
-
-            // Direction from player (screen space) to offscreen drop.
-            const dx = dropSx - playerSx;
-            const dy = dropSy - playerSy;
+            const dx = targetSx - playerSx;
+            const dy = targetSy - playerSy;
             const angle = Math.atan2(dy, dx);
 
-            // Place marker on a ring around the player.
-            const mx = playerSx + Math.cos(angle) * markerRingRadius;
-            const my = playerSy + Math.sin(angle) * markerRingRadius;
+            const mx = playerSx + Math.cos(angle) * (p.halfSize + target.ringOffset);
+            const my = playerSy + Math.sin(angle) * (p.halfSize + target.ringOffset);
 
-            // Arrow triangle pointing toward the drop.
             ctx.save();
             ctx.translate(mx, my);
             ctx.rotate(angle);
 
-            ctx.fillStyle = '#f59e0b';   // amber marker
-            ctx.strokeStyle = '#111827'; // dark outline
+            ctx.fillStyle = target.color;
+            ctx.strokeStyle = '#111827';
             ctx.lineWidth = 2;
 
             ctx.beginPath();
-            ctx.moveTo(markerSize, 0);
-            ctx.lineTo(-markerSize * 0.7, markerSize * 0.65);
-            ctx.lineTo(-markerSize * 0.7, -markerSize * 0.65);
+            ctx.moveTo(target.size, 0);
+            ctx.lineTo(-target.size * 0.7, target.size * 0.65);
+            ctx.lineTo(-target.size * 0.7, -target.size * 0.65);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
@@ -937,7 +953,6 @@ function FrameGame1() {
             ctx.restore();
         }
     }
-
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
