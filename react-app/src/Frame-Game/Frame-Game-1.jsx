@@ -851,6 +851,9 @@ function FrameGame1() {
             ctx.lineWidth = 2;
             ctx.stroke();
         }
+
+        drawOffscreenDropMarkers(ctx, canvas);
+
     }
 
     function distanceSqToPlayer(x, y) {
@@ -878,14 +881,62 @@ function FrameGame1() {
             }
             return d2 <= despawnSq;
         });
-
-        // advancedDropsRef.current = advancedDropsRef.current.filter((drop) => {
-        //     if (!drop.alive) return false;
-        //     return distanceSqToPlayer(drop.x, drop.y) <= despawnSq;
-        // });
     }
 
+    function isOnScreen(sx, sy, canvas, padding = 12) {
+        return (
+            sx >= -padding &&
+            sx <= canvas.width + padding &&
+            sy >= -padding &&
+            sy <= canvas.height + padding
+        );
+    }
 
+        
+    function drawOffscreenDropMarkers(ctx, canvas) {
+        const p = playerRef.current;
+        const { sx: playerSx, sy: playerSy } = worldToScreen(p.x, p.y, canvas);
+
+        const markerRingRadius = p.halfSize + 44; // circle around player
+        const markerSize = 12;
+
+        for (const drop of advancedDropsRef.current) {
+            if (!drop.alive) continue;
+
+            const { sx: dropSx, sy: dropSy } = worldToScreen(drop.x, drop.y, canvas);
+
+            // If drop is visible, no marker.
+            if (isOnScreen(dropSx, dropSy, canvas)) continue;
+
+            // Direction from player (screen space) to offscreen drop.
+            const dx = dropSx - playerSx;
+            const dy = dropSy - playerSy;
+            const angle = Math.atan2(dy, dx);
+
+            // Place marker on a ring around the player.
+            const mx = playerSx + Math.cos(angle) * markerRingRadius;
+            const my = playerSy + Math.sin(angle) * markerRingRadius;
+
+            // Arrow triangle pointing toward the drop.
+            ctx.save();
+            ctx.translate(mx, my);
+            ctx.rotate(angle);
+
+            ctx.fillStyle = '#f59e0b';   // amber marker
+            ctx.strokeStyle = '#111827'; // dark outline
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(markerSize, 0);
+            ctx.lineTo(-markerSize * 0.7, markerSize * 0.65);
+            ctx.lineTo(-markerSize * 0.7, -markerSize * 0.65);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
 
     useEffect(() => {
         const canvas = canvasRef.current;
