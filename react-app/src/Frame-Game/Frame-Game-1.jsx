@@ -4,7 +4,20 @@ import ToggleableSwitchComponent from '../components/ToggleComponent'
 
 function FrameGame1() {
     const canvasRef = useRef(null);
+
+
+
     const playerRef = useRef({ x: 400, y: 300, halfSize: 20, speed: 200 });
+    const cameraRef = useRef({ x: playerRef.current.x, y: playerRef.current.y });
+
+    const worldBandsRef = useRef({
+        activeRadius: 1200,       // counts toward normal population cap
+        despawnRadius: 2200,      // normal enemies removed past this
+        bossDespawnRadius: 3200,  // bosses culled less aggressively
+        spawnMinRadius: 220,      // should match your createEnemy min
+        spawnMaxRadius: 520,      // should match your createEnemy max
+    });
+
     const playerStatsRef = useRef({
         alive: true,
         hp: 10,
@@ -57,20 +70,16 @@ function FrameGame1() {
         return { maxActive, spawnInterval, hp, atk, def };
     }
 
-    function createEnemy(canvasWidth, canvasHeight, player, statOverrides = {}) {
+    function createEnemy(player, statOverrides = {}) {
         const halfSize = 18;
-        let x = 0;
-        let y = 0;
+        const minSpawnDistance=worldBandsRef.current.spawnMinRadius;
+        const maxSpawnDistance=worldBandsRef.current.spawnMaxRadius;
         let attempts = 0;
 
-        do {
-            x = randomBetween(halfSize, canvasWidth - halfSize);
-            y = randomBetween(halfSize, canvasHeight - halfSize);
-            attempts += 1;
-        } while (
-            Math.hypot(x - player.x, y - player.y) < 140 &&
-            attempts < 50
-        );
+        const angle=Math.random()*Math.PI*2;
+        const distance = randomBetween(minSpawnDistance, maxSpawnDistance);
+        const x = player.x + Math.cos(angle) * distance;
+        const y = player.y + Math.sin(angle) * distance;
 
         return {
             id: crypto.randomUUID(),
@@ -86,9 +95,16 @@ function FrameGame1() {
             takeDamageCooldown: 0,
         };
     }
-    function getActiveEnemyCount() {
+
+
+    function getActiveEnemyCountInBand() {
+        const activeRadiusSq = worldBandsRef.current.activeRadius * worldBandsRef.current.activeRadius;
+
         return enemiesRef.current.reduce((count, enemy) => {
-            return count + (enemy.alive ? 1 : 0);
+            if (!enemy.alive) return count;
+            if (enemy.isBoss) return count;
+            if (distanceSqToPlayer(enemy.x, enemy.y) > activeRadiusSq) return count;
+            return count + 1;
         }, 0);
     }
 
@@ -100,6 +116,7 @@ function FrameGame1() {
 
     const keysRef = useRef(new Set());
     const mouseSeekModeRef = useRef(false);
+    const [mouseSeekEnabled, setMouseSeekEnabled] = useState(false);
     const mouseRef = useRef({ x: 0, y: 0, inside: false });
 
     function setMouseSeekMode(nextValue) {
@@ -188,7 +205,7 @@ function FrameGame1() {
     function updateEnemyPopulation(dt, canvas) {
         const y = killsRef.current;
         const scaled = getDifficultyFromKills(y);
-        const activeCount = getActiveEnemyCount();
+        const activeCount = getActiveEnemyCountInBand();
 
         if (activeCount >= scaled.maxActive) {
             enemySpawnTimerRef.current = 0;
@@ -201,7 +218,7 @@ function FrameGame1() {
             enemySpawnTimerRef.current = 0;
 
             enemiesRef.current.push(
-                createEnemy(canvas.width, canvas.height, playerRef.current, {
+                createEnemy(playerRef.current, {
                     hp: scaled.hp,
                     atk: scaled.atk,
                     def: scaled.def,
@@ -225,9 +242,9 @@ function FrameGame1() {
     const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
     const bossesDefeatedRef = useRef(0);
 
-    function createBoss(canvas, player, scaled) {
+    function createBoss(player, scaled) {
         return {
-            ...createEnemy(canvas.width, canvas.height, player, {
+            ...createEnemy(player, {
                 hp: Math.floor(scaled.hp * 6),
                 atk: Math.max(2, Math.floor(scaled.atk * 2)),
                 def: Math.max(2, scaled.def + 2),
@@ -263,7 +280,7 @@ function FrameGame1() {
         if (bossSpawnTimerRef.current >= cfg.spawnDelay) {
             bossSpawnTimerRef.current = 0;
             const scaled = getDifficultyFromKills(kills);
-            enemiesRef.current.push(createBoss(canvas, playerRef.current, scaled));
+            enemiesRef.current.push(createBoss(playerRef.current, scaled));
             cfg.nextBossAt += cfg.killsPerBoss;
         }
     }
@@ -543,15 +560,15 @@ function FrameGame1() {
                 continue;
             }
 
-            if (
-                projectile.x < -20 ||
-                projectile.x > canvas.width + 20 ||
-                projectile.y < -20 ||
-                projectile.y > canvas.height + 20
-            ) {
-                projectile.alive = false;
-                continue;
-            }
+            // if (
+            //     projectile.x < -20 ||
+            //     projectile.x > canvas.width + 20 ||
+            //     projectile.y < -20 ||
+            //     projectile.y > canvas.height + 20
+            // ) {
+            //     projectile.alive = false;
+            //     continue;
+            // }
 
             for (const enemy of enemiesRef.current) {
                 if (!enemy.alive) {
@@ -663,8 +680,10 @@ function FrameGame1() {
         }
 
         if (mouseSeekModeRef.current && mouseRef.current.inside) {
-            const dx = mouseRef.current.x - p.x;
-            const dy = mouseRef.current.y - p.y;
+            const worldMouseX = mouseRef.current.x - canvas.width / 2 + cameraRef.current.x;
+            const worldMouseY = mouseRef.current.y - canvas.height / 2 + cameraRef.current.y;
+            const dx = worldMouseX - p.x;
+            const dy = worldMouseY - p.y;
             const distance = Math.hypot(dx, dy);
 
             if (distance > 2) {
@@ -681,8 +700,7 @@ function FrameGame1() {
             if (keys.has('d') || keys.has('D') || keys.has('ArrowRight')) p.x += p.speed * dt;
         }
 
-        p.x = Math.max(p.halfSize, Math.min(canvas.width - p.halfSize, p.x));
-        p.y = Math.max(p.halfSize, Math.min(canvas.height - p.halfSize, p.y));
+
     }
 
     function updateCombat(dt) {
@@ -731,15 +749,26 @@ function FrameGame1() {
         }
     }
 
+    function worldToScreen(wx, wy, canvas) {
+        return {
+            sx: wx - cameraRef.current.x + canvas.width / 2,
+            sy: wy - cameraRef.current.y + canvas.height / 2,
+        };
+    }
+
+
     function drawScene(ctx, canvas) {
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+
+        const { sx, sy } = worldToScreen(playerRef.current.x, playerRef.current.y, canvas);
+
         const p = playerRef.current;
         ctx.fillStyle = '#4a9eff';
         ctx.fillRect(
-            p.x - p.halfSize,
-            p.y - p.halfSize,
+            sx - p.halfSize,
+            sy - p.halfSize,
             p.halfSize * 2,
             p.halfSize * 2
         );
@@ -747,9 +776,8 @@ function FrameGame1() {
         const turret = turretRef.current;
 
         ctx.save();
-        ctx.translate(p.x, p.y);
+        ctx.translate(sx, sy);
         ctx.rotate(turret.angle);
-
         ctx.strokeStyle = '#9ad1ff';
         ctx.lineWidth = turret.width;
         ctx.lineCap = 'round';
@@ -757,13 +785,14 @@ function FrameGame1() {
         ctx.moveTo(0, 0);
         ctx.lineTo(p.halfSize + turret.length, 0);
         ctx.stroke();
-
         ctx.restore();
 
         for (const projectile of projectilesRef.current) {
+            const { sx: projectileSx, sy: projectileSy } = worldToScreen(projectile.x, projectile.y, canvas);
+
             ctx.fillStyle = '#ffd54a';
             ctx.beginPath();
-            ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+            ctx.arc(projectileSx, projectileSy, projectile.radius, 0, Math.PI * 2);
             ctx.fill();
         }
         const range = playerStatsRef.current.range;
@@ -771,24 +800,26 @@ function FrameGame1() {
         ctx.strokeStyle = 'rgba(154, 209, 255, 0.25)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, range, 0, Math.PI * 2);
+        ctx.arc(sx, sy, range, 0, Math.PI * 2);
         ctx.stroke();
 
         for (const enemy of enemiesRef.current) {
             if (!enemy.alive) continue;
 
+            const { sx: enemySx, sy: enemySy } = worldToScreen(enemy.x, enemy.y, canvas);
+
             ctx.fillStyle = '#d64545';
             ctx.fillRect(
-                enemy.x - enemy.halfSize,
-                enemy.y - enemy.halfSize,
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
                 enemy.halfSize * 2,
                 enemy.halfSize * 2
             );
 
             const barWidth = enemy.halfSize * 2;
             const barHeight = 6;
-            const barX = enemy.x - enemy.halfSize;
-            const barY = enemy.y - enemy.halfSize - 12;
+            const barX = enemySx - enemy.halfSize;
+            const barY = enemySy - enemy.halfSize - 12;
             const healthRatio = enemy.hp / enemy.maxHp;
 
             ctx.fillStyle = '#222222';
@@ -801,8 +832,8 @@ function FrameGame1() {
                 ctx.strokeStyle = '#ff3b3b';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(
-                    enemy.x - enemy.halfSize - pad,
-                    enemy.y - enemy.halfSize - pad,
+                    enemySx - enemy.halfSize - pad,
+                    enemySy - enemy.halfSize - pad,
                     enemy.halfSize * 2 + pad * 2,
                     enemy.halfSize * 2 + pad * 2
                 );
@@ -810,9 +841,10 @@ function FrameGame1() {
         }
 
         for (const drop of advancedDropsRef.current) {
+            const { sx: dropSx, sy: dropSy } = worldToScreen(drop.x, drop.y, canvas);
             ctx.fillStyle = '#c084fc';
             ctx.beginPath();
-            ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
+            ctx.arc(dropSx, dropSy, drop.radius, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.strokeStyle = '#6b21a8';
@@ -821,7 +853,37 @@ function FrameGame1() {
         }
     }
 
+    function distanceSqToPlayer(x, y) {
+        const p = playerRef.current;
+        const dx = x - p.x;
+        const dy = y - p.y;
+        return dx * dx + dy * dy;
+    }
 
+    function pruneFarEntities() {
+        const {
+            despawnRadius,
+            bossDespawnRadius,
+        } = worldBandsRef.current;
+
+        const despawnSq = despawnRadius * despawnRadius;
+        const bossDespawnSq = bossDespawnRadius * bossDespawnRadius;
+
+        enemiesRef.current = enemiesRef.current.filter((enemy) => {
+            if (!enemy.alive) return false;
+
+            const d2 = distanceSqToPlayer(enemy.x, enemy.y);
+            if (enemy.isBoss) {
+                return d2 <= bossDespawnSq;
+            }
+            return d2 <= despawnSq;
+        });
+
+        // advancedDropsRef.current = advancedDropsRef.current.filter((drop) => {
+        //     if (!drop.alive) return false;
+        //     return distanceSqToPlayer(drop.x, drop.y) <= despawnSq;
+        // });
+    }
 
 
 
@@ -838,7 +900,7 @@ function FrameGame1() {
         const scaled = getDifficultyFromKills(y);
 
         enemiesRef.current = Array.from({ length: startCount }, () =>
-            createEnemy(canvas.width, canvas.height, playerRef.current, {
+            createEnemy(playerRef.current, {
                 hp: scaled.hp,
                 atk: scaled.atk,
                 def: scaled.def,
@@ -856,7 +918,11 @@ function FrameGame1() {
             const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
             lastTime = timestamp;
 
+            cameraRef.current.x = playerRef.current.x;
+            cameraRef.current.y = playerRef.current.y;
+
             if (!shopOpenRef.current) {
+                pruneFarEntities();
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
                 updateTurret(dt);
