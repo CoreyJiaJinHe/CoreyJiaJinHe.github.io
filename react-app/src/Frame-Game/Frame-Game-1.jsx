@@ -581,6 +581,25 @@ function FrameGame1() {
         setTargetEnemyIdView(nextValue);
     }
 
+
+
+    const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
+    const shakeRef = useRef(0); // Current shake intensity
+
+    // Add a function to trigger effects
+    const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
+        const id = Date.now();
+        damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
+        
+        if (isPlayer) {
+            shakeRef.current = 10; // Set shake intensity
+        }
+    };
+
+
+
+
+
     function onEnemyKilled(enemy) {
         enemy.hp = 0;
         enemy.alive = false;
@@ -783,6 +802,12 @@ function FrameGame1() {
         }
     }
 
+    function enemyTakeDamage(enemy, amount) {
+        enemy.hp -= amount;
+        const { sx, sy } = worldToScreen(enemy.x, enemy.y, canvasRef.current);
+        triggerEffects(sx, sy, `-${amount}`, "#ffcc00");
+    };
+
     function updateProjectiles(dt, canvas) {
         for (const projectile of projectilesRef.current) {
             if (!projectile.alive) {
@@ -800,16 +825,6 @@ function FrameGame1() {
                 continue;
             }
 
-            // if (
-            //     projectile.x < -20 ||
-            //     projectile.x > canvas.width + 20 ||
-            //     projectile.y < -20 ||
-            //     projectile.y > canvas.height + 20
-            // ) {
-            //     projectile.alive = false;
-            //     continue;
-            // }
-
             for (const enemy of enemiesRef.current) {
                 if (!enemy.alive) {
                     continue;
@@ -823,8 +838,10 @@ function FrameGame1() {
                     continue;
                 }
 
-                enemy.hp -= Math.max(1, projectile.damage - enemy.def);
                 projectile.alive = false;
+
+                enemyTakeDamage(enemy, Math.max(1, projectile.damage - enemy.def));
+
 
                 if (enemy.hp <= 0) {
                     onEnemyKilled(enemy);
@@ -942,7 +959,12 @@ function FrameGame1() {
 
 
     }
-
+    function playerTakeDamage(amount, x, y, isPlayer) {
+        playerStatsRef.current.hp = Math.max(0, playerStatsRef.current.hp - amount);
+        const { sx, sy } = worldToScreen(playerRef.current.x, playerRef.current.y, canvasRef.current);
+        triggerEffects(sx, sy, `-${amount}`, isPlayer ? "red" : "white", isPlayer);
+    }
+    
     function updateCombat(dt) {
         const p = playerRef.current;
         const playerStats = playerStatsRef.current;
@@ -966,13 +988,14 @@ function FrameGame1() {
 
             if (enemy.takeDamageCooldown <= 0) {
                 const damageToEnemy = Math.max(1, playerStats.atk - enemy.def);
-                enemy.hp -= damageToEnemy;
+                enemyTakeDamage(enemy, damageToEnemy);
                 enemy.takeDamageCooldown = 0.25;
             }
 
             if (enemy.damagePlayerCooldown <= 0) {
                 const damageToPlayer = Math.max(1, enemy.atk - playerStats.def);
-                playerStats.hp = Math.max(0, playerStats.hp - damageToPlayer);
+                
+                playerTakeDamage(damageToPlayer, p.x, p.y, true);
                 enemy.damagePlayerCooldown = 0.5;
 
                 if (playerStats.hp <= 0) {
@@ -1116,6 +1139,8 @@ function FrameGame1() {
                     size: 14,
                 })),
         ];
+
+        drawEffects(ctx);
         drawOffscreenMarkers(ctx, canvas, markerTargets);
 
     }
@@ -1193,6 +1218,41 @@ function FrameGame1() {
             ctx.restore();
         }
     }
+
+    const updateEffects = (deltaTime) => {
+        // 1. Decay Shake
+        if (shakeRef.current > 0) {
+            shakeRef.current *= 0.9; // Smoothly reduce shake
+            if (shakeRef.current < 0.1) shakeRef.current = 0;
+        }
+
+        // 2. Decay Damage Text
+        damageTextsRef.current = damageTextsRef.current.filter(item => {
+            item.life -= 0.02; // Reduce opacity over time
+            return item.life > 0;
+        });
+    };
+
+    const drawEffects = (ctx) => {
+        // Apply Screen Shake to the context
+        if (shakeRef.current > 0) {
+            const sx = (Math.random() - 0.5) * shakeRef.current;
+            const sy = (Math.random() - 0.5) * shakeRef.current;
+            ctx.setTransform(1, 0, 0, 1, sx, sy);
+        }
+
+        damageTextsRef.current.forEach(textObj => {
+            ctx.font = `bold ${20 * textObj.life}px Arial`;
+            ctx.fillStyle = textObj.color;
+            ctx.globalAlpha = textObj.life;
+            ctx.fillText(textObj.text, textObj.x, textObj.y);
+            ctx.globalAlpha = 1.0;
+        });
+
+        // Reset transform so UI/HUD doesn't shake
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+    };
+
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -1237,6 +1297,7 @@ function FrameGame1() {
                 updateProjectiles(dt, canvas);
                 updateEnemyPopulation(dt, canvas);
                 updateBossSpawn(dt, canvas);
+                updateEffects(dt);
             }
             drawScene(ctx, canvas);
 
