@@ -29,6 +29,11 @@ function FrameGame1() {
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
 
 
+    const PROFILE = {
+        P1: 'p1', // slow
+        P2: 'p2', // default
+        P3: 'p3', // chaos
+    };
 
     const materialsRef = useRef(0);
     const [materialsView, setMaterialsView] = useState(0);
@@ -71,12 +76,92 @@ function FrameGame1() {
     }
 
     function createEnemy(player, statOverrides = {}) {
+        function updateEnemyAi(dt) {
+            const p = playerRef.current;
+            const cfg = getEnemyAiConfig();
+
+            for (const enemy of enemiesRef.current) {
+                if (!enemy.alive) continue;
+
+                const dx = p.x - enemy.x;
+                const dy = p.y - enemy.y;
+                const dist = Math.hypot(dx, dy);
+                const toPlayer = normalize2D(dx, dy);
+
+                const contactRange = p.halfSize + enemy.halfSize - 1;
+
+                if (dist <= enemy.desiredRange) {
+                    enemy.aiState = 'attack-range';
+                } else if (dist <= cfg.aggroRadius) {
+                    enemy.aiState = 'chase';
+                } else if (enemy.aiState === 'chase' || enemy.aiState === 'attack-range') {
+                    enemy.aiState = Math.random() < 0.5 ? 'idle-zigzag' : 'idle-move';
+                }
+
+                enemy.aiTimer -= dt;
+
+                if (enemy.aiState === 'idle-zigzag') {
+                    if (enemy.aiTimer <= 0) {
+                        enemy.aiTimer = randomBetween(cfg.repathIntervalMin, cfg.repathIntervalMax);
+                        enemy.wanderAngle += randomBetween(-0.9, 0.9);
+                    }
+
+                    enemy.strafePhase += dt * cfg.strafeFrequency;
+                    const strafe = Math.sin(enemy.strafePhase) * cfg.strafeAmplitude;
+
+                    const forwardX = Math.cos(enemy.wanderAngle);
+                    const forwardY = Math.sin(enemy.wanderAngle);
+                    const rightX = -forwardY;
+                    const rightY = forwardX;
+
+                    enemy.x += (forwardX * cfg.idleDriftSpeed + rightX * strafe) * dt;
+                    enemy.y += (forwardY * cfg.idleDriftSpeed + rightY * strafe) * dt;
+                }
+
+                if (enemy.aiState === 'idle-move') {
+                    enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
+                    enemy.x += enemy.idleMoveDir.x * cfg.idleMoveSpeed * dt;
+                    enemy.y += enemy.idleMoveDir.y * cfg.idleMoveSpeed * dt;
+
+                    if (enemy.idleMoveRemaining <= 0) {
+                        enemy.idleMoveDir = pickRandomIdleMoveDirection();
+                        enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
+                    }
+                }
+
+                if (enemy.aiState === 'chase') {
+                    enemy.x += toPlayer.x * enemy.speed * dt;
+                    enemy.y += toPlayer.y * enemy.speed * dt;
+                }
+
+                if (enemy.aiState === 'attack-range') {
+                    if (dist > contactRange) {
+                        enemy.x += toPlayer.x * cfg.contactPullSpeed * dt;
+                        enemy.y += toPlayer.y * cfg.contactPullSpeed * dt;
+                    } else {
+                        enemy.strafePhase += dt * cfg.strafeFrequency;
+                        const orbitDir = Math.sin(enemy.strafePhase);
+                        const tangentX = -toPlayer.y;
+                        const tangentY = toPlayer.x;
+
+                        enemy.x += tangentX * orbitDir * cfg.idleDriftSpeed * dt;
+                        enemy.y += tangentY * orbitDir * cfg.idleDriftSpeed * dt;
+
+                        if (dist < contactRange * 0.7) {
+                            enemy.x -= toPlayer.x * cfg.pushOutSpeed * dt;
+                            enemy.y -= toPlayer.y * cfg.pushOutSpeed * dt;
+                        }
+                    }
+                }
+            }
+        }
+        const cfg = getEnemyAiConfig();
         const halfSize = 18;
-        const minSpawnDistance=worldBandsRef.current.spawnMinRadius;
-        const maxSpawnDistance=worldBandsRef.current.spawnMaxRadius;
+        const minSpawnDistance = worldBandsRef.current.spawnMinRadius;
+        const maxSpawnDistance = worldBandsRef.current.spawnMaxRadius;
         let attempts = 0;
 
-        const angle=Math.random()*Math.PI*2;
+        const angle = Math.random() * Math.PI * 2;
         const distance = randomBetween(minSpawnDistance, maxSpawnDistance);
         const x = player.x + Math.cos(angle) * distance;
         const y = player.y + Math.sin(angle) * distance;
@@ -93,6 +178,15 @@ function FrameGame1() {
             alive: true,
             damagePlayerCooldown: 0,
             takeDamageCooldown: 0,
+
+            speed: cfg.chaseSpeed,
+            aiState: pickRandomInitialAiState(),
+            aiTimer: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            strafePhase: Math.random() * Math.PI * 2,
+            desiredRange: cfg.attackRange,
+            idleMoveDir: pickRandomIdleMoveDirection(),
+            idleMoveRemaining: randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax),
         };
     }
 
@@ -108,9 +202,160 @@ function FrameGame1() {
         }, 0);
     }
 
+    const enemyAiProfilesRef = useRef({
+        [PROFILE.P1]: {
+            aggroRadius: 280,
+            attackRange: 36,
+            idleDriftSpeed: 20,
+            idleMoveSpeed: 24,
+            chaseSpeed: 64,
+            strafeAmplitude: 20,
+            strafeFrequency: 2.4,
+            repathIntervalMin: 1.0,
+            repathIntervalMax: 1.8,
+            idleMoveSegmentMin: 40,
+            idleMoveSegmentMax: 140,
+            contactPullSpeed: 86,
+            pushOutSpeed: 120,
+        },
+        [PROFILE.P2]: {
+            aggroRadius: 320,
+            attackRange: 40,
+            idleDriftSpeed: 28,
+            idleMoveSpeed: 32,
+            chaseSpeed: 78,
+            strafeAmplitude: 26,
+            strafeFrequency: 3.2,
+            repathIntervalMin: 0.8,
+            repathIntervalMax: 1.6,
+            idleMoveSegmentMin: 50,
+            idleMoveSegmentMax: 170,
+            contactPullSpeed: 102,
+            pushOutSpeed: 148,
+        },
+        [PROFILE.P3]: {
+            aggroRadius: 360,
+            attackRange: 46,
+            idleDriftSpeed: 34,
+            idleMoveSpeed: 40,
+            chaseSpeed: 96,
+            strafeAmplitude: 34,
+            strafeFrequency: 4.1,
+            repathIntervalMin: 0.55,
+            repathIntervalMax: 1.2,
+            idleMoveSegmentMin: 70,
+            idleMoveSegmentMax: 230,
+            contactPullSpeed: 124,
+            pushOutSpeed: 182,
+        },
+    });
+
+    function getEnemyAiConfig() {
+        return enemyAiProfilesRef.current[pacingProfileRef.current];
+    }
+
 
     function randomBetween(min, max) {
         return Math.random() * (max - min) + min;
+    }
+
+    function normalize2D(x, y) {
+        const len = Math.hypot(x, y) || 1;
+        return { x: x / len, y: y / len };
+    }
+
+    function pickRandomIdleMoveDirection() {
+        const dirs = [
+            { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+            { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 },
+        ];
+        const d = dirs[Math.floor(Math.random() * dirs.length)];
+        const n = normalize2D(d.x, d.y);
+        return { x: n.x, y: n.y };
+    }
+
+    function pickRandomInitialAiState() {
+        const states = ['idle-zigzag', 'idle-move', 'chase', 'attack-range'];
+        return states[Math.floor(Math.random() * states.length)];
+    }
+    function updateEnemyAi(dt) {
+        const p = playerRef.current;
+        const cfg = getEnemyAiConfig();
+
+        for (const enemy of enemiesRef.current) {
+            if (!enemy.alive) continue;
+
+            const dx = p.x - enemy.x;
+            const dy = p.y - enemy.y;
+            const dist = Math.hypot(dx, dy);
+            const toPlayer = normalize2D(dx, dy);
+
+            const contactRange = p.halfSize + enemy.halfSize - 1;
+
+            if (dist <= enemy.desiredRange) {
+                enemy.aiState = 'attack-range';
+            } else if (dist <= cfg.aggroRadius) {
+                enemy.aiState = 'chase';
+            } else if (enemy.aiState === 'chase' || enemy.aiState === 'attack-range') {
+                enemy.aiState = Math.random() < 0.5 ? 'idle-zigzag' : 'idle-move';
+            }
+
+            enemy.aiTimer -= dt;
+
+            if (enemy.aiState === 'idle-zigzag') {
+                if (enemy.aiTimer <= 0) {
+                    enemy.aiTimer = randomBetween(cfg.repathIntervalMin, cfg.repathIntervalMax);
+                    enemy.wanderAngle += randomBetween(-0.9, 0.9);
+                }
+
+                enemy.strafePhase += dt * cfg.strafeFrequency;
+                const strafe = Math.sin(enemy.strafePhase) * cfg.strafeAmplitude;
+
+                const forwardX = Math.cos(enemy.wanderAngle);
+                const forwardY = Math.sin(enemy.wanderAngle);
+                const rightX = -forwardY;
+                const rightY = forwardX;
+
+                enemy.x += (forwardX * cfg.idleDriftSpeed + rightX * strafe) * dt;
+                enemy.y += (forwardY * cfg.idleDriftSpeed + rightY * strafe) * dt;
+            }
+
+            if (enemy.aiState === 'idle-move') {
+                enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
+                enemy.x += enemy.idleMoveDir.x * cfg.idleMoveSpeed * dt;
+                enemy.y += enemy.idleMoveDir.y * cfg.idleMoveSpeed * dt;
+
+                if (enemy.idleMoveRemaining <= 0) {
+                    enemy.idleMoveDir = pickRandomIdleMoveDirection();
+                    enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
+                }
+            }
+
+            if (enemy.aiState === 'chase') {
+                enemy.x += toPlayer.x * enemy.speed * dt;
+                enemy.y += toPlayer.y * enemy.speed * dt;
+            }
+
+            if (enemy.aiState === 'attack-range') {
+                if (dist > contactRange) {
+                    enemy.x += toPlayer.x * cfg.contactPullSpeed * dt;
+                    enemy.y += toPlayer.y * cfg.contactPullSpeed * dt;
+                } else {
+                    enemy.strafePhase += dt * cfg.strafeFrequency;
+                    const orbitDir = Math.sin(enemy.strafePhase);
+                    const tangentX = -toPlayer.y;
+                    const tangentY = toPlayer.x;
+
+                    enemy.x += tangentX * orbitDir * cfg.idleDriftSpeed * dt;
+                    enemy.y += tangentY * orbitDir * cfg.idleDriftSpeed * dt;
+
+                    if (dist < contactRange * 0.7) {
+                        enemy.x -= toPlayer.x * cfg.pushOutSpeed * dt;
+                        enemy.y -= toPlayer.y * cfg.pushOutSpeed * dt;
+                    }
+                }
+            }
+        }
     }
 
 
@@ -144,7 +389,7 @@ function FrameGame1() {
     const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
     const scaledEnemiesEnabledRef = useRef(false);
 
-    
+
     function setScaledEnemiesEnabledSync(nextValue) {
         const resolved =
             typeof nextValue === 'function'
@@ -156,14 +401,9 @@ function FrameGame1() {
     }
 
 
-    const PROFILE = {
-    P1: 'p1', // slow
-    P2: 'p2', // default
-    P3: 'p3', // chaos
-    };
     const [pacingProfile, setPacingProfile] = useState(PROFILE.P2);
     const pacingProfileRef = useRef(PROFILE.P2);
-    
+
     function setPacingProfileSync(nextValue) {
         const resolved =
             typeof nextValue === 'function'
@@ -916,8 +1156,8 @@ function FrameGame1() {
         );
     }
 
-    
-    
+
+
 
     function drawOffscreenMarkers(ctx, canvas, targets) {
         const p = playerRef.current;
@@ -992,6 +1232,7 @@ function FrameGame1() {
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
                 updateTurret(dt);
+                updateEnemyAi(dt);
                 updateCombat(dt);
                 updateProjectiles(dt, canvas);
                 updateEnemyPopulation(dt, canvas);
@@ -1031,8 +1272,8 @@ function FrameGame1() {
 
     function squaresOverlap(a, b) {
         return (
-            Math.abs(a.x - b.x) < a.halfSize + b.halfSize &&
-            Math.abs(a.y - b.y) < a.halfSize + b.halfSize
+            Math.abs(a.x - b.x) <= a.halfSize + b.halfSize &&
+            Math.abs(a.y - b.y) <= a.halfSize + b.halfSize
         );
     }
 
@@ -1152,9 +1393,9 @@ function FrameGame1() {
                 </div>
 
                 {developerMode ?
-                        (
-                            <>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+                    (
+                        <>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div>MAX ACTIVE: {liveDifficulty.maxActive}</div>
                                 <div>SPAWN RATE: {liveDifficulty.spawnInterval.toFixed(2)}s</div>
                                 <div>SCALED: {scaledEnemiesEnabled ? 'ON' : 'OFF'}</div>
@@ -1162,10 +1403,10 @@ function FrameGame1() {
                                 <div>KILLS/BOSS: {bossConfigRef.current.killsPerBoss}</div>
                                 <div>BOSSES DEFEATED: {bossesDefeatedView}</div>
                             </div>
-                            </>
-                        )
-                        : null
-                    }
+                        </>
+                    )
+                    : null
+                }
                 <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>HP:</span>
@@ -1194,7 +1435,7 @@ function FrameGame1() {
                     </div>
                     <div>MATERIALS: {materialsView}</div>
                     <div>KILLS: {killsView}</div>
-                    
+
                 </div>
 
             </div>
