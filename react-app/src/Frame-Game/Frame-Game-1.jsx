@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback  } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
 //import difficultyRef from './Difficulty-Scaling';
 
@@ -25,6 +25,9 @@ function FrameGame1() {
         atk: 5,
         def: 2,
         range: 220,
+        // Additional stats for secondary turrets
+        secondaryTurretAngle: 0,
+        secondaryTurretTurnSpeed: Math.PI * 1.8,
     });
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
 
@@ -590,16 +593,24 @@ function FrameGame1() {
     const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
         const id = Date.now();
         damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
-        
+
         if (isPlayer) {
             shakeRef.current = 10; // Set shake intensity
         }
     };
 
 
+    const unlockAdvancedWeaponTypes = useCallback(() => {
+        // In a real implementation, this would unlock a menu or 
+        // allow the player to select from the unlocked types.
+        console.log("Boss Defeated! Advanced Weapon Types Unlocked.");
+    }, []);
 
-
-
+    const setWeaponType = (type) => {
+        if (WEAPON_TYPE_MAP[type]) {
+            setActiveWeaponType(type);
+        }
+    };
     function onEnemyKilled(enemy) {
         enemy.hp = 0;
         enemy.alive = false;
@@ -618,6 +629,9 @@ function FrameGame1() {
         if (enemy.isBoss) {
             bossesDefeatedRef.current += 1;
             setBossesDefeatedView(bossesDefeatedRef.current);
+            if (bossesDefeatedRef.current === 1) {
+                unlockAdvancedWeaponTypes();
+            }
         }
     }
     function grantMaterials(amount) {
@@ -685,6 +699,81 @@ function FrameGame1() {
         advancedDropsRef.current = advancedDropsRef.current.filter((d) => d.alive);
     }
 
+    const WEAPON_TYPES = {
+        SINGLE: 'SINGLE',
+        DOUBLE: 'DOUBLE',
+        TRIPLE: 'TRIPLE',
+        BURST: 'BURST',     // Still a single turret, but with high-frequency firing
+        EXPLOSIVE: 'EXPLOSIVE', // Still a single turret, but with AoE projectiles
+    };
+
+    const TURRET_CONFIGS = {
+        PRIMARY: {
+            damage: 10,
+            fireInterval: 0.5,
+            projectileSpeed: 420,
+            spread: 0,
+            projectileType: 'STANDARD',
+            rangeMultiplier: 1, // Always full player range
+        },
+        SECONDARY: {
+            damage: 8,
+            fireInterval: 0.5,
+            projectileSpeed: 420,
+            spread: 0,
+            projectileType: 'STANDARD',
+            rangeMultiplier: 0.6, // 60% of player range
+        },
+        TRIPLE:{
+            damage: 8,
+            fireInterval: 0.5,
+            projectileSpeed: 420,
+            spread: 0,
+            projectileType: 'STANDARD',
+            rangeMultiplier: 0.6, // 60% of player range
+        },
+        BURST_UNIT: {
+            damage: 12,
+            fireInterval: 0.5, // Match main turret for burst, not beam
+            projectileSpeed: 420,
+            burstCount: 3,
+            projectileType: 'STANDARD',
+            rangeMultiplier: 1,
+        },
+        EXPLOSIVE_UNIT: {
+            damage: 15,
+            fireInterval: 1.0,
+            projectileSpeed: 320,
+            explosionRadius: 60,
+            projectileType: 'EXPLOSIVE',
+            rangeMultiplier: 1,
+        }
+    };
+    const WEAPON_TYPE_MAP = {
+        [WEAPON_TYPES.SINGLE]: [TURRET_CONFIGS.PRIMARY],
+
+        [WEAPON_TYPES.DOUBLE]: [
+            TURRET_CONFIGS.PRIMARY,
+            TURRET_CONFIGS.SECONDARY // Adds the second turret with smaller range
+        ],
+
+        [WEAPON_TYPES.TRIPLE]: [
+            TURRET_CONFIGS.PRIMARY,
+            TURRET_CONFIGS.SECONDARY,
+            TURRET_CONFIGS.SECONDARY // Adds two secondary turrets
+        ],
+
+        [WEAPON_TYPES.BURST]: [TURRET_CONFIGS.BURST_UNIT],
+
+        [WEAPON_TYPES.EXPLOSIVE]: [TURRET_CONFIGS.EXPLOSIVE_UNIT],
+    };
+
+    const [activeWeaponType, setActiveWeaponType] = useState(WEAPON_TYPES.SINGLE);
+    const activeTurrets = WEAPON_TYPE_MAP[activeWeaponType];
+
+
+
+
     const turretRef = useRef({
         angle: 0,
         turnSpeed: Math.PI * 1.4,
@@ -695,6 +784,32 @@ function FrameGame1() {
         fireInterval: 0.35,
         projectileSpeed: 420,
     });
+    // Secondary turret angles (for up to 2 secondaries)
+    const secondaryTurretAnglesRef = useRef([0, 0]);
+
+    // --- Main turret auto-fire flag (for future upgrade) ---
+    const [mainTurretAutoFireEnabled, setMainTurretAutoFireEnabled] = useState(false); // Set to true to enable auto-fire for main turret
+
+    // --- Unified turret cooldown state: one entry per turret (main + all secondaries) ---
+    const turretCooldownsRef = useRef(activeTurrets.map(() => ({ fireCooldown: 0 })));
+
+    // useEffect(() => {
+    //     setTurretCooldowns(prev => {
+    //         // If the number of turrets increased, add new cooldowns as 0
+    //         if (prev.length < activeTurrets.length) {
+    //             return [
+    //                 ...prev,
+    //                 ...Array(activeTurrets.length - prev.length).fill({ fireCooldown: 0 })
+    //             ];
+    //         }
+    //         // If the number of turrets decreased, trim the array
+    //         if (prev.length > activeTurrets.length) {
+    //             return prev.slice(0, activeTurrets.length);
+    //         }
+    //         // If unchanged, return as is
+    //         return prev;
+    //     });
+    // }, [activeTurrets.length]);
 
     const projectilesRef = useRef([]);
     const fireRequestRef = useRef(false);
@@ -721,38 +836,76 @@ function FrameGame1() {
         return Math.atan2(target.y - p.y, target.x - p.x);
     }
 
-    function getTurretMuzzlePosition() {
+    function getTurretMuzzlePosition(idx) {
         const p = playerRef.current;
-        const turret = turretRef.current;
-        const muzzleDistance = p.halfSize + turret.length;
-
+        let angle, length;
+        if (idx === 0) {
+            angle = turretRef.current.angle;
+            length = turretRef.current.length;
+        } else {
+            angle = secondaryTurretAnglesRef.current[idx - 1] || 0;
+            length = turretRef.current.length * 0.7;
+        }
+        const muzzleDistance = p.halfSize + length;
         return {
-            x: p.x + Math.cos(turret.angle) * muzzleDistance,
-            y: p.y + Math.sin(turret.angle) * muzzleDistance,
+            x: p.x + Math.cos(angle) * muzzleDistance,
+            y: p.y + Math.sin(angle) * muzzleDistance,
         };
     }
 
-    function spawnProjectileTowardTarget() {
-        const target = getTargetEnemy();
-        if (!target) {
-            return;
+    // --- Secondary Turret Helpers ---
+    function getSecondaryTurretTarget(idx, alreadyTargeted) {
+        // idx: 1 or 2 (secondary turrets)
+        const config = activeTurrets[idx];
+        const p = playerRef.current;
+        let closest = null, minDist = Infinity;
+        for (const enemy of enemiesRef.current) {
+            if (!enemy.alive) continue;
+            if (alreadyTargeted.has(enemy.id)) continue;
+            const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+            if (dist < minDist && dist <= playerStatsRef.current.range * (config.rangeMultiplier ?? 1)) {
+                closest = enemy;
+                minDist = dist;
+            }
         }
+        return closest;
+    }
 
-        const muzzle = getTurretMuzzlePosition();
-        const dx = target.x - muzzle.x;
-        const dy = target.y - muzzle.y;
-        const distance = Math.hypot(dx, dy);
-
-        const maxRange = playerStatsRef.current.range;
-
-        if (distance <= 0.001 || distance > maxRange) {
-            return false;
+    function rotateTurretAngle(current, target, turnSpeed, dt) {
+        let delta = normalizeAngle(target - current);
+        const maxStep = turnSpeed * dt;
+        if (Math.abs(delta) <= maxStep) {
+            return target;
+        } else {
+            return normalizeAngle(current + Math.sign(delta) * maxStep);
         }
+    }
 
-        const speed = turretRef.current.projectileSpeed;
-        const dirX = dx / distance;
-        const dirY = dy / distance;
+    function isTurretAligned(current, target, tolerance = 0.13) {
+        return Math.abs(normalizeAngle(target - current)) <= tolerance;
+    }
 
+    function getEffectiveRange(config) {
+        return playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
+    }
+    function calculateDistance(x1, y1, x2, y2) {
+        return Math.hypot(x2 - x1, y2 - y1);
+    }
+
+    // --- Generalized turret fire (used for both main and secondary turrets) ---
+    function fireTurret(idx, target) {
+        const config = activeTurrets[idx];
+        if (!config || !target) return false;
+        const muzzle = getTurretMuzzlePosition(idx);
+        const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
+
+        const effectiveRange = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
+
+        if (distance > effectiveRange) return false;
+
+        const speed = config.projectileSpeed;
+        const dirX = (target.x - muzzle.x) / distance;
+        const dirY = (target.y - muzzle.y) / distance;
         projectilesRef.current.push({
             id: crypto.randomUUID(),
             x: muzzle.x,
@@ -760,45 +913,109 @@ function FrameGame1() {
             radius: 5,
             vx: dirX * speed,
             vy: dirY * speed,
-            damage: Math.max(1, playerStatsRef.current.atk),
+            damage: config.damage,
             alive: true,
-            maxDistance: maxRange,
+            maxDistance: effectiveRange,
             traveled: 0,
         });
         return true;
     }
+    function setTurretCooldown(idx, cooldown) {
+        if (!Array.isArray(turretCooldownsRef.current)) turretCooldownsRef.current = [];
+        while (turretCooldownsRef.current.length <= idx) {
+            turretCooldownsRef.current.push({ fireCooldown: 0 });
+        }
+        turretCooldownsRef.current[idx] = { fireCooldown: cooldown };
+    }
+    // --- Unified auto-fire logic for all turrets (main and secondary) ---
+    function updateTurretAutoFire(dt) {
+        // Main turret auto-fire (if enabled)
+        if (mainTurretAutoFireEnabled && activeTurrets.length > 0) {
+            const cooldown = Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt);
+            if (cooldown > 0) {
+                turretCooldownsRef.current[0] = { fireCooldown: cooldown };
+            } else {
+                const target = getTargetEnemy();
+                if (target) {
+                    const targetAngle = Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x);
+                    if (isTurretAligned(turretRef.current.angle, targetAngle, turretRef.current.alignTolerance)) {
+                        const fired = fireTurret(0, target);
+                        if (fired) turretCooldownsRef.current[0] = { fireCooldown: activeTurrets[0].fireInterval };
+                    } else {
+                        turretCooldownsRef.current[0] = { fireCooldown: 0 }; // Not aligned, keep cooldown at 0
+                    }
+                } else {
+                    turretCooldownsRef.current[0] = { fireCooldown: 0 }; // No target, keep cooldown at 0
+                }
+            }
+        } else if (activeTurrets.length > 0) {
+            const cooldown = Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt);
+            turretCooldownsRef.current[0] = { fireCooldown: cooldown };
+        }
 
+        // Secondary turrets
+            const newAngles = [...secondaryTurretAnglesRef.current];
+            const targetedEnemyIds = new Set();
+            for (let idx = 1; idx < activeTurrets.length; idx++) {
+                const config = activeTurrets[idx];
+                let cooldown = Math.max(0, turretCooldownsRef.current[idx].fireCooldown - dt);
+                // Target selection
+                const target = getSecondaryTurretTarget(idx, targetedEnemyIds);
+                if (target) targetedEnemyIds.add(target.id);
+                // Rotation
+                let currentAngle = secondaryTurretAnglesRef.current[idx - 1] || 0;
+                let targetAngle = target ? Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x) : currentAngle;
+                let newAngle = rotateTurretAngle(currentAngle, targetAngle, Math.PI * 1.8, dt);
+                newAngles[idx - 1] = newAngle;
+                // Firing
+                if (cooldown > 0) {
+                    turretCooldownsRef.current[idx] = { fireCooldown: cooldown };
+                    continue; // Still cooling down, skip firing
+                } else if (target && isTurretAligned(newAngle, targetAngle)) {
+                    const fired = fireTurret(idx, target);
+                    if (fired) {
+                        turretCooldownsRef.current[idx] = { fireCooldown: config.fireInterval };
+                        //turretCooldowns[idx] = { fireCooldown: config.fireInterval };
+                    } else {
+                        turretCooldownsRef.current[idx] = { fireCooldown: 0 };
+                    }
+                } else {
+                    turretCooldownsRef.current[idx] = { fireCooldown: 0 };
+                }
+            }
+            secondaryTurretAnglesRef.current = newAngles;
+    }
+
+    // --- Main turret aim and player-controlled fire ---
     function updateTurret(dt) {
         const turret = turretRef.current;
         const targetAngle = getTargetAngle();
-
-        turret.fireCooldown = Math.max(0, turret.fireCooldown - dt);
-
+        turretCooldownsRef.current[0] = { fireCooldown: Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt) };
         if (targetAngle === null) {
             fireRequestRef.current = false;
             return;
         }
-
         const delta = normalizeAngle(targetAngle - turret.angle);
         const maxStep = turret.turnSpeed * dt;
-
         if (Math.abs(delta) <= maxStep) {
             turret.angle = targetAngle;
         } else {
             turret.angle += Math.sign(delta) * maxStep;
             turret.angle = normalizeAngle(turret.angle);
         }
-
         const remainingDelta = Math.abs(normalizeAngle(targetAngle - turret.angle));
         const isAligned = remainingDelta <= turret.alignTolerance;
-
-        if (fireRequestRef.current && isAligned && turret.fireCooldown <= 0) {
-            const fired = spawnProjectileTowardTarget();
-            fireRequestRef.current = false;
-
-            if (fired) {
-                turret.fireCooldown = turret.fireInterval;
+        // Player-controlled fire: only allow fireRequestRef to be honored if cooldown is zero
+        if (!mainTurretAutoFireEnabled && fireRequestRef.current) {
+            if (isAligned && turretCooldownsRef.current[0]?.fireCooldown <= 0) {
+                const fired = fireTurret(0, getTargetEnemy());
+                if (fired) {
+                    turretCooldownsRef.current[0] = { fireCooldown: activeTurrets[0].fireInterval };
+                }
+                fireRequestRef.current = false;
+                // If not fired, keep fireRequestRef true so user can retry when aligned/targeted
             }
+            // If cooldown is not up, ignore fireRequestRef until next eligible frame
         }
     }
 
@@ -964,7 +1181,7 @@ function FrameGame1() {
         const { sx, sy } = worldToScreen(playerRef.current.x, playerRef.current.y, canvasRef.current);
         triggerEffects(sx, sy, `-${amount}`, isPlayer ? "red" : "white", isPlayer);
     }
-    
+
     function updateCombat(dt) {
         const p = playerRef.current;
         const playerStats = playerStatsRef.current;
@@ -994,7 +1211,7 @@ function FrameGame1() {
 
             if (enemy.damagePlayerCooldown <= 0) {
                 const damageToPlayer = Math.max(1, enemy.atk - playerStats.def);
-                
+
                 playerTakeDamage(damageToPlayer, p.x, p.y, true);
                 enemy.damagePlayerCooldown = 0.5;
 
@@ -1021,12 +1238,13 @@ function FrameGame1() {
 
 
     function drawScene(ctx, canvas) {
+
+        // --- BACKGROUND ---
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-
+        // --- PLAYER ---
         const { sx, sy } = worldToScreen(playerRef.current.x, playerRef.current.y, canvas);
-
         const p = playerRef.current;
         ctx.fillStyle = '#4a9eff';
         ctx.fillRect(
@@ -1036,41 +1254,83 @@ function FrameGame1() {
             p.halfSize * 2
         );
 
-        const turret = turretRef.current;
+        // --- TURRETS ---
+        // Main turret always at center, secondaries have their own angle and are shorter
+        const turretLength = turretRef.current.length;
+        const turretWidth = turretRef.current.width;
+        function drawTurret(angle, isMain, tipColor, lengthOverride, baseOffset = 0) {
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(angle + baseOffset);
+            ctx.strokeStyle = isMain ? '#9ad1ff' : '#7a9abf';
+            ctx.lineWidth = isMain ? turretWidth : Math.max(6, turretWidth * 0.6);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(p.halfSize + (lengthOverride ?? turretLength), 0);
+            ctx.stroke();
+            if (tipColor) {
+                ctx.beginPath();
+                ctx.arc(p.halfSize + (lengthOverride ?? turretLength), 0, isMain ? 6 : 4, 0, Math.PI * 2);
+                ctx.fillStyle = tipColor;
+                ctx.fill();
+            }
+            ctx.restore();
+        }
 
-        ctx.save();
-        ctx.translate(sx, sy);
-        ctx.rotate(turret.angle);
-        ctx.strokeStyle = '#9ad1ff';
-        ctx.lineWidth = turret.width;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(p.halfSize + turret.length, 0);
-        ctx.stroke();
-        ctx.restore();
+        // --- Draw secondary turret ranges ---
+        for (let idx = 1; idx < activeTurrets.length; idx++) {
+            const config = activeTurrets[idx];
+            const angle = secondaryTurretAnglesRef.current[idx - 1] || 0;
+            const range = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(122, 154, 191, 0.18)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.arc(sx, sy, range, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
 
+        // --- Draw main turret and secondaries ---
+        if (activeWeaponType === WEAPON_TYPES.DOUBLE) {
+            drawTurret(turretRef.current.angle, true);
+            drawTurret(secondaryTurretAnglesRef.current[0] || 0, false, undefined, turretLength * 0.7, 0.22);
+        } else if (activeWeaponType === WEAPON_TYPES.TRIPLE) {
+            drawTurret(turretRef.current.angle, true);
+            drawTurret(secondaryTurretAnglesRef.current[0] || 0, false, undefined, turretLength * 0.7, 0.22);
+            drawTurret(secondaryTurretAnglesRef.current[1] || 0, false, undefined, turretLength * 0.7, -0.22);
+        } else if (activeWeaponType === WEAPON_TYPES.BURST) {
+            drawTurret(turretRef.current.angle, true, '#222');
+        } else if (activeWeaponType === WEAPON_TYPES.EXPLOSIVE) {
+            drawTurret(turretRef.current.angle, true, '#e22');
+        } else {
+            drawTurret(turretRef.current.angle, true);
+        }
+
+        // --- PROJECTILES ---
         for (const projectile of projectilesRef.current) {
             const { sx: projectileSx, sy: projectileSy } = worldToScreen(projectile.x, projectile.y, canvas);
-
             ctx.fillStyle = '#ffd54a';
             ctx.beginPath();
             ctx.arc(projectileSx, projectileSy, projectile.radius, 0, Math.PI * 2);
             ctx.fill();
         }
-        const range = playerStatsRef.current.range;
 
+        // --- MAIN TURRET RANGE ---
+        const range = playerStatsRef.current.range;
         ctx.strokeStyle = 'rgba(154, 209, 255, 0.25)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(sx, sy, range, 0, Math.PI * 2);
         ctx.stroke();
 
+        // --- ENEMIES ---
         for (const enemy of enemiesRef.current) {
             if (!enemy.alive) continue;
-
             const { sx: enemySx, sy: enemySy } = worldToScreen(enemy.x, enemy.y, canvas);
-
             ctx.fillStyle = '#d64545';
             ctx.fillRect(
                 enemySx - enemy.halfSize,
@@ -1078,18 +1338,15 @@ function FrameGame1() {
                 enemy.halfSize * 2,
                 enemy.halfSize * 2
             );
-
             const barWidth = enemy.halfSize * 2;
             const barHeight = 6;
             const barX = enemySx - enemy.halfSize;
             const barY = enemySy - enemy.halfSize - 12;
             const healthRatio = enemy.hp / enemy.maxHp;
-
             ctx.fillStyle = '#222222';
             ctx.fillRect(barX, barY, barWidth, barHeight);
             ctx.fillStyle = '#4caf50';
             ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
-
             if (enemy.id === targetEnemyIdRef.current) {
                 const pad = 4;
                 ctx.strokeStyle = '#ff3b3b';
@@ -1103,19 +1360,19 @@ function FrameGame1() {
             }
         }
 
+        // --- ADVANCED DROPS ---
         for (const drop of advancedDropsRef.current) {
             const { sx: dropSx, sy: dropSy } = worldToScreen(drop.x, drop.y, canvas);
             ctx.fillStyle = '#c084fc';
             ctx.beginPath();
             ctx.arc(dropSx, dropSy, drop.radius, 0, Math.PI * 2);
             ctx.fill();
-
             ctx.strokeStyle = '#6b21a8';
             ctx.lineWidth = 2;
             ctx.stroke();
         }
 
-
+        // --- MARKERS (offscreen, bosses, drops) ---
         const markerTargets = [
             ...advancedDropsRef.current
                 .filter((drop) => drop.alive)
@@ -1127,7 +1384,6 @@ function FrameGame1() {
                     ringOffset: 44,
                     size: 12,
                 })),
-
             ...enemiesRef.current
                 .filter((enemy) => enemy.alive && enemy.isBoss)
                 .map((boss) => ({
@@ -1140,9 +1396,9 @@ function FrameGame1() {
                 })),
         ];
 
+        // --- EFFECTS & OFFSCREEN MARKERS ---
         drawEffects(ctx);
         drawOffscreenMarkers(ctx, canvas, markerTargets);
-
     }
 
     function distanceSqToPlayer(x, y) {
@@ -1292,6 +1548,7 @@ function FrameGame1() {
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
                 updateTurret(dt);
+                updateTurretAutoFire(dt)
                 updateEnemyAi(dt);
                 updateCombat(dt);
                 updateProjectiles(dt, canvas);
