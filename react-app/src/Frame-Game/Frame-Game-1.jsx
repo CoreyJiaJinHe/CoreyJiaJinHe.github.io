@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback  } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
 //import difficultyRef from './Difficulty-Scaling';
 
@@ -599,18 +599,8 @@ function FrameGame1() {
         }
     };
 
+    const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
 
-    const unlockAdvancedWeaponTypes = useCallback(() => {
-        // In a real implementation, this would unlock a menu or 
-        // allow the player to select from the unlocked types.
-        console.log("Boss Defeated! Advanced Weapon Types Unlocked.");
-    }, []);
-
-    const setWeaponType = (type) => {
-        if (WEAPON_TYPE_MAP[type]) {
-            setActiveWeaponType(type);
-        }
-    };
     function onEnemyKilled(enemy) {
         enemy.hp = 0;
         enemy.alive = false;
@@ -627,10 +617,11 @@ function FrameGame1() {
         }
 
         if (enemy.isBoss) {
+            grantMaterials(4);
             bossesDefeatedRef.current += 1;
             setBossesDefeatedView(bossesDefeatedRef.current);
             if (bossesDefeatedRef.current === 1) {
-                unlockAdvancedWeaponTypes();
+                setFirstWeaponUpgradeOpen(true);
             }
         }
     }
@@ -699,80 +690,113 @@ function FrameGame1() {
         advancedDropsRef.current = advancedDropsRef.current.filter((d) => d.alive);
     }
 
-    const WEAPON_TYPES = {
-        SINGLE: 'SINGLE',
-        DOUBLE: 'DOUBLE',
-        TRIPLE: 'TRIPLE',
-        BURST: 'BURST',     // Still a single turret, but with high-frequency firing
-        EXPLOSIVE: 'EXPLOSIVE', // Still a single turret, but with AoE projectiles
+    // Consolidated weapon configuration: each weapon type key maps to an array of turret configs
+    const WEAPON_CONFIGS = {
+        SINGLE: [
+            {
+                damage: 5,
+                fireInterval: 0.5,
+                projectileSpeed: 420,
+                spread: 0,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 1,
+            },
+        ],
+        DOUBLE: [
+            {
+                damage: 3,
+                fireInterval: 0.5,
+                projectileSpeed: 420,
+                spread: 0,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 1,
+            },
+            {
+                damage: 3,
+                fireInterval: 0.5,
+                projectileSpeed: 420,
+                spread: 0,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 0.6,
+            },
+        ],
+        TRIPLE: [
+            {
+                damage: 3,
+                fireInterval: 0.5,
+                projectileSpeed: 420,
+                spread: 0,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 1,
+            },
+            {
+                damage: 3,
+                fireInterval: 0.5,
+                projectileSpeed: 420,
+                spread: 0,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 0.6,
+            },
+            {
+                damage: 3,
+                fireInterval: 0.5,
+                projectileSpeed: 420,
+                spread: 0,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 0.6,
+            },
+        ],
+        BURST: [
+            {
+                damage: 2,
+                fireInterval: 0.6,
+                projectileSpeed: 420,
+                burstCount: 3,
+                projectileType: 'STANDARD',
+                rangeMultiplier: 1,
+            },
+        ],
+        EXPLOSIVE: [
+            {
+                damage: 10,
+                fireInterval: 1.0,
+                projectileSpeed: 320,
+                explosionRadius: 60,
+                projectileType: 'EXPLOSIVE',
+                rangeMultiplier: 1,
+            },
+        ],
     };
 
-    const TURRET_CONFIGS = {
-        PRIMARY: {
-            damage: 10,
-            fireInterval: 0.5,
-            projectileSpeed: 420,
-            spread: 0,
-            projectileType: 'STANDARD',
-            rangeMultiplier: 1, // Always full player range
-        },
-        SECONDARY: {
-            damage: 8,
-            fireInterval: 0.5,
-            projectileSpeed: 420,
-            spread: 0,
-            projectileType: 'STANDARD',
-            rangeMultiplier: 0.6, // 60% of player range
-        },
-        TRIPLE:{
-            damage: 8,
-            fireInterval: 0.5,
-            projectileSpeed: 420,
-            spread: 0,
-            projectileType: 'STANDARD',
-            rangeMultiplier: 0.6, // 60% of player range
-        },
-        BURST_UNIT: {
-            damage: 12,
-            fireInterval: 0.5, // Match main turret for burst, not beam
-            projectileSpeed: 420,
-            burstCount: 3,
-            projectileType: 'STANDARD',
-            rangeMultiplier: 1,
-        },
-        EXPLOSIVE_UNIT: {
-            damage: 15,
-            fireInterval: 1.0,
-            projectileSpeed: 320,
-            explosionRadius: 60,
-            projectileType: 'EXPLOSIVE',
-            rangeMultiplier: 1,
+    // --- Weapon type and turrets ---
+
+    const weaponTypeKeys = Object.keys(WEAPON_CONFIGS);
+    const [activeWeaponType, setActiveWeaponType] = useState('EXPLOSIVE');
+    const activeWeaponTypeRef = useRef(activeWeaponType);
+    useEffect(() => {
+        activeWeaponTypeRef.current = activeWeaponType;
+    }, [activeWeaponType]);
+    function getActiveTurrets() {
+        return WEAPON_CONFIGS[activeWeaponTypeRef.current] || [];
+    }
+
+    
+    function selectAdvancedWeaponUpgrade(weaponType) {
+        if (!WEAPON_CONFIGS[weaponType]) {
+            console.error('Invalid weapon upgrade selection:', weaponType);
+            return;
         }
-    };
-    const WEAPON_TYPE_MAP = {
-        [WEAPON_TYPES.SINGLE]: [TURRET_CONFIGS.PRIMARY],
+        setActiveWeaponType(weaponType);
+        setFirstWeaponUpgradeOpen(false);
+    }
 
-        [WEAPON_TYPES.DOUBLE]: [
-            TURRET_CONFIGS.PRIMARY,
-            TURRET_CONFIGS.SECONDARY // Adds the second turret with smaller range
-        ],
-
-        [WEAPON_TYPES.TRIPLE]: [
-            TURRET_CONFIGS.PRIMARY,
-            TURRET_CONFIGS.SECONDARY,
-            TURRET_CONFIGS.SECONDARY // Adds two secondary turrets
-        ],
-
-        [WEAPON_TYPES.BURST]: [TURRET_CONFIGS.BURST_UNIT],
-
-        [WEAPON_TYPES.EXPLOSIVE]: [TURRET_CONFIGS.EXPLOSIVE_UNIT],
-    };
-
-    const [activeWeaponType, setActiveWeaponType] = useState(WEAPON_TYPES.SINGLE);
-    const activeTurrets = WEAPON_TYPE_MAP[activeWeaponType];
-
-
-
+    // Ensure turretCooldowns and all logic sync when weapon type changes
+    useEffect(() => {
+        const newTurrets = WEAPON_CONFIGS[activeWeaponType] || [];
+        turretCooldownsRef.current = newTurrets.map(() => ({ fireCooldown: 0 }));
+        // Optionally reset secondary turret angles if needed
+        // secondaryTurretAnglesRef.current = [0, 0];
+    }, [activeWeaponType]);
 
     const turretRef = useRef({
         angle: 0,
@@ -791,7 +815,7 @@ function FrameGame1() {
     const [mainTurretAutoFireEnabled, setMainTurretAutoFireEnabled] = useState(false); // Set to true to enable auto-fire for main turret
 
     // --- Unified turret cooldown state: one entry per turret (main + all secondaries) ---
-    const turretCooldownsRef = useRef(activeTurrets.map(() => ({ fireCooldown: 0 })));
+    const turretCooldownsRef = useRef(getActiveTurrets().map(() => ({ fireCooldown: 0 })));
 
     // useEffect(() => {
     //     setTurretCooldowns(prev => {
@@ -856,7 +880,7 @@ function FrameGame1() {
     // --- Secondary Turret Helpers ---
     function getSecondaryTurretTarget(idx, alreadyTargeted) {
         // idx: 1 or 2 (secondary turrets)
-        const config = activeTurrets[idx];
+        const config = getActiveTurrets()[idx];
         const p = playerRef.current;
         let closest = null, minDist = Infinity;
         for (const enemy of enemiesRef.current) {
@@ -894,30 +918,59 @@ function FrameGame1() {
 
     // --- Generalized turret fire (used for both main and secondary turrets) ---
     function fireTurret(idx, target) {
-        const config = activeTurrets[idx];
+        const config = getActiveTurrets()[idx];
         if (!config || !target) return false;
+        // Burst weapon logic (main turret only)
+        if (activeWeaponTypeRef.current === 'BURST' && idx === 0) {
+            // Only start burst if not already firing
+            if (!burstStateRef.current.firing) {
+                // Only initialize burst state; do NOT fire the first shot here
+                burstStateRef.current.shotsRemaining = (config.burstCount || 3);
+                burstStateRef.current.burstTimer = 0; // Fire immediately on next handleBurstFire
+                burstStateRef.current.burstInterval = config.burstInterval || 0.15;
+                burstStateRef.current.target = target;
+                burstStateRef.current.firing = true;
+            }
+            return true;
+        }
+        // Standard projectile logic (single, double, triple, secondary, etc)
         const muzzle = getTurretMuzzlePosition(idx);
         const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
-
         const effectiveRange = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
-
         if (distance > effectiveRange) return false;
-
         const speed = config.projectileSpeed;
         const dirX = (target.x - muzzle.x) / distance;
         const dirY = (target.y - muzzle.y) / distance;
-        projectilesRef.current.push({
-            id: crypto.randomUUID(),
-            x: muzzle.x,
-            y: muzzle.y,
-            radius: 5,
-            vx: dirX * speed,
-            vy: dirY * speed,
-            damage: config.damage,
-            alive: true,
-            maxDistance: effectiveRange,
-            traveled: 0,
-        });
+        // EXPLOSIVE weapon: mark projectile and add explosionRadius
+        if (config.projectileType === 'EXPLOSIVE') {
+            projectilesRef.current.push({
+                id: crypto.randomUUID(),
+                x: muzzle.x,
+                y: muzzle.y,
+                radius: 8,
+                vx: dirX * speed,
+                vy: dirY * speed,
+                damage: config.damage,
+                alive: true,
+                maxDistance: effectiveRange,
+                traveled: 0,
+                projectileType: 'EXPLOSIVE',
+                explosionRadius: config.explosionRadius || 60,
+            });
+        } else {
+            projectilesRef.current.push({
+                id: crypto.randomUUID(),
+                x: muzzle.x,
+                y: muzzle.y,
+                radius: 5,
+                vx: dirX * speed,
+                vy: dirY * speed,
+                damage: config.damage,
+                alive: true,
+                maxDistance: effectiveRange,
+                traveled: 0,
+            });
+        }
         return true;
     }
     function setTurretCooldown(idx, cooldown) {
@@ -929,6 +982,7 @@ function FrameGame1() {
     }
     // --- Unified auto-fire logic for all turrets (main and secondary) ---
     function updateTurretAutoFire(dt) {
+        const activeTurrets = getActiveTurrets();
         // Main turret auto-fire (if enabled)
         if (mainTurretAutoFireEnabled && activeTurrets.length > 0) {
             const cooldown = Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt);
@@ -954,42 +1008,43 @@ function FrameGame1() {
         }
 
         // Secondary turrets
-            const newAngles = [...secondaryTurretAnglesRef.current];
-            const targetedEnemyIds = new Set();
-            for (let idx = 1; idx < activeTurrets.length; idx++) {
-                const config = activeTurrets[idx];
-                let cooldown = Math.max(0, turretCooldownsRef.current[idx].fireCooldown - dt);
-                // Target selection
-                const target = getSecondaryTurretTarget(idx, targetedEnemyIds);
-                if (target) targetedEnemyIds.add(target.id);
-                // Rotation
-                let currentAngle = secondaryTurretAnglesRef.current[idx - 1] || 0;
-                let targetAngle = target ? Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x) : currentAngle;
-                let newAngle = rotateTurretAngle(currentAngle, targetAngle, Math.PI * 1.8, dt);
-                newAngles[idx - 1] = newAngle;
-                // Firing
-                if (cooldown > 0) {
-                    turretCooldownsRef.current[idx] = { fireCooldown: cooldown };
-                    continue; // Still cooling down, skip firing
-                } else if (target && isTurretAligned(newAngle, targetAngle)) {
-                    const fired = fireTurret(idx, target);
-                    if (fired) {
-                        turretCooldownsRef.current[idx] = { fireCooldown: config.fireInterval };
-                        //turretCooldowns[idx] = { fireCooldown: config.fireInterval };
-                    } else {
-                        turretCooldownsRef.current[idx] = { fireCooldown: 0 };
-                    }
+        const newAngles = [...secondaryTurretAnglesRef.current];
+        const targetedEnemyIds = new Set();
+        for (let idx = 1; idx < activeTurrets.length; idx++) {
+            const config = activeTurrets[idx];
+            let cooldown = Math.max(0, turretCooldownsRef.current[idx].fireCooldown - dt);
+            // Target selection
+            const target = getSecondaryTurretTarget(idx, targetedEnemyIds);
+            if (target) targetedEnemyIds.add(target.id);
+            // Rotation
+            let currentAngle = secondaryTurretAnglesRef.current[idx - 1] || 0;
+            let targetAngle = target ? Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x) : currentAngle;
+            let newAngle = rotateTurretAngle(currentAngle, targetAngle, Math.PI * 1.8, dt);
+            newAngles[idx - 1] = newAngle;
+            // Firing
+            if (cooldown > 0) {
+                turretCooldownsRef.current[idx] = { fireCooldown: cooldown };
+                continue; // Still cooling down, skip firing
+            } else if (target && isTurretAligned(newAngle, targetAngle)) {
+                const fired = fireTurret(idx, target);
+                if (fired) {
+                    turretCooldownsRef.current[idx] = { fireCooldown: config.fireInterval };
                 } else {
                     turretCooldownsRef.current[idx] = { fireCooldown: 0 };
                 }
+            } else {
+                turretCooldownsRef.current[idx] = { fireCooldown: 0 };
             }
-            secondaryTurretAnglesRef.current = newAngles;
+        }
+        secondaryTurretAnglesRef.current = newAngles;
     }
 
     // --- Main turret aim and player-controlled fire ---
     function updateTurret(dt) {
         const turret = turretRef.current;
         const targetAngle = getTargetAngle();
+        // console.log(`Trying to fire. Cooldown: ${turretCooldownsRef.current[0].fireCooldown.toFixed(2)}, FireRequest: ${fireRequestRef.current}`);
+        // console.log(`Turret details: ${turretRef}`)
         turretCooldownsRef.current[0] = { fireCooldown: Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt) };
         if (targetAngle === null) {
             fireRequestRef.current = false;
@@ -1006,18 +1061,81 @@ function FrameGame1() {
         const remainingDelta = Math.abs(normalizeAngle(targetAngle - turret.angle));
         const isAligned = remainingDelta <= turret.alignTolerance;
         // Player-controlled fire: only allow fireRequestRef to be honored if cooldown is zero
+
         if (!mainTurretAutoFireEnabled && fireRequestRef.current) {
             if (isAligned && turretCooldownsRef.current[0]?.fireCooldown <= 0) {
-                const fired = fireTurret(0, getTargetEnemy());
-                if (fired) {
-                    turretCooldownsRef.current[0] = { fireCooldown: activeTurrets[0].fireInterval };
+                // Burst weapon: queue burst sequence and process burst
+                if (activeWeaponTypeRef.current === 'BURST') {
+                    const fired = fireTurret(0, getTargetEnemy());
+                    if (fired) {
+                        // Cooldown will be set after burst completes
+                    }
+                    handleBurstFire(dt);
+                    fireRequestRef.current = false;
+                } else {
+                    // Standard fire
+                    const fired = fireTurret(0, getTargetEnemy());
+                    if (fired) {
+                        turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].fireInterval };
+                    }
+                    fireRequestRef.current = false;
                 }
-                fireRequestRef.current = false;
-                // If not fired, keep fireRequestRef true so user can retry when aligned/targeted
             }
             // If cooldown is not up, ignore fireRequestRef until next eligible frame
         }
     }
+    // Use the config from WEAPON_CONFIGS for burst defaults
+    const burstDefaults = WEAPON_CONFIGS.BURST?.[0] || { burstInterval: 0.15, burstCount: 3 };
+    const burstStateRef = useRef({
+        shotsRemaining: 0,
+        burstTimer: 0,
+        burstInterval: burstDefaults.burstInterval,
+        burstCount: burstDefaults.burstCount,
+        target: null,
+        firing: false,
+    });
+
+    // --- Burst fire handler ---
+    function handleBurstFire(dt) {
+        if (activeWeaponTypeRef.current !== 'BURST' || !burstStateRef.current.firing) return;
+        burstStateRef.current.burstTimer -= dt;
+        while (burstStateRef.current.shotsRemaining > 0 && burstStateRef.current.burstTimer <= 0) {
+            // Fire a projectile
+            const config = getActiveTurrets()[0];
+            const muzzle = getTurretMuzzlePosition(0);
+            const target = burstStateRef.current.target;
+            if (target) {
+                const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
+                const effectiveRange = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
+                if (distance <= effectiveRange) {
+                    const speed = config.projectileSpeed;
+                    const dirX = (target.x - muzzle.x) / distance;
+                    const dirY = (target.y - muzzle.y) / distance;
+                    projectilesRef.current.push({
+                        id: crypto.randomUUID(),
+                        x: muzzle.x,
+                        y: muzzle.y,
+                        radius: 5,
+                        vx: dirX * speed,
+                        vy: dirY * speed,
+                        damage: config.damage,
+                        alive: true,
+                        maxDistance: effectiveRange,
+                        traveled: 0,
+                    });
+                }
+            }
+            burstStateRef.current.shotsRemaining--;
+            // Only set burstTimer > 0 after the first shot; for first shot, fire immediately
+            burstStateRef.current.burstTimer += burstStateRef.current.burstInterval;
+        }
+        // If all shots fired, start cooldown
+        if (burstStateRef.current.shotsRemaining <= 0) {
+            burstStateRef.current.firing = false;
+                    turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].fireInterval };
+        }
+    }
+    // --- Burst weapon state ---
 
     function enemyTakeDamage(enemy, amount) {
         enemy.hp -= amount;
@@ -1037,8 +1155,12 @@ function FrameGame1() {
             const stepDistance = Math.hypot(projectile.vx * dt, projectile.vy * dt);
             projectile.traveled += stepDistance;
 
+            let exploded = false;
+
             if (projectile.traveled >= projectile.maxDistance) {
                 projectile.alive = false;
+                // Explode if explosive
+                if (projectile.projectileType === 'EXPLOSIVE') exploded = true;
                 continue;
             }
 
@@ -1055,21 +1177,53 @@ function FrameGame1() {
                     continue;
                 }
 
-                projectile.alive = false;
-
-                enemyTakeDamage(enemy, Math.max(1, projectile.damage - enemy.def));
-
-
-                if (enemy.hp <= 0) {
-                    onEnemyKilled(enemy);
+                // Explosive: trigger AoE
+                if (projectile.projectileType === 'EXPLOSIVE') {
+                    exploded = true;
+                } else {
+                    projectile.alive = false;
+                    enemyTakeDamage(enemy, Math.max(1, projectile.damage - enemy.def));
+                    if (enemy.hp <= 0) onEnemyKilled(enemy);
                 }
                 break;
             }
+
+            // Handle explosion if needed
+            if (exploded) {
+                projectile.alive = false;
+                // AoE damage to all enemies in radius
+                for (const enemy of enemiesRef.current) {
+                    if (!enemy.alive) continue;
+                    const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
+                    if (dist <= (projectile.explosionRadius || 60) + (enemy.halfSize || 0)) {
+                        // Optional: radial falloff (full damage at center, half at edge)
+                        let falloff = 1;
+                        if (dist > (projectile.explosionRadius || 60) * 0.5) {
+                            falloff = 0.5 + 0.5 * ((projectile.explosionRadius || 60) - dist) / ((projectile.explosionRadius || 60) * 0.5);
+                            falloff = Math.max(0.5, falloff);
+                        }
+                        const dmg = Math.max(1, Math.round((projectile.damage - enemy.def) * falloff));
+                        enemyTakeDamage(enemy, dmg);
+                        console.log(`Explosion hit enemy for ${dmg} damage (falloff: ${falloff.toFixed(2)})`);
+                        if (enemy.hp <= 0) onEnemyKilled(enemy);
+                    }
+                }
+                // Visual effect: shake and explosion effect
+                shakeRef.current = Math.max(shakeRef.current, 16);
+                // Add explosion effect to damageTextsRef for visuals
+                damageTextsRef.current.push({
+                    id: 'explosion-' + Date.now(),
+                    x: worldToScreen(projectile.x, projectile.y, canvas).sx,
+                    y: worldToScreen(projectile.x, projectile.y, canvas).sy,
+                    text: '',
+                    color: '#ffb347',
+                    life: 0.7,
+                    explosionRadius: projectile.explosionRadius || 60,
+                });
+            }
         }
 
-        projectilesRef.current = projectilesRef.current.filter(
-            (projectile) => projectile.alive
-        );
+        projectilesRef.current = projectilesRef.current.filter((projectile) => projectile.alive);
     }
 
     function setupCanvas(canvas) {
@@ -1238,6 +1392,7 @@ function FrameGame1() {
 
 
     function drawScene(ctx, canvas) {
+        
 
         // --- BACKGROUND ---
         ctx.fillStyle = '#3a3a3a';
@@ -1277,6 +1432,7 @@ function FrameGame1() {
             }
             ctx.restore();
         }
+        const activeTurrets = getActiveTurrets();
 
         // --- Draw secondary turret ranges ---
         for (let idx = 1; idx < activeTurrets.length; idx++) {
@@ -1295,16 +1451,16 @@ function FrameGame1() {
         }
 
         // --- Draw main turret and secondaries ---
-        if (activeWeaponType === WEAPON_TYPES.DOUBLE) {
+        if (activeWeaponTypeRef.current === 'DOUBLE') {
             drawTurret(turretRef.current.angle, true);
             drawTurret(secondaryTurretAnglesRef.current[0] || 0, false, undefined, turretLength * 0.7, 0.22);
-        } else if (activeWeaponType === WEAPON_TYPES.TRIPLE) {
+        } else if (activeWeaponTypeRef.current === 'TRIPLE') {
             drawTurret(turretRef.current.angle, true);
             drawTurret(secondaryTurretAnglesRef.current[0] || 0, false, undefined, turretLength * 0.7, 0.22);
             drawTurret(secondaryTurretAnglesRef.current[1] || 0, false, undefined, turretLength * 0.7, -0.22);
-        } else if (activeWeaponType === WEAPON_TYPES.BURST) {
+        } else if (activeWeaponTypeRef.current === 'BURST') {
             drawTurret(turretRef.current.angle, true, '#222');
-        } else if (activeWeaponType === WEAPON_TYPES.EXPLOSIVE) {
+        } else if (activeWeaponTypeRef.current === 'EXPLOSIVE') {
             drawTurret(turretRef.current.angle, true, '#e22');
         } else {
             drawTurret(turretRef.current.angle, true);
@@ -1395,6 +1551,7 @@ function FrameGame1() {
                     size: 14,
                 })),
         ];
+
 
         // --- EFFECTS & OFFSCREEN MARKERS ---
         drawEffects(ctx);
@@ -1490,23 +1647,39 @@ function FrameGame1() {
     };
 
     const drawEffects = (ctx) => {
-        // Apply Screen Shake to the context
+        // --- Apply screen shake transform for world only ---
         if (shakeRef.current > 0) {
             const sx = (Math.random() - 0.5) * shakeRef.current;
             const sy = (Math.random() - 0.5) * shakeRef.current;
             ctx.setTransform(1, 0, 0, 1, sx, sy);
+        } else {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
         }
 
+        // No shake transform here; overlays should not shake
         damageTextsRef.current.forEach(textObj => {
-            ctx.font = `bold ${20 * textObj.life}px Arial`;
-            ctx.fillStyle = textObj.color;
-            ctx.globalAlpha = textObj.life;
-            ctx.fillText(textObj.text, textObj.x, textObj.y);
-            ctx.globalAlpha = 1.0;
+            // Draw explosion effect if present
+            if (textObj.explosionRadius) {
+                ctx.save();
+                ctx.globalAlpha = textObj.life * 0.5;
+                ctx.beginPath();
+                ctx.arc(textObj.x, textObj.y, textObj.explosionRadius, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffb347';
+                ctx.fill();
+                ctx.restore();
+            }
+            // Draw normal damage text
+            if (textObj.text) {
+                ctx.font = `bold ${20 * textObj.life}px Arial`;
+                ctx.fillStyle = 'white';
+                ctx.globalAlpha = textObj.life;
+                ctx.fillText(textObj.text, textObj.x, textObj.y);
+                ctx.globalAlpha = 1.0;
+            }
         });
-
-        // Reset transform so UI/HUD doesn't shake
+        // --- Reset transform before overlays/effects ---
         ctx.setTransform(1, 0, 0, 1, 0, 0);
+
     };
 
     useEffect(() => {
@@ -1516,7 +1689,6 @@ function FrameGame1() {
         const cleanupCanvas = setupCanvas(canvas);
 
         const { startCount } = enemySpawnConfigRef.current;
-
 
         const y = killsRef.current;
         const scaled = getDifficultyFromKills(y);
@@ -1543,11 +1715,13 @@ function FrameGame1() {
             cameraRef.current.x = playerRef.current.x;
             cameraRef.current.y = playerRef.current.y;
 
-            if (!shopOpenRef.current) {
+            // Pause game logic if shop or weapon upgrade popup is open
+            if (!shopOpenRef.current || !firstWeaponUpgradeOpen) {
                 pruneFarEntities();
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
                 updateTurret(dt);
+                handleBurstFire(dt);
                 updateTurretAutoFire(dt)
                 updateEnemyAi(dt);
                 updateCombat(dt);
@@ -1557,7 +1731,6 @@ function FrameGame1() {
                 updateEffects(dt);
             }
             drawScene(ctx, canvas);
-
 
             animFrameId = requestAnimationFrame(loop);
         }
@@ -1808,7 +1981,58 @@ function FrameGame1() {
                         <button onClick={buyMaxHpUpgrade}>+2 Max HP (5)</button>
                         <button onClick={buySpeedUpgrade}>+20 Speed (5)</button>
                     </div>
-                )}</div>
+                )}
+
+                {firstWeaponUpgradeOpen && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(20, 20, 20, 0.92)',
+                            color: '#ffffff',
+                            border: '2px solid #888',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            zIndex: 10,
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        <button
+                            type="button"
+                            className="Frame-Close-Button"
+                            aria-label="Close popup frame"
+                            onClick={() => setFirstWeaponUpgradeOpen(false)}
+                        >
+                            ×
+                        </button>
+                        <h3>Weapon Upgrades</h3>
+                        <p>Upgrade your weapons to increase your combat effectiveness. Select one. This is permanent.</p>
+                        {weaponTypeKeys.map((key) => {
+                            const configs = WEAPON_CONFIGS[key];
+                            // Show summary for the first turret config (main turret)
+                            const main = configs[0];
+                            return (
+                                <button
+                                    key={key}
+                                    style={{ minWidth: 120, padding: '8px 12px', borderRadius: 6, border: '1px solid #888', background: '#222', color: '#fff', cursor: 'pointer', margin: 4 }}
+                                    onClick={() => selectAdvancedWeaponUpgrade(key)}
+                                >
+                                    <b>{key.replace(/_/g, ' ')}</b>
+                                    <div style={{ fontSize: 13, marginTop: 2 }}>
+                                        DMG: {main.damage} | CD: {main.fireInterval}s<br />
+                                        SPD: {main.projectileSpeed}{main.explosionRadius ? ` | AoE: ${main.explosionRadius}` : ''}
+                                    </div>
+                                    {configs.length > 1 && <div style={{ fontSize: 11, color: '#aaa' }}>+{configs.length - 1} secondary</div>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+                
+                </div>
         </>
     );
 }
