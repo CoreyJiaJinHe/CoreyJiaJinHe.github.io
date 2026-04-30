@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
 //import difficultyRef from './Difficulty-Scaling';
+import FrameGameShop from './components/Shop.jsx'
 
 function FrameGame1() {
     const canvasRef = useRef(null);
@@ -780,7 +781,7 @@ function FrameGame1() {
         return WEAPON_CONFIGS[activeWeaponTypeRef.current] || [];
     }
 
-    
+
     function selectAdvancedWeaponUpgrade(weaponType) {
         if (!WEAPON_CONFIGS[weaponType]) {
             console.error('Invalid weapon upgrade selection:', weaponType);
@@ -1132,7 +1133,7 @@ function FrameGame1() {
         // If all shots fired, start cooldown
         if (burstStateRef.current.shotsRemaining <= 0) {
             burstStateRef.current.firing = false;
-                    turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].fireInterval };
+            turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].fireInterval };
         }
     }
     // --- Burst weapon state ---
@@ -1392,7 +1393,7 @@ function FrameGame1() {
 
 
     function drawScene(ctx, canvas) {
-        
+
 
         // --- BACKGROUND ---
         ctx.fillStyle = '#3a3a3a';
@@ -1780,72 +1781,91 @@ function FrameGame1() {
         setShopOpen(shopOpenRef.current);
     }
 
-    function spendMaterials(cost) {
-        if (materialsRef.current < cost) {
-            return false;
-        }
+    // function buyRangeUpgrade() {
+    //     const cost = 5;
+    //     if (!spendMaterials(cost)) {
+    //         return;
+    //     }
 
+    //     playerStatsRef.current.range += 20;
+    //     setPlayerStatsView({ ...playerStatsRef.current });
+    // }
+
+    // function buyAttackUpgrade() {
+    //     const cost = 5;
+    //     if (!spendMaterials(cost)) {
+    //         return;
+    //     }
+
+    //     playerStatsRef.current.atk += 1;
+    //     setPlayerStatsView({ ...playerStatsRef.current });
+    // }
+
+    // function buyDefenseUpgrade() {
+    //     const cost = 5;
+    //     if (!spendMaterials(cost)) {
+    //         return;
+    //     }
+
+    //     playerStatsRef.current.def += 1;
+    //     setPlayerStatsView({ ...playerStatsRef.current });
+    // }
+
+    // function buyMaxHpUpgrade() {
+    //     const cost = 5;
+    //     if (!spendMaterials(cost)) {
+    //         return;
+    //     }
+
+    //     playerStatsRef.current.maxHP += 2;
+    //     playerStatsRef.current.hp += 2;
+    //     setPlayerStatsView({ ...playerStatsRef.current });
+    // }
+
+    // function buySpeedUpgrade() {
+    //     const cost = 5;
+    //     if (!spendMaterials(cost)) {
+    //         return;
+    //     }
+
+    //     playerRef.current.speed += 20;
+    // }
+
+
+
+    const upgradeCountsRef = useRef(0)
+    const upgradeCostRef=useRef(0);
+
+
+    function handleShopPurchase(upgradeFunction, cost) {
+        if (upgradeFunction == 'range') {
+            playerStatsRef.current.range += 20;
+        }
+        else if(upgradeFunction == 'atk') {
+            playerStatsRef.current.atk += 1;
+        }
+        else if(upgradeFunction == 'def') {
+            playerStatsRef.current.def += 1;
+        }
+        else if(upgradeFunction == 'maxHP') {
+            playerStatsRef.current.maxHP += 2;
+            playerStatsRef.current.hp += 2;
+        }
+        else if(upgradeFunction == 'speed') {
+            playerRef.current.speed += 20;
+
+        }
+        else if(upgradeFunction == "heal"){
+            playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
+
+        }
+        else {
+            console.log(`Error has occured with purchasing your shop upgrade.`)
+        }
         materialsRef.current -= cost;
         setMaterialsView(materialsRef.current);
-        return true;
-    }
-
-    function buyRangeUpgrade() {
-        const cost = 5;
-        if (!spendMaterials(cost)) {
-            return;
-        }
-
-        playerStatsRef.current.range += 20;
         setPlayerStatsView({ ...playerStatsRef.current });
     }
-
-    function buyAttackUpgrade() {
-        const cost = 5;
-        if (!spendMaterials(cost)) {
-            return;
-        }
-
-        playerStatsRef.current.atk += 1;
-        setPlayerStatsView({ ...playerStatsRef.current });
-    }
-
-    function buyDefenseUpgrade() {
-        const cost = 5;
-        if (!spendMaterials(cost)) {
-            return;
-        }
-
-        playerStatsRef.current.def += 1;
-        setPlayerStatsView({ ...playerStatsRef.current });
-    }
-
-    function buyMaxHpUpgrade() {
-        const cost = 5;
-        if (!spendMaterials(cost)) {
-            return;
-        }
-
-        playerStatsRef.current.maxHP += 2;
-        playerStatsRef.current.hp += 2;
-        setPlayerStatsView({ ...playerStatsRef.current });
-    }
-
-    function buySpeedUpgrade() {
-        const cost = 5;
-        if (!spendMaterials(cost)) {
-            return;
-        }
-
-        playerRef.current.speed += 20;
-    }
-
-
-
-
-
-
-
 
 
     const [developerMode, setDeveloperMode] = useState(true);
@@ -1946,8 +1966,13 @@ function FrameGame1() {
                         height: "100%",
                     }}
                 />
-
-                {shopOpen && (
+                {shopOpen && (<FrameGameShop shopUpgradeCallbacks={handleShopPurchase} 
+                materialsView={materialsView} 
+                setShopOpenSync={setShopOpen} 
+                upgradeCountsRef={upgradeCountsRef} 
+                upgradeCostRef={upgradeCostRef} 
+                pacingProfileRef={pacingProfileRef} />)}
+                {/* {shopOpen && (
                     <div
                         style={{
                             position: 'absolute',
@@ -1981,7 +2006,7 @@ function FrameGame1() {
                         <button onClick={buyMaxHpUpgrade}>+2 Max HP (5)</button>
                         <button onClick={buySpeedUpgrade}>+20 Speed (5)</button>
                     </div>
-                )}
+                )} */}
 
                 {firstWeaponUpgradeOpen && (
                     <div
@@ -2031,8 +2056,8 @@ function FrameGame1() {
                         })}
                     </div>
                 )}
-                
-                </div>
+
+            </div>
         </>
     );
 }
