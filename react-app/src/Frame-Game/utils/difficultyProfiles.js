@@ -30,3 +30,52 @@ export const DIFFICULTY_PROFILES = {
         killsPerDefStep: 18, defStep: 1,
     },
 };
+
+
+export const ENEMY_AI_DIFFICULTY_PROFILES = {
+    [PROFILE.P1]: {
+        aggroRadius: 280,
+        attackRange: 36,
+        idleDriftSpeed: 20,
+        idleMoveSpeed: 24,
+        chaseSpeed: 64,
+        strafeAmplitude: 20,
+        strafeFrequency: 2.4,
+        repathIntervalMin: 1.0,
+        repathIntervalMax: 1.8,
+        idleMoveSegmentMin: 40,
+        idleMoveSegmentMax: 140,
+        contactPullSpeed: 86,
+        pushOutSpeed: 120,
+    },
+    [PROFILE.P2]: {
+        aggroRadius: 320,
+        attackRange: 40,
+        idleDriftSpeed: 28,
+        idleMoveSpeed: 32,
+        chaseSpeed: 78,
+        strafeAmplitude: 26,
+        strafeFrequency: 3.2,
+        repathIntervalMin: 0.8,
+        repathIntervalMax: 1.6,
+        idleMoveSegmentMin: 50,
+        idleMoveSegmentMax: 170,
+        contactPullSpeed: 102,
+        pushOutSpeed: 148,
+    },
+    [PROFILE.P3]: {
+        aggroRadius: 360,
+        attackRange: 46,
+        idleDriftSpeed: 34,
+        idleMoveSpeed: 40,
+        chaseSpeed: 96,
+        strafeAmplitude: 34,
+        strafeFrequency: 4.1,
+        repathIntervalMin: 0.55,
+        repathIntervalMax: 1.2,
+        idleMoveSegmentMin: 70,
+        idleMoveSegmentMax: 230,
+        contactPullSpeed: 124,
+        pushOutSpeed: 182,
+    }
+};

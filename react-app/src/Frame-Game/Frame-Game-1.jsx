@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
-//import difficultyRef from './Difficulty-Scaling';
+import {PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './utils/difficultyProfiles.js';
 import FrameGameShop from './components/Shop.jsx'
 
 function FrameGame1() {
@@ -33,11 +33,11 @@ function FrameGame1() {
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
 
 
-    const PROFILE = {
-        P1: 'p1', // slow
-        P2: 'p2', // default
-        P3: 'p3', // chaos
-    };
+    // const PROFILE = {
+    //     P1: 'p1', // slow
+    //     P2: 'p2', // default
+    //     P3: 'p3', // chaos
+    // };
 
     const materialsRef = useRef(0);
     const [materialsView, setMaterialsView] = useState(0);
@@ -56,7 +56,7 @@ function FrameGame1() {
     const [killsView, setKillsView] = useState(0);
 
     function getDifficultyFromKills(kills) {
-        const d = difficultyProfilesRef.current[pacingProfileRef.current];
+        const d = DIFFICULTY_PROFILES[pacingProfileRef.current];
         const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0;
 
         const extraActive = Math.floor(effectiveKills / d.killsPerExtraActive);
@@ -206,56 +206,56 @@ function FrameGame1() {
         }, 0);
     }
 
-    const enemyAiProfilesRef = useRef({
-        [PROFILE.P1]: {
-            aggroRadius: 280,
-            attackRange: 36,
-            idleDriftSpeed: 20,
-            idleMoveSpeed: 24,
-            chaseSpeed: 64,
-            strafeAmplitude: 20,
-            strafeFrequency: 2.4,
-            repathIntervalMin: 1.0,
-            repathIntervalMax: 1.8,
-            idleMoveSegmentMin: 40,
-            idleMoveSegmentMax: 140,
-            contactPullSpeed: 86,
-            pushOutSpeed: 120,
-        },
-        [PROFILE.P2]: {
-            aggroRadius: 320,
-            attackRange: 40,
-            idleDriftSpeed: 28,
-            idleMoveSpeed: 32,
-            chaseSpeed: 78,
-            strafeAmplitude: 26,
-            strafeFrequency: 3.2,
-            repathIntervalMin: 0.8,
-            repathIntervalMax: 1.6,
-            idleMoveSegmentMin: 50,
-            idleMoveSegmentMax: 170,
-            contactPullSpeed: 102,
-            pushOutSpeed: 148,
-        },
-        [PROFILE.P3]: {
-            aggroRadius: 360,
-            attackRange: 46,
-            idleDriftSpeed: 34,
-            idleMoveSpeed: 40,
-            chaseSpeed: 96,
-            strafeAmplitude: 34,
-            strafeFrequency: 4.1,
-            repathIntervalMin: 0.55,
-            repathIntervalMax: 1.2,
-            idleMoveSegmentMin: 70,
-            idleMoveSegmentMax: 230,
-            contactPullSpeed: 124,
-            pushOutSpeed: 182,
-        },
-    });
+    // const enemyAiProfilesRef = useRef({
+    //     [PROFILE.P1]: {
+    //         aggroRadius: 280,
+    //         attackRange: 36,
+    //         idleDriftSpeed: 20,
+    //         idleMoveSpeed: 24,
+    //         chaseSpeed: 64,
+    //         strafeAmplitude: 20,
+    //         strafeFrequency: 2.4,
+    //         repathIntervalMin: 1.0,
+    //         repathIntervalMax: 1.8,
+    //         idleMoveSegmentMin: 40,
+    //         idleMoveSegmentMax: 140,
+    //         contactPullSpeed: 86,
+    //         pushOutSpeed: 120,
+    //     },
+    //     [PROFILE.P2]: {
+    //         aggroRadius: 320,
+    //         attackRange: 40,
+    //         idleDriftSpeed: 28,
+    //         idleMoveSpeed: 32,
+    //         chaseSpeed: 78,
+    //         strafeAmplitude: 26,
+    //         strafeFrequency: 3.2,
+    //         repathIntervalMin: 0.8,
+    //         repathIntervalMax: 1.6,
+    //         idleMoveSegmentMin: 50,
+    //         idleMoveSegmentMax: 170,
+    //         contactPullSpeed: 102,
+    //         pushOutSpeed: 148,
+    //     },
+    //     [PROFILE.P3]: {
+    //         aggroRadius: 360,
+    //         attackRange: 46,
+    //         idleDriftSpeed: 34,
+    //         idleMoveSpeed: 40,
+    //         chaseSpeed: 96,
+    //         strafeAmplitude: 34,
+    //         strafeFrequency: 4.1,
+    //         repathIntervalMin: 0.55,
+    //         repathIntervalMax: 1.2,
+    //         idleMoveSegmentMin: 70,
+    //         idleMoveSegmentMax: 230,
+    //         contactPullSpeed: 124,
+    //         pushOutSpeed: 182,
+    //     },
+    // });
 
     function getEnemyAiConfig() {
-        return enemyAiProfilesRef.current[pacingProfileRef.current];
+        return ENEMY_AI_DIFFICULTY_PROFILES[pacingProfileRef.current];
     }
 
 
@@ -419,32 +419,32 @@ function FrameGame1() {
     }
 
 
-    const difficultyProfilesRef = useRef({
-        [PROFILE.P1]: {
-            maxActiveBase: 8, maxActiveCap: 14, killsPerExtraActive: 18,
-            spawnIntervalBase: 1.8, spawnIntervalMin: 0.9, killsPerSpawnStep: 24, spawnStep: 0.08,
-            enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
-            killsPerHpStep: 10, hpStep: 1,
-            killsPerAtkStep: 24, atkStep: 1,
-            killsPerDefStep: 32, defStep: 1,
-        },
-        [PROFILE.P2]: {
-            maxActiveBase: 10, maxActiveCap: 20, killsPerExtraActive: 12,
-            spawnIntervalBase: 1.5, spawnIntervalMin: 0.45, killsPerSpawnStep: 18, spawnStep: 0.1,
-            enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
-            killsPerHpStep: 6, hpStep: 2,
-            killsPerAtkStep: 14, atkStep: 1,
-            killsPerDefStep: 22, defStep: 1,
-        },
-        [PROFILE.P3]: {
-            maxActiveBase: 12, maxActiveCap: 28, killsPerExtraActive: 8,
-            spawnIntervalBase: 1.2, spawnIntervalMin: 0.25, killsPerSpawnStep: 12, spawnStep: 0.12,
-            enemyHpBase: 12, enemyAtkBase: 2, enemyDefBase: 2,
-            killsPerHpStep: 4, hpStep: 2,
-            killsPerAtkStep: 10, atkStep: 1,
-            killsPerDefStep: 18, defStep: 1,
-        },
-    });
+    // const difficultyProfilesRef = useRef({
+    //     [PROFILE.P1]: {
+    //         maxActiveBase: 8, maxActiveCap: 14, killsPerExtraActive: 18,
+    //         spawnIntervalBase: 1.8, spawnIntervalMin: 0.9, killsPerSpawnStep: 24, spawnStep: 0.08,
+    //         enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
+    //         killsPerHpStep: 10, hpStep: 1,
+    //         killsPerAtkStep: 24, atkStep: 1,
+    //         killsPerDefStep: 32, defStep: 1,
+    //     },
+    //     [PROFILE.P2]: {
+    //         maxActiveBase: 10, maxActiveCap: 20, killsPerExtraActive: 12,
+    //         spawnIntervalBase: 1.5, spawnIntervalMin: 0.45, killsPerSpawnStep: 18, spawnStep: 0.1,
+    //         enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
+    //         killsPerHpStep: 6, hpStep: 2,
+    //         killsPerAtkStep: 14, atkStep: 1,
+    //         killsPerDefStep: 22, defStep: 1,
+    //     },
+    //     [PROFILE.P3]: {
+    //         maxActiveBase: 12, maxActiveCap: 28, killsPerExtraActive: 8,
+    //         spawnIntervalBase: 1.2, spawnIntervalMin: 0.25, killsPerSpawnStep: 12, spawnStep: 0.12,
+    //         enemyHpBase: 12, enemyAtkBase: 2, enemyDefBase: 2,
+    //         killsPerHpStep: 4, hpStep: 2,
+    //         killsPerAtkStep: 10, atkStep: 1,
+    //         killsPerDefStep: 18, defStep: 1,
+    //     },
+    // });
 
     function updateEnemyPopulation(dt, canvas) {
         const y = killsRef.current;
@@ -601,6 +601,7 @@ function FrameGame1() {
     };
 
     const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
+    const firstWeaponUpgradeOpenRef = useRef(firstWeaponUpgradeOpen);
 
     function onEnemyKilled(enemy) {
         enemy.hp = 0;
@@ -623,6 +624,7 @@ function FrameGame1() {
             setBossesDefeatedView(bossesDefeatedRef.current);
             if (bossesDefeatedRef.current === 1) {
                 setFirstWeaponUpgradeOpen(true);
+                firstWeaponUpgradeOpenRef.current = true;
             }
         }
     }
@@ -789,6 +791,7 @@ function FrameGame1() {
         }
         setActiveWeaponType(weaponType);
         setFirstWeaponUpgradeOpen(false);
+        firstWeaponUpgradeOpenRef.current=false
     }
 
     // Ensure turretCooldowns and all logic sync when weapon type changes
@@ -1715,9 +1718,8 @@ function FrameGame1() {
 
             cameraRef.current.x = playerRef.current.x;
             cameraRef.current.y = playerRef.current.y;
-
             // Pause game logic if shop or weapon upgrade popup is open
-            if (!shopOpenRef.current || !firstWeaponUpgradeOpen) {
+            if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current)) {
                 pruneFarEntities();
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
@@ -1781,60 +1783,8 @@ function FrameGame1() {
         setShopOpen(shopOpenRef.current);
     }
 
-    // function buyRangeUpgrade() {
-    //     const cost = 5;
-    //     if (!spendMaterials(cost)) {
-    //         return;
-    //     }
-
-    //     playerStatsRef.current.range += 20;
-    //     setPlayerStatsView({ ...playerStatsRef.current });
-    // }
-
-    // function buyAttackUpgrade() {
-    //     const cost = 5;
-    //     if (!spendMaterials(cost)) {
-    //         return;
-    //     }
-
-    //     playerStatsRef.current.atk += 1;
-    //     setPlayerStatsView({ ...playerStatsRef.current });
-    // }
-
-    // function buyDefenseUpgrade() {
-    //     const cost = 5;
-    //     if (!spendMaterials(cost)) {
-    //         return;
-    //     }
-
-    //     playerStatsRef.current.def += 1;
-    //     setPlayerStatsView({ ...playerStatsRef.current });
-    // }
-
-    // function buyMaxHpUpgrade() {
-    //     const cost = 5;
-    //     if (!spendMaterials(cost)) {
-    //         return;
-    //     }
-
-    //     playerStatsRef.current.maxHP += 2;
-    //     playerStatsRef.current.hp += 2;
-    //     setPlayerStatsView({ ...playerStatsRef.current });
-    // }
-
-    // function buySpeedUpgrade() {
-    //     const cost = 5;
-    //     if (!spendMaterials(cost)) {
-    //         return;
-    //     }
-
-    //     playerRef.current.speed += 20;
-    // }
-
-
-
     const upgradeCountsRef = useRef(0)
-    const upgradeCostRef=useRef(0);
+    const upgradeCostRef = useRef(0);
 
 
     function handleShopPurchase(upgradeFunction, cost) {
@@ -1972,42 +1922,7 @@ function FrameGame1() {
                 upgradeCountsRef={upgradeCountsRef} 
                 upgradeCostRef={upgradeCostRef} 
                 pacingProfileRef={pacingProfileRef} />)}
-                {/* {shopOpen && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(20, 20, 20, 0.92)',
-                            color: '#ffffff',
-                            border: '2px solid #888',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            zIndex: 10,
-                            boxSizing: 'border-box',
-                        }}
-                    >
-                        <button
-                            type="button"
-                            className="Frame-Close-Button"
-                            aria-label="Close popup frame"
-                            onClick={() => setShopOpenSync(false)}
-                        >
-                            ×
-                        </button>
-                        <h3>Shop</h3>
-                        <div>MATERIALS: {materialsView}</div>
-
-                        <button onClick={buyRangeUpgrade}>+20 Range (5)</button>
-                        <button onClick={buyAttackUpgrade}>+1 ATK (5)</button>
-                        <button onClick={buyDefenseUpgrade}>+1 DEF (5)</button>
-                        <button onClick={buyMaxHpUpgrade}>+2 Max HP (5)</button>
-                        <button onClick={buySpeedUpgrade}>+20 Speed (5)</button>
-                    </div>
-                )} */}
-
+                
                 {firstWeaponUpgradeOpen && (
                     <div
                         style={{
