@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
-import {PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './utils/difficultyProfiles.js';
+import { PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './utils/difficultyProfiles.js';
+import { WEAPON_CONFIGS } from './utils/weaponConfigs.js';
 import FrameGameShop from './components/Shop.jsx'
 
 function FrameGame1() {
@@ -31,13 +32,6 @@ function FrameGame1() {
         secondaryTurretTurnSpeed: Math.PI * 1.8,
     });
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
-
-
-    // const PROFILE = {
-    //     P1: 'p1', // slow
-    //     P2: 'p2', // default
-    //     P3: 'p3', // chaos
-    // };
 
     const materialsRef = useRef(0);
     const [materialsView, setMaterialsView] = useState(0);
@@ -206,54 +200,6 @@ function FrameGame1() {
         }, 0);
     }
 
-    // const enemyAiProfilesRef = useRef({
-    //     [PROFILE.P1]: {
-    //         aggroRadius: 280,
-    //         attackRange: 36,
-    //         idleDriftSpeed: 20,
-    //         idleMoveSpeed: 24,
-    //         chaseSpeed: 64,
-    //         strafeAmplitude: 20,
-    //         strafeFrequency: 2.4,
-    //         repathIntervalMin: 1.0,
-    //         repathIntervalMax: 1.8,
-    //         idleMoveSegmentMin: 40,
-    //         idleMoveSegmentMax: 140,
-    //         contactPullSpeed: 86,
-    //         pushOutSpeed: 120,
-    //     },
-    //     [PROFILE.P2]: {
-    //         aggroRadius: 320,
-    //         attackRange: 40,
-    //         idleDriftSpeed: 28,
-    //         idleMoveSpeed: 32,
-    //         chaseSpeed: 78,
-    //         strafeAmplitude: 26,
-    //         strafeFrequency: 3.2,
-    //         repathIntervalMin: 0.8,
-    //         repathIntervalMax: 1.6,
-    //         idleMoveSegmentMin: 50,
-    //         idleMoveSegmentMax: 170,
-    //         contactPullSpeed: 102,
-    //         pushOutSpeed: 148,
-    //     },
-    //     [PROFILE.P3]: {
-    //         aggroRadius: 360,
-    //         attackRange: 46,
-    //         idleDriftSpeed: 34,
-    //         idleMoveSpeed: 40,
-    //         chaseSpeed: 96,
-    //         strafeAmplitude: 34,
-    //         strafeFrequency: 4.1,
-    //         repathIntervalMin: 0.55,
-    //         repathIntervalMax: 1.2,
-    //         idleMoveSegmentMin: 70,
-    //         idleMoveSegmentMax: 230,
-    //         contactPullSpeed: 124,
-    //         pushOutSpeed: 182,
-    //     },
-    // });
-
     function getEnemyAiConfig() {
         return ENEMY_AI_DIFFICULTY_PROFILES[pacingProfileRef.current];
     }
@@ -417,34 +363,6 @@ function FrameGame1() {
         pacingProfileRef.current = resolved;
         setPacingProfile(resolved);
     }
-
-
-    // const difficultyProfilesRef = useRef({
-    //     [PROFILE.P1]: {
-    //         maxActiveBase: 8, maxActiveCap: 14, killsPerExtraActive: 18,
-    //         spawnIntervalBase: 1.8, spawnIntervalMin: 0.9, killsPerSpawnStep: 24, spawnStep: 0.08,
-    //         enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
-    //         killsPerHpStep: 10, hpStep: 1,
-    //         killsPerAtkStep: 24, atkStep: 1,
-    //         killsPerDefStep: 32, defStep: 1,
-    //     },
-    //     [PROFILE.P2]: {
-    //         maxActiveBase: 10, maxActiveCap: 20, killsPerExtraActive: 12,
-    //         spawnIntervalBase: 1.5, spawnIntervalMin: 0.45, killsPerSpawnStep: 18, spawnStep: 0.1,
-    //         enemyHpBase: 10, enemyAtkBase: 1, enemyDefBase: 2,
-    //         killsPerHpStep: 6, hpStep: 2,
-    //         killsPerAtkStep: 14, atkStep: 1,
-    //         killsPerDefStep: 22, defStep: 1,
-    //     },
-    //     [PROFILE.P3]: {
-    //         maxActiveBase: 12, maxActiveCap: 28, killsPerExtraActive: 8,
-    //         spawnIntervalBase: 1.2, spawnIntervalMin: 0.25, killsPerSpawnStep: 12, spawnStep: 0.12,
-    //         enemyHpBase: 12, enemyAtkBase: 2, enemyDefBase: 2,
-    //         killsPerHpStep: 4, hpStep: 2,
-    //         killsPerAtkStep: 10, atkStep: 1,
-    //         killsPerDefStep: 18, defStep: 1,
-    //     },
-    // });
 
     function updateEnemyPopulation(dt, canvas) {
         const y = killsRef.current;
@@ -694,91 +612,91 @@ function FrameGame1() {
     }
 
     // Consolidated weapon configuration: each weapon type key maps to an array of turret configs
-    const WEAPON_CONFIGS = {
-        SINGLE: [
-            {
-                damage: 5,
-                fireInterval: 0.5,
-                projectileSpeed: 420,
-                spread: 0,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 1,
-            },
-        ],
-        DOUBLE: [
-            {
-                damage: 3,
-                fireInterval: 0.5,
-                projectileSpeed: 420,
-                spread: 0,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 1,
-            },
-            {
-                damage: 3,
-                fireInterval: 0.5,
-                projectileSpeed: 420,
-                spread: 0,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 0.6,
-            },
-        ],
-        TRIPLE: [
-            {
-                damage: 3,
-                fireInterval: 0.5,
-                projectileSpeed: 420,
-                spread: 0,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 1,
-            },
-            {
-                damage: 3,
-                fireInterval: 0.5,
-                projectileSpeed: 420,
-                spread: 0,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 0.6,
-            },
-            {
-                damage: 3,
-                fireInterval: 0.5,
-                projectileSpeed: 420,
-                spread: 0,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 0.6,
-            },
-        ],
-        BURST: [
-            {
-                damage: 2,
-                fireInterval: 0.6,
-                projectileSpeed: 420,
-                burstCount: 3,
-                projectileType: 'STANDARD',
-                rangeMultiplier: 1,
-            },
-        ],
-        EXPLOSIVE: [
-            {
-                damage: 10,
-                fireInterval: 1.0,
-                projectileSpeed: 320,
-                explosionRadius: 60,
-                projectileType: 'EXPLOSIVE',
-                rangeMultiplier: 1,
-            },
-        ],
-    };
+    // const WEAPON_CONFIGS = {
+    //     SINGLE: [
+    //         {
+    //             damage: 5,
+    //             fireInterval: 0.5,
+    //             projectileSpeed: 420,
+    //             spread: 0,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 1,
+    //         },
+    //     ],
+    //     DOUBLE: [
+    //         {
+    //             damage: 3,
+    //             fireInterval: 0.5,
+    //             projectileSpeed: 420,
+    //             spread: 0,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 1,
+    //         },
+    //         {
+    //             damage: 3,
+    //             fireInterval: 0.5,
+    //             projectileSpeed: 420,
+    //             spread: 0,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 0.6,
+    //         },
+    //     ],
+    //     TRIPLE: [
+    //         {
+    //             damage: 3,
+    //             fireInterval: 0.5,
+    //             projectileSpeed: 420,
+    //             spread: 0,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 1,
+    //         },
+    //         {
+    //             damage: 3,
+    //             fireInterval: 0.5,
+    //             projectileSpeed: 420,
+    //             spread: 0,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 0.6,
+    //         },
+    //         {
+    //             damage: 3,
+    //             fireInterval: 0.5,
+    //             projectileSpeed: 420,
+    //             spread: 0,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 0.6,
+    //         },
+    //     ],
+    //     BURST: [
+    //         {
+    //             damage: 2,
+    //             fireInterval: 0.6,
+    //             projectileSpeed: 420,
+    //             burstCount: 3,
+    //             projectileType: 'STANDARD',
+    //             rangeMultiplier: 1,
+    //         },
+    //     ],
+    //     EXPLOSIVE: [
+    //         {
+    //             damage: 10,
+    //             fireInterval: 1.0,
+    //             projectileSpeed: 320,
+    //             explosionRadius: 60,
+    //             projectileType: 'EXPLOSIVE',
+    //             rangeMultiplier: 1,
+    //         },
+    //     ],
+    // };
 
     // --- Weapon type and turrets ---
-
     const weaponTypeKeys = Object.keys(WEAPON_CONFIGS);
     const [activeWeaponType, setActiveWeaponType] = useState('EXPLOSIVE');
     const activeWeaponTypeRef = useRef(activeWeaponType);
     useEffect(() => {
         activeWeaponTypeRef.current = activeWeaponType;
     }, [activeWeaponType]);
+
     function getActiveTurrets() {
         return WEAPON_CONFIGS[activeWeaponTypeRef.current] || [];
     }
@@ -791,7 +709,7 @@ function FrameGame1() {
         }
         setActiveWeaponType(weaponType);
         setFirstWeaponUpgradeOpen(false);
-        firstWeaponUpgradeOpenRef.current=false
+        firstWeaponUpgradeOpenRef.current = false
     }
 
     // Ensure turretCooldowns and all logic sync when weapon type changes
@@ -820,24 +738,6 @@ function FrameGame1() {
 
     // --- Unified turret cooldown state: one entry per turret (main + all secondaries) ---
     const turretCooldownsRef = useRef(getActiveTurrets().map(() => ({ fireCooldown: 0 })));
-
-    // useEffect(() => {
-    //     setTurretCooldowns(prev => {
-    //         // If the number of turrets increased, add new cooldowns as 0
-    //         if (prev.length < activeTurrets.length) {
-    //             return [
-    //                 ...prev,
-    //                 ...Array(activeTurrets.length - prev.length).fill({ fireCooldown: 0 })
-    //             ];
-    //         }
-    //         // If the number of turrets decreased, trim the array
-    //         if (prev.length > activeTurrets.length) {
-    //             return prev.slice(0, activeTurrets.length);
-    //         }
-    //         // If unchanged, return as is
-    //         return prev;
-    //     });
-    // }, [activeTurrets.length]);
 
     const projectilesRef = useRef([]);
     const fireRequestRef = useRef(false);
@@ -1244,8 +1144,96 @@ function FrameGame1() {
 
     }
 
+
+    const [keybindOpen, setKeybindOpen] = useState(false);
+    const keybindOpenRef = useRef (keybindOpen)
+
+    useEffect(() => {
+        keybindOpenRef.current = keybindOpen;
+    }, [keybindOpen]);
+
+    const [waitingforKey, setWaitingforKey] = useState(null);  // null | 'shop' | 'cycleTarget' | 'fire'
+    const waitingforKeyRef = useRef(waitingforKey)
+
+    useEffect(()=>{
+        waitingforKeyRef.current = waitingforKey;
+    }, [waitingforKey]);
+
+
+    function getKeyDisplayName(key) {
+        if (key === " ") return "SPACE";
+        if (key === "ArrowUp") return "↑";
+        if (key === "ArrowDown") return "↓";
+        if (key === "ArrowLeft") return "←";
+        if (key === "ArrowRight") return "→";
+        // Add more mappings as needed
+        return key.length === 1 ? key.toUpperCase() : key;
+    }
+    const keybinds = useRef(
+        {
+            shop: "b",
+            cycleTarget: "Tab",
+            fire: " ",
+            // Add more actions and their default keys here
+        }
+    );
+    function storeKeybinds() {
+        //Store keybinds for future sessions in local storage.
+        try{
+            localStorage.setItem('keybinds', JSON.stringify(keybinds.current));
+            localStorage.setItem('keybinds_saved_at', Date.now().toString());
+
+        } catch (e) {
+            console.error('Failed to store keybinds:', e);
+        }
+    }
+
+
+
+    useEffect(() =>{
+        const stored = localStorage.getItem('keybinds');
+        const savedAt = parseInt(localStorage.getItem('keybinds_saved_at'), 10);
+        if (!isNaN(savedAt) && Date.now() - savedAt < 365 * 24 * 60 * 60 * 1000) {
+            // Saved keybinds are less than 1 year old, consider them valid
+            try {
+                const parsed = JSON.parse(stored);
+                keybinds.current = { ...keybinds.current, ...parsed };
+            } catch (e) {
+                console.error('Failed to parse stored keybinds:', e);
+            }
+        }
+        else{
+            // Saved keybinds are too old or not present, consider them invalid
+        }
+    },[])
+
+
+
+    useEffect(() => {
+        const handleKeybindChange =(e) =>{
+            e.preventDefault();
+            e.stopPropagation();
+
+
+            keybinds.current[waitingforKeyRef.current] = e.key;
+            setWaitingforKey(null);
+            storeKeybinds();
+        }
+        if (waitingforKey != null){
+            window.addEventListener('keydown', handleKeybindChange);
+        }
+        else{
+            window.removeEventListener('keydown', handleKeybindChange);
+        }
+    }, [waitingforKey]);
+
     function setupInput(canvas) {
         const onMouseMove = (e) => {
+            if (keybindOpenRef.current) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             const rect = canvas.getBoundingClientRect();
             mouseRef.current.x = e.clientX - rect.left;
             mouseRef.current.y = e.clientY - rect.top;
@@ -1257,13 +1245,19 @@ function FrameGame1() {
         };
 
         const onKeyDown = (e) => {
+            if (keybindOpenRef.current) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
             keysRef.current.add(e.key);
-            if (e.key === 'b') {
+            if (e.key === keybinds.current.shop) {
                 e.preventDefault();
                 setShopOpenSync((current) => !current);
             }
 
-            if (e.key === 'Tab') {
+            if (e.key === keybinds.current.cycleTarget) {
                 e.preventDefault();
                 if (!tabPressedRef.current) {
                     if (e.shiftKey) {
@@ -1274,7 +1268,7 @@ function FrameGame1() {
                     tabPressedRef.current = true;
                 }
             }
-            if (e.key === ' ') {
+            if (e.key === keybinds.current.fire) {
                 e.preventDefault();
                 if (!e.repeat) {
                     fireRequestRef.current = true;
@@ -1283,8 +1277,15 @@ function FrameGame1() {
         };
 
         const onKeyUp = (e) => {
+            if (keybindOpenRef.current) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+
             keysRef.current.delete(e.key);
-            if (e.key === 'Tab') {
+            if (e.key === keybinds.current.cycleTarget) {
                 tabPressedRef.current = false;
             }
         };
@@ -1719,7 +1720,8 @@ function FrameGame1() {
             cameraRef.current.x = playerRef.current.x;
             cameraRef.current.y = playerRef.current.y;
             // Pause game logic if shop or weapon upgrade popup is open
-            if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current)) {
+            console.log(`KeybindOpenRef.current: ${keybindOpenRef.current}, ${keybindOpen}`)
+            if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current || keybindOpenRef.current)) {
                 pruneFarEntities();
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
@@ -1791,21 +1793,21 @@ function FrameGame1() {
         if (upgradeFunction == 'range') {
             playerStatsRef.current.range += 20;
         }
-        else if(upgradeFunction == 'atk') {
+        else if (upgradeFunction == 'atk') {
             playerStatsRef.current.atk += 1;
         }
-        else if(upgradeFunction == 'def') {
+        else if (upgradeFunction == 'def') {
             playerStatsRef.current.def += 1;
         }
-        else if(upgradeFunction == 'maxHP') {
+        else if (upgradeFunction == 'maxHP') {
             playerStatsRef.current.maxHP += 2;
             playerStatsRef.current.hp += 2;
         }
-        else if(upgradeFunction == 'speed') {
+        else if (upgradeFunction == 'speed') {
             playerRef.current.speed += 20;
 
         }
-        else if(upgradeFunction == "heal"){
+        else if (upgradeFunction == "heal") {
             playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
 
         }
@@ -1850,6 +1852,9 @@ function FrameGame1() {
                     </label>
                     <button onClick={() => setShopOpenSync((current) => !current)}>
                         {shopOpen ? 'Close Shop' : 'Open Shop'}
+                    </button>
+                    <button onClick={() => setKeybindOpen((current) => !current)}>
+                        {keybindOpen ? 'Close Keybinds' : 'Open Keybinds'}
                     </button>
                 </div>
 
@@ -1916,13 +1921,59 @@ function FrameGame1() {
                         height: "100%",
                     }}
                 />
-                {shopOpen && (<FrameGameShop shopUpgradeCallbacks={handleShopPurchase} 
-                materialsView={materialsView} 
-                setShopOpenSync={setShopOpen} 
-                upgradeCountsRef={upgradeCountsRef} 
-                upgradeCostRef={upgradeCostRef} 
-                pacingProfileRef={pacingProfileRef} />)}
-                
+                {shopOpen && (<FrameGameShop shopUpgradeCallbacks={handleShopPurchase}
+                    materialsView={materialsView}
+                    setShopOpenSync={setShopOpen}
+                    upgradeCountsRef={upgradeCountsRef}
+                    upgradeCostRef={upgradeCostRef}
+                    pacingProfileRef={pacingProfileRef} />)}
+                {keybindOpen && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                            color: '#000000',
+                            border: '2px solid #888',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            zIndex: 10,
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        <button
+                            type="button"
+                            className="Frame-Close-Button"
+                            aria-label="Close popup frame"
+                            onClick={() => {setKeybindOpen(false), setWaitingforKey(null)}}
+                        >
+                            ×
+                        </button>
+                        <p>Rebind Keybinds</p>
+                        <div style={{ flexDirection: 'column', display: 'flex' }}>
+                            <div style={{ flexDirection: 'row', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <button style={{minWidth:'100px'}} onClick={() => setWaitingforKey('shop')}>Shop</button>
+                                <p>{waitingforKey === 'shop' ? "Waiting for key..." : getKeyDisplayName(keybinds.current.shop)}</p>
+                            </div>
+                            <div style={{ flexDirection: 'row', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <button style={{minWidth:'100px'}} onClick={() => setWaitingforKey('cycleTarget')}>Cycle Target</button>
+                                <p>{waitingforKey === 'cycleTarget' ? "Waiting for key..." : getKeyDisplayName(keybinds.current.cycleTarget)}</p>
+                            </div>
+                            <div style={{ flexDirection: 'row', display: 'flex', alignItems: 'center', gap: '20px' }}>
+
+                                <button style={{minWidth:'100px'}} onClick={() => setWaitingforKey('fire')}>Fire</button>
+                                <p>{waitingforKey === 'fire' ? "Waiting for key..." : getKeyDisplayName(keybinds.current.fire)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                )
+
+                }
+
                 {firstWeaponUpgradeOpen && (
                     <div
                         style={{
