@@ -4,7 +4,7 @@ import { PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './ut
 import { WEAPON_CONFIGS } from './utils/weaponConfigs.js';
 import FrameGameShop from './components/Shop.jsx'
 import FrameGameKeybinds from './components/Keybinds.jsx'
-function FrameGame1() {
+function FrameGame1({largeMode,toggleLargeMode}) {
     const canvasRef = useRef(null);
 
 
@@ -1076,24 +1076,6 @@ function FrameGame1() {
     useEffect(() => {
         keybindOpenRef.current = keybindOpen;
     }, [keybindOpen]);
-
-    // const [waitingforKey, setWaitingforKey] = useState(null);  // null | 'shop' | 'cycleTarget' | 'fire'
-    // const waitingforKeyRef = useRef(waitingforKey)
-
-    // useEffect(()=>{
-    //     waitingforKeyRef.current = waitingforKey;
-    // }, [waitingforKey]);
-
-
-    // function getKeyDisplayName(key) {
-    //     if (key === " ") return "SPACE";
-    //     if (key === "ArrowUp") return "↑";
-    //     if (key === "ArrowDown") return "↓";
-    //     if (key === "ArrowLeft") return "←";
-    //     if (key === "ArrowRight") return "→";
-    //     // Add more mappings as needed
-    //     return key.length === 1 ? key.toUpperCase() : key;
-    // }
     const keybinds = useRef(
         {
             shop: "b",
@@ -1102,20 +1084,6 @@ function FrameGame1() {
             // Add more actions and their default keys here
         }
     );
-
-    // function storeKeybinds() {
-    //     //Store keybinds for future sessions in local storage.
-    //     try{
-    //         localStorage.setItem('keybinds', JSON.stringify(keybinds.current));
-    //         localStorage.setItem('keybinds_saved_at', Date.now().toString());
-
-    //     } catch (e) {
-    //         console.error('Failed to store keybinds:', e);
-    //     }
-    // }
-
-
-
     useEffect(() => {
         const stored = localStorage.getItem('keybinds');
         const savedAt = parseInt(localStorage.getItem('keybinds_saved_at'), 10);
@@ -1132,26 +1100,6 @@ function FrameGame1() {
             // Saved keybinds are too old or not present, consider them invalid
         }
     }, [])
-
-
-
-    // useEffect(() => {
-    //     const handleKeybindChange =(e) =>{
-    //         e.preventDefault();
-    //         e.stopPropagation();
-
-
-    //         keybinds.current[waitingforKeyRef.current] = e.key;
-    //         setWaitingforKey(null);
-    //         storeKeybinds();
-    //     }
-    //     if (waitingforKey != null){
-    //         window.addEventListener('keydown', handleKeybindChange);
-    //     }
-    //     else{
-    //         window.removeEventListener('keydown', handleKeybindChange);
-    //     }
-    // }, [waitingforKey]);
 
     function setupInput(canvas) {
         const onMouseMove = (e) => {
@@ -1765,6 +1713,12 @@ function FrameGame1() {
                         booleanForFunction={scaledEnemiesEnabled}
                         label="Scaled Enemies: "
                     />
+
+                    <ToggleableSwitchComponent
+                        attachFunction={toggleLargeMode}
+                        booleanForFunction={largeMode}
+                        label="Large Mode: "
+                    />
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>Pacing:</span>
                         <select
@@ -1858,55 +1812,6 @@ function FrameGame1() {
                     keybinds={keybinds}
                 />)}
 
-
-
-
-                {/* {keybindOpen && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(255, 255, 255, 0.92)',
-                            color: '#000000',
-                            border: '2px solid #888',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            zIndex: 10,
-                            boxSizing: 'border-box',
-                        }}
-                    >
-                        <button
-                            type="button"
-                            className="Frame-Close-Button"
-                            aria-label="Close popup frame"
-                            onClick={() => {setKeybindOpen(false), setWaitingforKey(null)}}
-                        >
-                            ×
-                        </button>
-                        <p>Rebind Keybinds</p>
-                        <div style={{ flexDirection: 'column', display: 'flex' }}>
-                            <div style={{ flexDirection: 'row', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                <button style={{minWidth:'100px'}} onClick={() => setWaitingforKey('shop')}>Shop</button>
-                                <p>{waitingforKey === 'shop' ? "Waiting for key..." : getKeyDisplayName(keybinds.current.shop)}</p>
-                            </div>
-                            <div style={{ flexDirection: 'row', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                <button style={{minWidth:'100px'}} onClick={() => setWaitingforKey('cycleTarget')}>Cycle Target</button>
-                                <p>{waitingforKey === 'cycleTarget' ? "Waiting for key..." : getKeyDisplayName(keybinds.current.cycleTarget)}</p>
-                            </div>
-                            <div style={{ flexDirection: 'row', display: 'flex', alignItems: 'center', gap: '20px' }}>
-
-                                <button style={{minWidth:'100px'}} onClick={() => setWaitingforKey('fire')}>Fire</button>
-                                <p>{waitingforKey === 'fire' ? "Waiting for key..." : getKeyDisplayName(keybinds.current.fire)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                )
-
-                } */}
 
                 {firstWeaponUpgradeOpen && (
                     <div

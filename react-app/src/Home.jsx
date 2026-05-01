@@ -65,6 +65,11 @@ function App() {
     document.body.style.color = nightMode ? "#f3f4f6" : "#1f2937"
   }, [nightMode])
 
+  const [largeMode, setLargeMode] = useState(false);
+  function toggleLargeMode(){
+    setLargeMode((current) => !current)
+  }
+
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)')
     const updateIsMobile = (event) => {
@@ -110,7 +115,7 @@ function App() {
 
           {isFrameOpen ? (
             <div className="Home-Page-Frame-Overlay" role="dialog" aria-modal="true" aria-label="Popup frame">
-              <div className={`Home-Page-Frame ${nightMode ? 'night-mode' : 'day-mode'}`}>
+              <div className={`Home-Page-Frame ${nightMode ? 'night-mode' : 'day-mode'} ${largeMode ? 'large' : ''}`}>
                 <button
                   type="button"
                   className="Home-Page-Frame-Close-Button"
@@ -120,7 +125,7 @@ function App() {
                   ×
                 </button>
                 <h2>Popup Frame</h2>
-                <FrameGame1 />
+                <FrameGame1 largeMode={largeMode} toggleLargeMode={toggleLargeMode}/>
               </div>
             </div>
           ) : null}
