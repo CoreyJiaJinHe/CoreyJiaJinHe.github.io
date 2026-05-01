@@ -3,7 +3,7 @@ import ToggleableSwitchComponent from '../components/ToggleComponent'
 import { PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './utils/difficultyProfiles.js';
 import { WEAPON_CONFIGS } from './utils/weaponConfigs.js';
 import FrameGameShop from './components/Shop.jsx'
-
+import FrameGameKeybinds from './components/Keybinds.jsx'
 function FrameGame1() {
     const canvasRef = useRef(null);
 
@@ -611,84 +611,6 @@ function FrameGame1() {
         advancedDropsRef.current = advancedDropsRef.current.filter((d) => d.alive);
     }
 
-    // Consolidated weapon configuration: each weapon type key maps to an array of turret configs
-    // const WEAPON_CONFIGS = {
-    //     SINGLE: [
-    //         {
-    //             damage: 5,
-    //             fireInterval: 0.5,
-    //             projectileSpeed: 420,
-    //             spread: 0,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 1,
-    //         },
-    //     ],
-    //     DOUBLE: [
-    //         {
-    //             damage: 3,
-    //             fireInterval: 0.5,
-    //             projectileSpeed: 420,
-    //             spread: 0,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 1,
-    //         },
-    //         {
-    //             damage: 3,
-    //             fireInterval: 0.5,
-    //             projectileSpeed: 420,
-    //             spread: 0,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 0.6,
-    //         },
-    //     ],
-    //     TRIPLE: [
-    //         {
-    //             damage: 3,
-    //             fireInterval: 0.5,
-    //             projectileSpeed: 420,
-    //             spread: 0,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 1,
-    //         },
-    //         {
-    //             damage: 3,
-    //             fireInterval: 0.5,
-    //             projectileSpeed: 420,
-    //             spread: 0,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 0.6,
-    //         },
-    //         {
-    //             damage: 3,
-    //             fireInterval: 0.5,
-    //             projectileSpeed: 420,
-    //             spread: 0,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 0.6,
-    //         },
-    //     ],
-    //     BURST: [
-    //         {
-    //             damage: 2,
-    //             fireInterval: 0.6,
-    //             projectileSpeed: 420,
-    //             burstCount: 3,
-    //             projectileType: 'STANDARD',
-    //             rangeMultiplier: 1,
-    //         },
-    //     ],
-    //     EXPLOSIVE: [
-    //         {
-    //             damage: 10,
-    //             fireInterval: 1.0,
-    //             projectileSpeed: 320,
-    //             explosionRadius: 60,
-    //             projectileType: 'EXPLOSIVE',
-    //             rangeMultiplier: 1,
-    //         },
-    //     ],
-    // };
-
     // --- Weapon type and turrets ---
     const weaponTypeKeys = Object.keys(WEAPON_CONFIGS);
     const [activeWeaponType, setActiveWeaponType] = useState('EXPLOSIVE');
@@ -1146,29 +1068,32 @@ function FrameGame1() {
 
 
     const [keybindOpen, setKeybindOpen] = useState(false);
-    const keybindOpenRef = useRef (keybindOpen)
+    const keybindOpenRef = useRef(false)
 
+    function handleKeybindsClose() {
+        setKeybindOpen(false);
+    }
     useEffect(() => {
         keybindOpenRef.current = keybindOpen;
     }, [keybindOpen]);
 
-    const [waitingforKey, setWaitingforKey] = useState(null);  // null | 'shop' | 'cycleTarget' | 'fire'
-    const waitingforKeyRef = useRef(waitingforKey)
+    // const [waitingforKey, setWaitingforKey] = useState(null);  // null | 'shop' | 'cycleTarget' | 'fire'
+    // const waitingforKeyRef = useRef(waitingforKey)
 
-    useEffect(()=>{
-        waitingforKeyRef.current = waitingforKey;
-    }, [waitingforKey]);
+    // useEffect(()=>{
+    //     waitingforKeyRef.current = waitingforKey;
+    // }, [waitingforKey]);
 
 
-    function getKeyDisplayName(key) {
-        if (key === " ") return "SPACE";
-        if (key === "ArrowUp") return "↑";
-        if (key === "ArrowDown") return "↓";
-        if (key === "ArrowLeft") return "←";
-        if (key === "ArrowRight") return "→";
-        // Add more mappings as needed
-        return key.length === 1 ? key.toUpperCase() : key;
-    }
+    // function getKeyDisplayName(key) {
+    //     if (key === " ") return "SPACE";
+    //     if (key === "ArrowUp") return "↑";
+    //     if (key === "ArrowDown") return "↓";
+    //     if (key === "ArrowLeft") return "←";
+    //     if (key === "ArrowRight") return "→";
+    //     // Add more mappings as needed
+    //     return key.length === 1 ? key.toUpperCase() : key;
+    // }
     const keybinds = useRef(
         {
             shop: "b",
@@ -1177,20 +1102,21 @@ function FrameGame1() {
             // Add more actions and their default keys here
         }
     );
-    function storeKeybinds() {
-        //Store keybinds for future sessions in local storage.
-        try{
-            localStorage.setItem('keybinds', JSON.stringify(keybinds.current));
-            localStorage.setItem('keybinds_saved_at', Date.now().toString());
 
-        } catch (e) {
-            console.error('Failed to store keybinds:', e);
-        }
-    }
+    // function storeKeybinds() {
+    //     //Store keybinds for future sessions in local storage.
+    //     try{
+    //         localStorage.setItem('keybinds', JSON.stringify(keybinds.current));
+    //         localStorage.setItem('keybinds_saved_at', Date.now().toString());
+
+    //     } catch (e) {
+    //         console.error('Failed to store keybinds:', e);
+    //     }
+    // }
 
 
 
-    useEffect(() =>{
+    useEffect(() => {
         const stored = localStorage.getItem('keybinds');
         const savedAt = parseInt(localStorage.getItem('keybinds_saved_at'), 10);
         if (!isNaN(savedAt) && Date.now() - savedAt < 365 * 24 * 60 * 60 * 1000) {
@@ -1202,30 +1128,30 @@ function FrameGame1() {
                 console.error('Failed to parse stored keybinds:', e);
             }
         }
-        else{
+        else {
             // Saved keybinds are too old or not present, consider them invalid
         }
-    },[])
+    }, [])
 
 
 
-    useEffect(() => {
-        const handleKeybindChange =(e) =>{
-            e.preventDefault();
-            e.stopPropagation();
+    // useEffect(() => {
+    //     const handleKeybindChange =(e) =>{
+    //         e.preventDefault();
+    //         e.stopPropagation();
 
 
-            keybinds.current[waitingforKeyRef.current] = e.key;
-            setWaitingforKey(null);
-            storeKeybinds();
-        }
-        if (waitingforKey != null){
-            window.addEventListener('keydown', handleKeybindChange);
-        }
-        else{
-            window.removeEventListener('keydown', handleKeybindChange);
-        }
-    }, [waitingforKey]);
+    //         keybinds.current[waitingforKeyRef.current] = e.key;
+    //         setWaitingforKey(null);
+    //         storeKeybinds();
+    //     }
+    //     if (waitingforKey != null){
+    //         window.addEventListener('keydown', handleKeybindChange);
+    //     }
+    //     else{
+    //         window.removeEventListener('keydown', handleKeybindChange);
+    //     }
+    // }, [waitingforKey]);
 
     function setupInput(canvas) {
         const onMouseMove = (e) => {
@@ -1927,7 +1853,15 @@ function FrameGame1() {
                     upgradeCountsRef={upgradeCountsRef}
                     upgradeCostRef={upgradeCostRef}
                     pacingProfileRef={pacingProfileRef} />)}
-                {keybindOpen && (
+                {keybindOpen && (<FrameGameKeybinds
+                    handleKeybindsClose={handleKeybindsClose}
+                    keybinds={keybinds}
+                />)}
+
+
+
+
+                {/* {keybindOpen && (
                     <div
                         style={{
                             position: 'absolute',
@@ -1972,7 +1906,7 @@ function FrameGame1() {
 
                 )
 
-                }
+                } */}
 
                 {firstWeaponUpgradeOpen && (
                     <div
