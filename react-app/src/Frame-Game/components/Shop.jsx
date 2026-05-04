@@ -1,6 +1,6 @@
 import {useRef, useEffect, useState }from 'react';
 
-function FrameGameShop({shopUpgradeCallbacks, materialsView, setShopOpenSync, upgradeCountsRef, upgradeCostRef, pacingProfileRef}) {
+function FrameGameShopOverlay({shopUpgradeCallbacks, materialsView, setShopOpenSync, upgradeCountsRef, upgradeCostRef, pacingProfileRef}) {
 
     function canSpendMaterials(cost) {
         if (materialsView < cost) {
@@ -87,4 +87,4 @@ function FrameGameShop({shopUpgradeCallbacks, materialsView, setShopOpenSync, up
 }
 
 
-export default FrameGameShop;
+export default FrameGameShopOverlay;
