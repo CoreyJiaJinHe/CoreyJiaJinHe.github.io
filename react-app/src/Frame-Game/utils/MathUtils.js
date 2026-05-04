@@ -37,12 +37,13 @@ function normalize2D(x, y) {
     return { x: x / len, y: y / len };
 }
 
-// function worldToScreen(wx, wy, canvas) {
-//     return {
-//         sx: wx - cameraRef.current.x + canvas.width / 2,
-//         sy: wy - cameraRef.current.y + canvas.height / 2,
-//     };
-// }
+function worldToScreen(wx, wy, camera, canvas) {
+        return {
+            sx: wx - camera.x + canvas.width / 2,
+            sy: wy - camera.y + canvas.height / 2,
+        };
+    }
+
 
 
 function distanceSqToPlayer(x, y, playerX, playerY) {
@@ -58,4 +59,4 @@ function isOnScreen(sx, sy, canvas, padding = 12) {
         sy <= canvas.height + padding
     );
 }
-export { squareOverlapsCircle, squaresOverlap, calculateDistance, randomBetween, normalize2D, distanceSqToPlayer, isOnScreen };
+export { squareOverlapsCircle, squaresOverlap, calculateDistance, randomBetween, normalize2D, distanceSqToPlayer, worldToScreen, isOnScreen };
