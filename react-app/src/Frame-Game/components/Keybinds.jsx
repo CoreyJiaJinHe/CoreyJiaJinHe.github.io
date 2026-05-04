@@ -1,7 +1,7 @@
 import { useRef, useState ,useEffect } from 'react';
 
 
-function FrameGameKeybinds({handleKeybindsClose, keybinds }) {
+function FrameGameKeybindsOverlay({handleKeybindsClose, keybinds }) {
     const [waitingforKey, setWaitingforKey] = useState(null);  // null | 'shop' | 'cycleTarget' | 'fire'
     const waitingforKeyRef = useRef(waitingforKey)
 
@@ -100,4 +100,4 @@ function FrameGameKeybinds({handleKeybindsClose, keybinds }) {
 }
 
 
-export default FrameGameKeybinds;
+export default FrameGameKeybindsOverlay;

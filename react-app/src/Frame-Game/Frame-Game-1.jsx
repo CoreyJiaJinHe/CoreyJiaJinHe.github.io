@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
-import { PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './utils/difficultyProfiles.js';
-import { WEAPON_CONFIGS } from './utils/weaponConfigs.js';
-import FrameGameShop from './components/Shop.jsx'
-import FrameGameKeybinds from './components/Keybinds.jsx'
-function FrameGame1({largeMode,toggleLargeMode}) {
+import { PROFILE, DIFFICULTY_PROFILES, ENEMY_AI_DIFFICULTY_PROFILES } from './configs/difficultyProfiles.js';
+import { WEAPON_CONFIGS } from './configs/weaponConfigs.js';
+import FrameGameShopOverlay from './components/Shop.jsx'
+import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
+import FrameGameWeaponUpgradeOverlay from './components/WeaponUpgrade.jsx'
+import {
+    squareOverlapsCircle,
+    squaresOverlap,
+    calculateDistance,
+    randomBetween,
+    normalize2D,
+    
+    distanceSqToPlayer,
+    isOnScreen
+} from './utils/MathUtils.js';
+function FrameGame1({ largeMode, toggleLargeMode }) {
     const canvasRef = useRef(null);
 
 
@@ -195,7 +206,7 @@ function FrameGame1({largeMode,toggleLargeMode}) {
         return enemiesRef.current.reduce((count, enemy) => {
             if (!enemy.alive) return count;
             if (enemy.isBoss) return count;
-            if (distanceSqToPlayer(enemy.x, enemy.y) > activeRadiusSq) return count;
+            if (distanceSqToPlayer(enemy.x, enemy.y, playerRef.current.x, playerRef.current.y) > activeRadiusSq) return count;
             return count + 1;
         }, 0);
     }
@@ -205,14 +216,14 @@ function FrameGame1({largeMode,toggleLargeMode}) {
     }
 
 
-    function randomBetween(min, max) {
-        return Math.random() * (max - min) + min;
-    }
+    // function randomBetween(min, max) {
+    //     return Math.random() * (max - min) + min;
+    // }
 
-    function normalize2D(x, y) {
-        const len = Math.hypot(x, y) || 1;
-        return { x: x / len, y: y / len };
-    }
+    // function normalize2D(x, y) {
+    //     const len = Math.hypot(x, y) || 1;
+    //     return { x: x / len, y: y / len };
+    // }
 
     function pickRandomIdleMoveDirection() {
         const dirs = [
@@ -738,9 +749,9 @@ function FrameGame1({largeMode,toggleLargeMode}) {
     function getEffectiveRange(config) {
         return playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
     }
-    function calculateDistance(x1, y1, x2, y2) {
-        return Math.hypot(x2 - x1, y2 - y1);
-    }
+    // function calculateDistance(x1, y1, x2, y2) {
+    //     return Math.hypot(x2 - x1, y2 - y1);
+    // }
 
     // --- Generalized turret fire (used for both main and secondary turrets) ---
     function fireTurret(idx, target) {
@@ -1271,8 +1282,6 @@ function FrameGame1({largeMode,toggleLargeMode}) {
 
 
     function drawScene(ctx, canvas) {
-
-
         // --- BACKGROUND ---
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1437,12 +1446,12 @@ function FrameGame1({largeMode,toggleLargeMode}) {
         drawOffscreenMarkers(ctx, canvas, markerTargets);
     }
 
-    function distanceSqToPlayer(x, y) {
-        const p = playerRef.current;
-        const dx = x - p.x;
-        const dy = y - p.y;
-        return dx * dx + dy * dy;
-    }
+    // function distanceSqToPlayer(x, y) {
+    //     const p = playerRef.current;
+    //     const dx = x - p.x;
+    //     const dy = y - p.y;
+    //     return dx * dx + dy * dy;
+    // }
 
     function pruneFarEntities() {
         const {
@@ -1456,7 +1465,7 @@ function FrameGame1({largeMode,toggleLargeMode}) {
         enemiesRef.current = enemiesRef.current.filter((enemy) => {
             if (!enemy.alive) return false;
 
-            const d2 = distanceSqToPlayer(enemy.x, enemy.y);
+            const d2 = distanceSqToPlayer(enemy.x, enemy.y, playerRef.current.x, playerRef.current.y);
             if (enemy.isBoss) {
                 return d2 <= bossDespawnSq;
             }
@@ -1464,14 +1473,14 @@ function FrameGame1({largeMode,toggleLargeMode}) {
         });
     }
 
-    function isOnScreen(sx, sy, canvas, padding = 12) {
-        return (
-            sx >= -padding &&
-            sx <= canvas.width + padding &&
-            sy >= -padding &&
-            sy <= canvas.height + padding
-        );
-    }
+    // function isOnScreen(sx, sy, canvas, padding = 12) {
+    //     return (
+    //         sx >= -padding &&
+    //         sx <= canvas.width + padding &&
+    //         sy >= -padding &&
+    //         sy <= canvas.height + padding
+    //     );
+    // }
 
 
 
@@ -1623,29 +1632,30 @@ function FrameGame1({largeMode,toggleLargeMode}) {
         };
     }, []);
 
-    function squareOverlapsCircle(square, circle) {
-        const closestX = Math.max(
-            square.x - square.halfSize,
-            Math.min(circle.x, square.x + square.halfSize)
-        );
-        const closestY = Math.max(
-            square.y - square.halfSize,
-            Math.min(circle.y, square.y + square.halfSize)
-        );
+    // function squareOverlapsCircle(square, circle) {
+    //     const closestX = Math.max(
+    //         square.x - square.halfSize,
+    //         Math.min(circle.x, square.x + square.halfSize)
+    //     );
+    //     const closestY = Math.max(
+    //         square.y - square.halfSize,
+    //         Math.min(circle.y, square.y + square.halfSize)
+    //     );
 
-        const dx = circle.x - closestX;
-        const dy = circle.y - closestY;
+    //     const dx = circle.x - closestX;
+    //     const dy = circle.y - closestY;
 
-        return dx * dx + dy * dy <= circle.radius * circle.radius;
-    }
+    //     return dx * dx + dy * dy <= circle.radius * circle.radius;
+    // }
 
 
-    function squaresOverlap(a, b) {
-        return (
-            Math.abs(a.x - b.x) <= a.halfSize + b.halfSize &&
-            Math.abs(a.y - b.y) <= a.halfSize + b.halfSize
-        );
-    }
+    // function squaresOverlap(a, b) {
+    //     //Check collission between entity a and entity b. 
+    //     return (
+    //         Math.abs(a.x - b.x) <= a.halfSize + b.halfSize &&
+    //         Math.abs(a.y - b.y) <= a.halfSize + b.halfSize
+    //     );
+    // }
 
     const [shopOpen, setShopOpen] = useState(false);
     const shopOpenRef = useRef(false);
@@ -1801,19 +1811,26 @@ function FrameGame1({largeMode,toggleLargeMode}) {
                         height: "100%",
                     }}
                 />
-                {shopOpen && (<FrameGameShop shopUpgradeCallbacks={handleShopPurchase}
+                {shopOpen && (<FrameGameShopOverlay shopUpgradeCallbacks={handleShopPurchase}
                     materialsView={materialsView}
                     setShopOpenSync={setShopOpen}
                     upgradeCountsRef={upgradeCountsRef}
                     upgradeCostRef={upgradeCostRef}
                     pacingProfileRef={pacingProfileRef} />)}
-                {keybindOpen && (<FrameGameKeybinds
+
+                {keybindOpen && (<FrameGameKeybindsOverlay
                     handleKeybindsClose={handleKeybindsClose}
                     keybinds={keybinds}
                 />)}
 
 
-                {firstWeaponUpgradeOpen && (
+                {firstWeaponUpgradeOpen && (<FrameGameWeaponUpgradeOverlay
+                    handleWeaponUpgradeClose={setFirstWeaponUpgradeOpen}
+                    weaponTypeKeys={weaponTypeKeys}
+                    WEAPON_CONFIGS={WEAPON_CONFIGS}
+                    selectAdvancedWeaponUpgrade={selectAdvancedWeaponUpgrade}
+                />)}
+                {/* firstWeaponUpgradeOpen && 
                     <div
                         style={{
                             position: 'absolute',
@@ -1860,7 +1877,7 @@ function FrameGame1({largeMode,toggleLargeMode}) {
                             );
                         })}
                     </div>
-                )}
+                )} */}
 
             </div>
         </>
