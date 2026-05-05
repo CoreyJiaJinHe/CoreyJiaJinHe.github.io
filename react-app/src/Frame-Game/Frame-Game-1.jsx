@@ -217,16 +217,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return ENEMY_AI_DIFFICULTY_PROFILES[pacingProfileRef.current];
     }
 
-
-    // function randomBetween(min, max) {
-    //     return Math.random() * (max - min) + min;
-    // }
-
-    // function normalize2D(x, y) {
-    //     const len = Math.hypot(x, y) || 1;
-    //     return { x: x / len, y: y / len };
-    // }
-
     function pickRandomIdleMoveDirection() {
         const dirs = [
             { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
@@ -1275,195 +1265,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     }
 
-    // function worldToScreen(wx, wy, canvas) {
-    //     return {
-    //         sx: wx - cameraRef.current.x + canvas.width / 2,
-    //         sy: wy - cameraRef.current.y + canvas.height / 2,
-    //     };
-    // }
-
-    // function worldToScreen(wx, wy, camera, canvas) {
-    //     return {
-    //         sx: wx - camera.x + canvas.width / 2,
-    //         sy: wy - camera.y + canvas.height / 2,
-    //     };
-    // }
-
-
-
-
-    // function drawScene(ctx, canvas) {
-    //     // --- BACKGROUND ---
-    //     ctx.fillStyle = '#3a3a3a';
-    //     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    //     // --- PLAYER ---
-    //     const { sx, sy } = worldToScreen(playerRef.current.x, playerRef.current.y, cameraRef.current, canvasRef.current);
-    //     const p = playerRef.current;
-    //     ctx.fillStyle = '#4a9eff';
-    //     ctx.fillRect(
-    //         sx - p.halfSize,
-    //         sy - p.halfSize,
-    //         p.halfSize * 2,
-    //         p.halfSize * 2
-    //     );
-
-    //     // --- TURRETS ---
-    //     // Main turret always at center, secondaries have their own angle and are shorter
-    //     const turretLength = turretRef.current.length;
-    //     const turretWidth = turretRef.current.width;
-    //     function drawTurret(angle, isMain, tipColor, lengthOverride, baseOffset = 0) {
-    //         ctx.save();
-    //         ctx.translate(sx, sy);
-    //         ctx.rotate(angle + baseOffset);
-    //         ctx.strokeStyle = isMain ? '#9ad1ff' : '#7a9abf';
-    //         ctx.lineWidth = isMain ? turretWidth : Math.max(6, turretWidth * 0.6);
-    //         ctx.lineCap = 'round';
-    //         ctx.beginPath();
-    //         ctx.moveTo(0, 0);
-    //         ctx.lineTo(p.halfSize + (lengthOverride ?? turretLength), 0);
-    //         ctx.stroke();
-    //         if (tipColor) {
-    //             ctx.beginPath();
-    //             ctx.arc(p.halfSize + (lengthOverride ?? turretLength), 0, isMain ? 6 : 4, 0, Math.PI * 2);
-    //             ctx.fillStyle = tipColor;
-    //             ctx.fill();
-    //         }
-    //         ctx.restore();
-    //     }
-    //     const activeTurrets = getActiveTurrets();
-
-    //     // --- Draw secondary turret ranges ---
-    //     for (let idx = 1; idx < activeTurrets.length; idx++) {
-    //         const config = activeTurrets[idx];
-    //         const angle = secondaryTurretAnglesRef.current[idx - 1] || 0;
-    //         const range = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
-    //         ctx.save();
-    //         ctx.strokeStyle = 'rgba(122, 154, 191, 0.18)';
-    //         ctx.lineWidth = 1.5;
-    //         ctx.setLineDash([6, 6]);
-    //         ctx.beginPath();
-    //         ctx.arc(sx, sy, range, 0, Math.PI * 2);
-    //         ctx.stroke();
-    //         ctx.setLineDash([]);
-    //         ctx.restore();
-    //     }
-
-    //     // --- Draw main turret and secondaries ---
-    //     if (activeWeaponTypeRef.current === 'DOUBLE') {
-    //         drawTurret(turretRef.current.angle, true);
-    //         drawTurret(secondaryTurretAnglesRef.current[0] || 0, false, undefined, turretLength * 0.7, 0.22);
-    //     } else if (activeWeaponTypeRef.current === 'TRIPLE') {
-    //         drawTurret(turretRef.current.angle, true);
-    //         drawTurret(secondaryTurretAnglesRef.current[0] || 0, false, undefined, turretLength * 0.7, 0.22);
-    //         drawTurret(secondaryTurretAnglesRef.current[1] || 0, false, undefined, turretLength * 0.7, -0.22);
-    //     } else if (activeWeaponTypeRef.current === 'BURST') {
-    //         drawTurret(turretRef.current.angle, true, '#222');
-    //     } else if (activeWeaponTypeRef.current === 'EXPLOSIVE') {
-    //         drawTurret(turretRef.current.angle, true, '#e22');
-    //     } else {
-    //         drawTurret(turretRef.current.angle, true);
-    //     }
-
-    //     // --- PROJECTILES ---
-    //     for (const projectile of projectilesRef.current) {
-    //         const { sx: projectileSx, sy: projectileSy } = worldToScreen(projectile.x, projectile.y, cameraRef.current, canvasRef.current);
-    //         ctx.fillStyle = '#ffd54a';
-    //         ctx.beginPath();
-    //         ctx.arc(projectileSx, projectileSy, projectile.radius, 0, Math.PI * 2);
-    //         ctx.fill();
-    //     }
-
-    //     // --- MAIN TURRET RANGE ---
-    //     const range = playerStatsRef.current.range;
-    //     ctx.strokeStyle = 'rgba(154, 209, 255, 0.25)';
-    //     ctx.lineWidth = 2;
-    //     ctx.beginPath();
-    //     ctx.arc(sx, sy, range, 0, Math.PI * 2);
-    //     ctx.stroke();
-
-    //     // --- ENEMIES ---
-    //     for (const enemy of enemiesRef.current) {
-    //         if (!enemy.alive) continue;
-    //         const { sx: enemySx, sy: enemySy } = worldToScreen(enemy.x, enemy.y, cameraRef.current, canvasRef.current);
-    //         ctx.fillStyle = '#d64545';
-    //         ctx.fillRect(
-    //             enemySx - enemy.halfSize,
-    //             enemySy - enemy.halfSize,
-    //             enemy.halfSize * 2,
-    //             enemy.halfSize * 2
-    //         );
-    //         const barWidth = enemy.halfSize * 2;
-    //         const barHeight = 6;
-    //         const barX = enemySx - enemy.halfSize;
-    //         const barY = enemySy - enemy.halfSize - 12;
-    //         const healthRatio = enemy.hp / enemy.maxHp;
-    //         ctx.fillStyle = '#222222';
-    //         ctx.fillRect(barX, barY, barWidth, barHeight);
-    //         ctx.fillStyle = '#4caf50';
-    //         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
-    //         if (enemy.id === targetEnemyIdRef.current) {
-    //             const pad = 4;
-    //             ctx.strokeStyle = '#ff3b3b';
-    //             ctx.lineWidth = 3;
-    //             ctx.strokeRect(
-    //                 enemySx - enemy.halfSize - pad,
-    //                 enemySy - enemy.halfSize - pad,
-    //                 enemy.halfSize * 2 + pad * 2,
-    //                 enemy.halfSize * 2 + pad * 2
-    //             );
-    //         }
-    //     }
-
-    //     // --- ADVANCED DROPS ---
-    //     for (const drop of advancedDropsRef.current) {
-    //         const { sx: dropSx, sy: dropSy } = worldToScreen(drop.x, drop.y, cameraRef.current, canvasRef.current);
-    //         ctx.fillStyle = '#c084fc';
-    //         ctx.beginPath();
-    //         ctx.arc(dropSx, dropSy, drop.radius, 0, Math.PI * 2);
-    //         ctx.fill();
-    //         ctx.strokeStyle = '#6b21a8';
-    //         ctx.lineWidth = 2;
-    //         ctx.stroke();
-    //     }
-
-    //     // --- MARKERS (offscreen, bosses, drops) ---
-    //     const markerTargets = [
-    //         ...advancedDropsRef.current
-    //             .filter((drop) => drop.alive)
-    //             .map((drop) => ({
-    //                 id: drop.id,
-    //                 x: drop.x,
-    //                 y: drop.y,
-    //                 color: '#f59e0b',  // drop marker
-    //                 ringOffset: 44,
-    //                 size: 12,
-    //             })),
-    //         ...enemiesRef.current
-    //             .filter((enemy) => enemy.alive && enemy.isBoss)
-    //             .map((boss) => ({
-    //                 id: boss.id,
-    //                 x: boss.x,
-    //                 y: boss.y,
-    //                 color: '#ef4444',  // boss marker
-    //                 ringOffset: 64,
-    //                 size: 14,
-    //             })),
-    //     ];
-
-
-    //     // --- EFFECTS & OFFSCREEN MARKERS ---
-    //     drawEffects(ctx);
-    //     drawOffscreenMarkers(ctx, canvas, markerTargets);
-    // }
-
-    // function distanceSqToPlayer(x, y) {
-    //     const p = playerRef.current;
-    //     const dx = x - p.x;
-    //     const dy = y - p.y;
-    //     return dx * dx + dy * dy;
-    // }
-
     function pruneFarEntities() {
         const {
             despawnRadius,
@@ -1484,52 +1285,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         });
     }
 
-    // function isOnScreen(sx, sy, canvas, padding = 12) {
-    //     return (
-    //         sx >= -padding &&
-    //         sx <= canvas.width + padding &&
-    //         sy >= -padding &&
-    //         sy <= canvas.height + padding
-    //     );
-    // }
-
-
-
-    // function drawOffscreenMarkers(ctx, canvas, targets) {
-    //     const p = playerRef.current;
-    //     const { sx: playerSx, sy: playerSy } = worldToScreen(p.x, p.y, cameraRef.current, canvasRef.current);
-
-    //     for (const target of targets) {
-    //         const { sx: targetSx, sy: targetSy } = worldToScreen(target.x, target.y, cameraRef.current, canvasRef.current);
-    //         if (isOnScreen(targetSx, targetSy, canvas)) continue;
-
-    //         const dx = targetSx - playerSx;
-    //         const dy = targetSy - playerSy;
-    //         const angle = Math.atan2(dy, dx);
-
-    //         const mx = playerSx + Math.cos(angle) * (p.halfSize + target.ringOffset);
-    //         const my = playerSy + Math.sin(angle) * (p.halfSize + target.ringOffset);
-
-    //         ctx.save();
-    //         ctx.translate(mx, my);
-    //         ctx.rotate(angle);
-
-    //         ctx.fillStyle = target.color;
-    //         ctx.strokeStyle = '#111827';
-    //         ctx.lineWidth = 2;
-
-    //         ctx.beginPath();
-    //         ctx.moveTo(target.size, 0);
-    //         ctx.lineTo(-target.size * 0.7, target.size * 0.65);
-    //         ctx.lineTo(-target.size * 0.7, -target.size * 0.65);
-    //         ctx.closePath();
-    //         ctx.fill();
-    //         ctx.stroke();
-
-    //         ctx.restore();
-    //     }
-    // }
-
     const updateEffects = (deltaTime) => {
         // 1. Decay Shake
         if (shakeRef.current > 0) {
@@ -1543,42 +1298,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             return item.life > 0;
         });
     };
-    
-    // const drawEffects = (ctx) => {
-    //     // --- Apply screen shake transform for world only ---
-    //     if (shakeRef.current > 0) {
-    //         const sx = (Math.random() - 0.5) * shakeRef.current;
-    //         const sy = (Math.random() - 0.5) * shakeRef.current;
-    //         ctx.setTransform(1, 0, 0, 1, sx, sy);
-    //     } else {
-    //         ctx.setTransform(1, 0, 0, 1, 0, 0);
-    //     }
-
-    //     // No shake transform here; overlays should not shake
-    //     damageTextsRef.current.forEach(textObj => {
-    //         // Draw explosion effect if present
-    //         if (textObj.explosionRadius) {
-    //             ctx.save();
-    //             ctx.globalAlpha = textObj.life * 0.5;
-    //             ctx.beginPath();
-    //             ctx.arc(textObj.x, textObj.y, textObj.explosionRadius, 0, Math.PI * 2);
-    //             ctx.fillStyle = '#ffb347';
-    //             ctx.fill();
-    //             ctx.restore();
-    //         }
-    //         // Draw normal damage text
-    //         if (textObj.text) {
-    //             ctx.font = `bold ${20 * textObj.life}px Arial`;
-    //             ctx.fillStyle = 'white';
-    //             ctx.globalAlpha = textObj.life;
-    //             ctx.fillText(textObj.text, textObj.x, textObj.y);
-    //             ctx.globalAlpha = 1.0;
-    //         }
-    //     });
-    //     // --- Reset transform before overlays/effects ---
-    //     ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-    // };
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -1658,32 +1377,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             cleanupCanvas();
         };
     }, []);
-
-    // function squareOverlapsCircle(square, circle) {
-    //     const closestX = Math.max(
-    //         square.x - square.halfSize,
-    //         Math.min(circle.x, square.x + square.halfSize)
-    //     );
-    //     const closestY = Math.max(
-    //         square.y - square.halfSize,
-    //         Math.min(circle.y, square.y + square.halfSize)
-    //     );
-
-    //     const dx = circle.x - closestX;
-    //     const dy = circle.y - closestY;
-
-    //     return dx * dx + dy * dy <= circle.radius * circle.radius;
-    // }
-
-
-    // function squaresOverlap(a, b) {
-    //     //Check collission between entity a and entity b. 
-    //     return (
-    //         Math.abs(a.x - b.x) <= a.halfSize + b.halfSize &&
-    //         Math.abs(a.y - b.y) <= a.halfSize + b.halfSize
-    //     );
-    // }
-
     const [shopOpen, setShopOpen] = useState(false);
     const shopOpenRef = useRef(false);
 
@@ -1857,55 +1550,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     WEAPON_CONFIGS={WEAPON_CONFIGS}
                     selectAdvancedWeaponUpgrade={selectAdvancedWeaponUpgrade}
                 />)}
-                {/* firstWeaponUpgradeOpen && 
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(20, 20, 20, 0.92)',
-                            color: '#ffffff',
-                            border: '2px solid #888',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            zIndex: 10,
-                            boxSizing: 'border-box',
-                        }}
-                    >
-                        <button
-                            type="button"
-                            className="Frame-Close-Button"
-                            aria-label="Close popup frame"
-                            onClick={() => setFirstWeaponUpgradeOpen(false)}
-                        >
-                            ×
-                        </button>
-                        <h3>Weapon Upgrades</h3>
-                        <p>Upgrade your weapons to increase your combat effectiveness. Select one. This is permanent.</p>
-                        {weaponTypeKeys.map((key) => {
-                            const configs = WEAPON_CONFIGS[key];
-                            // Show summary for the first turret config (main turret)
-                            const main = configs[0];
-                            return (
-                                <button
-                                    key={key}
-                                    style={{ minWidth: 120, padding: '8px 12px', borderRadius: 6, border: '1px solid #888', background: '#222', color: '#fff', cursor: 'pointer', margin: 4 }}
-                                    onClick={() => selectAdvancedWeaponUpgrade(key)}
-                                >
-                                    <b>{key.replace(/_/g, ' ')}</b>
-                                    <div style={{ fontSize: 13, marginTop: 2 }}>
-                                        DMG: {main.damage} | CD: {main.fireInterval}s<br />
-                                        SPD: {main.projectileSpeed}{main.explosionRadius ? ` | AoE: ${main.explosionRadius}` : ''}
-                                    </div>
-                                    {configs.length > 1 && <div style={{ fontSize: 11, color: '#aaa' }}>+{configs.length - 1} secondary</div>}
-                                </button>
-                            );
-                        })}
-                    </div>
-                )} */}
-
             </div>
         </>
     );
