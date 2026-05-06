@@ -27,7 +27,7 @@ function FrameGameWeaponUpgradeOverlay({handleWeaponUpgradeClose,weaponTypeKeys,
                     type="button"
                     className="Frame-Close-Button"
                     aria-label="Close popup frame"
-                    onClick={() => setFirstWeaponUpgradeOpen(false)}
+                    onClick={() => handleWeaponUpgradeClose(false)}
                 >
                     ×
                 </button>
@@ -35,7 +35,6 @@ function FrameGameWeaponUpgradeOverlay({handleWeaponUpgradeClose,weaponTypeKeys,
                 <p>Upgrade your weapons to increase your combat effectiveness. Select one. This is permanent.</p>
                 {weaponTypeKeys.map((key) => {
                     const configs = WEAPON_CONFIGS[key];
-                    // Show summary for the first turret config (main turret)
                     const main = configs[0];
                     return (
                         <button
@@ -45,8 +44,22 @@ function FrameGameWeaponUpgradeOverlay({handleWeaponUpgradeClose,weaponTypeKeys,
                         >
                             <b>{key.replace(/_/g, ' ')}</b>
                             <div style={{ fontSize: 13, marginTop: 2 }}>
-                                DMG: {main.damage} | CD: {main.fireInterval}s<br />
-                                SPD: {main.projectileSpeed}{main.explosionRadius ? ` | AoE: ${main.explosionRadius}` : ''}
+                                {key === 'SWORD' ? (
+                                    <>
+                                        DMG: {main.damage} | SWING: {main.swingDuration}s<br />
+                                        ARC: {Math.round((main.arcSpan / Math.PI) * 100)}% pi
+                                    </>
+                                ) : key === 'FLAIL' ? (
+                                    <>
+                                        DMG: {main.damage} | SPIN: {main.spinSpeed?.toFixed(2)}<br />
+                                        ORBIT: {main.orbitRadius} | BALL: {main.ballRadius}
+                                    </>
+                                ) : (
+                                    <>
+                                        DMG: {main.damage} | CD: {main.cooldown}s<br />
+                                        SPD: {main.projectileSpeed}{main.explosionRadius ? ` | AoE: ${main.explosionRadius}` : ''}
+                                    </>
+                                )}
                             </div>
                             {configs.length > 1 && <div style={{ fontSize: 11, color: '#aaa' }}>+{configs.length - 1} secondary</div>}
                         </button>

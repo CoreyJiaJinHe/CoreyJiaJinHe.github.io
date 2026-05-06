@@ -38,6 +38,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         hp: 10,
         maxHP: 10,
         atk: 5,
+        meleeBonusPct: 0,
+        projectileBonusPct: 0,
+        explosionBonusPct: 0,
         def: 2,
         range: 220,
         // Additional stats for secondary turrets
@@ -652,7 +655,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         width: 10,
         alignTolerance: 0.12,
         fireCooldown: 0,
-        fireInterval: 0.35,
+        cooldown: 0.35,
         projectileSpeed: 420,
     });
     // Secondary turret angles (for up to 2 secondaries)
@@ -666,6 +669,29 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const projectilesRef = useRef([]);
     const fireRequestRef = useRef(false);
+
+    function isMeleeWeaponType(type) {
+        return type === 'SWORD' || type === 'FLAIL';
+    }
+
+    function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
+        const list = WEAPON_CONFIGS[type] || [];
+        return list[0] || null;
+    }
+
+    const swordSwingsRef = useRef([]);
+    const meleeAimAngleRef = useRef(0);
+    const flailStateRef = useRef({
+        orbitAngle: 0,
+        boosted: false,
+        boostTimer: 0,
+        cooldown: 0,
+        enemyHitCooldowns: {},
+    });
+
+    const meleeCooldownsRef = useRef({
+        sword: 0,
+    });
     function normalizeAngle(angle) {
         while (angle > Math.PI) angle -= Math.PI * 2;
         while (angle < -Math.PI) angle += Math.PI * 2;
@@ -749,6 +775,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function fireTurret(idx, target) {
         const config = getActiveTurrets()[idx];
         if (!config || !target) return false;
+        if (isMeleeWeaponType(activeWeaponTypeRef.current)) return false;
         // Burst weapon logic (main turret only)
         if (activeWeaponTypeRef.current === 'BURST' && idx === 0) {
             // Only start burst if not already firing
@@ -811,6 +838,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
     // --- Unified auto-fire logic for all turrets (main and secondary) ---
     function updateTurretAutoFire(dt) {
+        if (isMeleeWeaponType(activeWeaponTypeRef.current)) {
+            return;
+        }
+
         const activeTurrets = getActiveTurrets();
         // Main turret auto-fire (if enabled)
         if (mainTurretAutoFireEnabled && activeTurrets.length > 0) {
@@ -823,7 +854,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     const targetAngle = Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x);
                     if (isTurretAligned(turretRef.current.angle, targetAngle, turretRef.current.alignTolerance)) {
                         const fired = fireTurret(0, target);
-                        if (fired) turretCooldownsRef.current[0] = { fireCooldown: activeTurrets[0].fireInterval };
+                        if (fired) turretCooldownsRef.current[0] = { fireCooldown: activeTurrets[0].cooldown };
                     } else {
                         turretCooldownsRef.current[0] = { fireCooldown: 0 }; // Not aligned, keep cooldown at 0
                     }
@@ -857,7 +888,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             } else if (target && isTurretAligned(newAngle, targetAngle)) {
                 const fired = fireTurret(idx, target);
                 if (fired) {
-                    turretCooldownsRef.current[idx] = { fireCooldown: config.fireInterval };
+                    turretCooldownsRef.current[idx] = { fireCooldown: config.cooldown };
                 } else {
                     turretCooldownsRef.current[idx] = { fireCooldown: 0 };
                 }
@@ -891,6 +922,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         const isAligned = remainingDelta <= turret.alignTolerance;
         // Player-controlled fire: only allow fireRequestRef to be honored if cooldown is zero
 
+        if (isMeleeWeaponType(activeWeaponTypeRef.current)) {
+            return;
+        }
+
         if (!mainTurretAutoFireEnabled && fireRequestRef.current) {
             if (isAligned && turretCooldownsRef.current[0]?.fireCooldown <= 0) {
                 // Burst weapon: queue burst sequence and process burst
@@ -905,7 +940,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     // Standard fire
                     const fired = fireTurret(0, getTargetEnemy());
                     if (fired) {
-                        turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].fireInterval };
+                        turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
                     }
                     fireRequestRef.current = false;
                 }
@@ -961,7 +996,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         // If all shots fired, start cooldown
         if (burstStateRef.current.shotsRemaining <= 0) {
             burstStateRef.current.firing = false;
-            turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].fireInterval };
+            turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
         }
     }
     // --- Burst weapon state ---
@@ -1011,7 +1046,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     exploded = true;
                 } else {
                     projectile.alive = false;
-                    enemyTakeDamage(enemy, Math.max(1, projectile.damage - enemy.def));
+                    resolveEnemyHit(enemy, createHitOptions('projectile', projectile.damage));
                     if (enemy.hp <= 0) onEnemyKilled(enemy);
                 }
                 break;
@@ -1031,8 +1066,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                             falloff = 0.5 + 0.5 * ((projectile.explosionRadius || 60) - dist) / ((projectile.explosionRadius || 60) * 0.5);
                             falloff = Math.max(0.5, falloff);
                         }
-                        const dmg = Math.max(1, Math.round((projectile.damage - enemy.def) * falloff));
-                        enemyTakeDamage(enemy, dmg);
+                        resolveEnemyHit(
+                            enemy,
+                            createHitOptions('explosion', projectile.damage * falloff)
+                        );
                         //console.log(`Explosion hit enemy for ${dmg} damage (falloff: ${falloff.toFixed(2)})`);
                         if (enemy.hp <= 0) onEnemyKilled(enemy);
                     }
@@ -1218,6 +1255,382 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         triggerEffects(sx, sy, `-${amount}`, isPlayer ? "red" : "white", isPlayer);
     }
 
+    const HIT_SOURCE_PRESETS = {
+        melee: {
+            weaponMultiplier: 1,
+            flatBonuses: 0,
+            ignoreDefense: false,
+            minDamage: 1,
+        },
+        projectile: {
+            weaponMultiplier: 1,
+            flatBonuses: 0,
+            ignoreDefense: false,
+            minDamage: 1,
+        },
+        explosion: {
+            weaponMultiplier: 1,
+            flatBonuses: 0,
+            ignoreDefense: false,
+            minDamage: 1,
+        },
+    };
+
+    function createHitOptions(sourceType, projectileDamage = 0, overrides = {}) {
+        return {
+            sourceType,
+            projectileDamage,
+            ...(HIT_SOURCE_PRESETS[sourceType] || HIT_SOURCE_PRESETS.projectile),
+            ...overrides,
+        };
+    }
+
+    function resolveEnemyHit(enemy, options = {}) {
+        const {
+            sourceType = 'projectile',
+            projectileDamage = 0,
+            weaponMultiplier = 1,
+            flatBonuses = 0,
+            ignoreDefense = false,
+            defenseOverride,
+            minDamage = 1,
+        } = options;
+
+        const sourceBonusPct = sourceType === 'melee'
+            ? (playerStatsRef.current.meleeBonusPct ?? 0)
+            : sourceType === 'explosion'
+                ? (playerStatsRef.current.explosionBonusPct ?? 0)
+                : (playerStatsRef.current.projectileBonusPct ?? 0);
+
+        const targetDefense = ignoreDefense
+            ? 0
+            : (defenseOverride ?? enemy.def ?? 0);
+
+        // Unified formula (for now): playerAtk + projectileDamage, then modifiers, then defense.
+        // sourceType is reserved for future source-specific perks/scaling.
+        const baseDamage = playerStatsRef.current.atk + projectileDamage;
+        const actualDamage = Math.max(
+            minDamage,
+            Math.round(baseDamage * weaponMultiplier * (1 + sourceBonusPct) + flatBonuses - targetDefense)
+        );
+
+        enemyTakeDamage(enemy, actualDamage);
+        return { sourceType, actualDamage };
+    }
+
+    function getMeleeAimAngle() {
+        return meleeAimAngleRef.current;
+    }
+
+    function isAngleWithinSweep(angle, start, end) {
+        const sweep = normalizeAngle(end - start);
+        const relative = normalizeAngle(angle - start);
+        if (sweep >= 0) {
+            return relative >= 0 && relative <= sweep;
+        }
+        return relative <= 0 && relative >= sweep;
+    }
+
+    function trySwordAttack() {
+        if (activeWeaponTypeRef.current !== 'SWORD') {
+            return false;
+        }
+
+        const swordCfg = getMainWeaponConfig('SWORD');
+        if (!swordCfg) {
+            return false;
+        }
+
+        if (meleeCooldownsRef.current.sword > 0) {
+            return false;
+        }
+
+        const aimAngle = getMeleeAimAngle();
+        const arcSpan = swordCfg.arcSpan ?? (Math.PI * 0.95);
+        const startAngle = aimAngle - arcSpan * 0.55;
+        const endAngle = aimAngle + arcSpan * 0.45;
+        const swingDuration = swordCfg.swingDuration ?? 0.16;
+        const innerRadius = playerRef.current.halfSize + (swordCfg.innerRadiusOffset ?? 6);
+        const outerRadius = playerRef.current.halfSize + (swordCfg.outerRadiusOffset ?? 52);
+
+        swordSwingsRef.current.push({
+            id: crypto.randomUUID(),
+            x: playerRef.current.x,
+            y: playerRef.current.y,
+            innerRadius,
+            outerRadius,
+            startAngle,
+            endAngle,
+            duration: swingDuration,
+            elapsed: 0,
+            life: Math.max(0.18, swingDuration * 1.35),
+            weaponDamage: swordCfg.damage ?? 0,
+            hitEnemyIds: new Set(),
+        });
+
+        meleeCooldownsRef.current.sword = swordCfg.cooldown ?? 0.34;
+        return true;
+    }
+
+    function tryFlailAttack() {
+        if (activeWeaponTypeRef.current !== 'FLAIL') {
+            return false;
+        }
+
+        const flailCfg = getMainWeaponConfig('FLAIL');
+        if (!flailCfg) {
+            return false;
+        }
+
+        const flail = flailStateRef.current;
+        if (flail.cooldown > 0) {
+            return false;
+        }
+
+        flail.boosted = true;
+        flail.boostTimer = flailCfg.boostDuration ?? 1.1;
+        flail.cooldown = flailCfg.cooldown ?? 1.25;
+        return true;
+    }
+
+    function handleMeleeFireRequest() {
+        if (!fireRequestRef.current) {
+            return;
+        }
+
+        if (activeWeaponTypeRef.current === 'SWORD') {
+            trySwordAttack();
+            fireRequestRef.current = false;
+            return;
+        }
+
+        if (activeWeaponTypeRef.current === 'FLAIL') {
+            tryFlailAttack();
+            fireRequestRef.current = false;
+        }
+    }
+
+    function updateSwordSwings(dt) {
+        const swings = swordSwingsRef.current;
+        if (!swings.length) {
+            return;
+        }
+
+        for (const swing of swings) {
+            swing.elapsed += dt;
+            swing.life -= dt;
+            const t = Math.min(1, swing.elapsed / swing.duration);
+            const currentEndAngle = swing.startAngle + (swing.endAngle - swing.startAngle) * t;
+
+            for (const enemy of enemiesRef.current) {
+                if (!enemy.alive) {
+                    continue;
+                }
+                if (swing.hitEnemyIds.has(enemy.id)) {
+                    continue;
+                }
+
+                const dx = enemy.x - swing.x;
+                const dy = enemy.y - swing.y;
+                const dist = Math.hypot(dx, dy);
+                const enemyRadius = enemy.halfSize;
+
+                const overlapsAnnulus =
+                    dist + enemyRadius >= swing.innerRadius &&
+                    dist - enemyRadius <= swing.outerRadius;
+
+                if (!overlapsAnnulus) {
+                    continue;
+                }
+
+                const angle = Math.atan2(dy, dx);
+                if (!isAngleWithinSweep(angle, swing.startAngle, currentEndAngle)) {
+                    continue;
+                }
+
+                resolveEnemyHit(enemy, createHitOptions('melee', swing.weaponDamage));
+                swing.hitEnemyIds.add(enemy.id);
+                if (enemy.hp <= 0) {
+                    onEnemyKilled(enemy);
+                }
+            }
+        }
+
+        swordSwingsRef.current = swings.filter((swing) => swing.life > 0);
+    }
+
+    function updateFlail(dt) {
+        const flailCfg = getMainWeaponConfig('FLAIL');
+        if (!flailCfg) {
+            return;
+        }
+
+        const flail = flailStateRef.current;
+        flail.cooldown = Math.max(0, flail.cooldown - dt);
+        if (flail.boosted) {
+            flail.boostTimer = Math.max(0, flail.boostTimer - dt);
+            if (flail.boostTimer <= 0) flail.boosted = false;
+        }
+        flail.orbitAngle = normalizeAngle(flail.orbitAngle + (flailCfg.spinSpeed ?? (Math.PI * 2.2)) * dt);
+
+        for (const enemyId of Object.keys(flail.enemyHitCooldowns)) {
+            flail.enemyHitCooldowns[enemyId] = Math.max(0, flail.enemyHitCooldowns[enemyId] - dt);
+            if (flail.enemyHitCooldowns[enemyId] <= 0) {
+                delete flail.enemyHitCooldowns[enemyId];
+            }
+        }
+
+        if (activeWeaponTypeRef.current !== 'FLAIL') {
+            return;
+        }
+
+        const p = playerRef.current;
+        const anchorAngle = getMeleeAimAngle();
+        const stickLength = p.halfSize + (flailCfg.stickLength ?? 40);
+        const anchor = {
+            x: p.x + Math.cos(anchorAngle) * stickLength,
+            y: p.y + Math.sin(anchorAngle) * stickLength,
+        };
+        const orbitRadius = flailCfg.orbitRadius ?? 28;
+        const ballRadius = flailCfg.ballRadius ?? 10;
+
+        const a1 = normalizeAngle(anchorAngle + flail.orbitAngle);
+        const a2 = normalizeAngle(a1 + Math.PI);
+
+        const balls = [
+            {
+                x: anchor.x + Math.cos(a1) * orbitRadius,
+                y: anchor.y + Math.sin(a1) * orbitRadius,
+            },
+            {
+                x: anchor.x + Math.cos(a2) * orbitRadius,
+                y: anchor.y + Math.sin(a2) * orbitRadius,
+            },
+        ];
+
+        for (const enemy of enemiesRef.current) {
+            if (!enemy.alive) {
+                continue;
+            }
+
+            let hit = false;
+            for (const ball of balls) {
+                const dist = calculateDistance(ball.x, ball.y, enemy.x, enemy.y);
+                if (dist <= ballRadius + enemy.halfSize) {
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (!hit) {
+                continue;
+            }
+
+            if ((flail.enemyHitCooldowns[enemy.id] ?? 0) > 0) {
+                continue;
+            }
+
+            const damageOptions = flail.boosted
+                ? createHitOptions('melee', flailCfg.damage ?? 0, { weaponMultiplier: flailCfg.boostMultiplier ?? 2.5 })
+                : createHitOptions('melee', flailCfg.damage ?? 0);
+            resolveEnemyHit(enemy, damageOptions);
+            flail.enemyHitCooldowns[enemy.id] = flailCfg.contactInterval ?? 0.14;
+
+            if (enemy.hp <= 0) {
+                onEnemyKilled(enemy);
+            }
+        }
+    }
+
+    function updateMeleeWeapons(dt) {
+        if (!isMeleeWeaponType(activeWeaponTypeRef.current)) {
+            swordSwingsRef.current = [];
+            flailStateRef.current.boosted = false;
+            flailStateRef.current.boostTimer = 0;
+            return;
+        }
+
+        // Smooth aim angle rotation toward target (no snapping)
+        const rawTarget = getTargetAngle() ?? meleeAimAngleRef.current;
+        meleeAimAngleRef.current = rotateTurretAngle(meleeAimAngleRef.current, rawTarget, turretRef.current.turnSpeed, dt);
+
+        meleeCooldownsRef.current.sword = Math.max(0, meleeCooldownsRef.current.sword - dt);
+        handleMeleeFireRequest();
+        updateSwordSwings(dt);
+        updateFlail(dt);
+    }
+
+    function getMeleeVisualState() {
+        const p = playerRef.current;
+        const currentType = activeWeaponTypeRef.current;
+        const currentCfg = getMainWeaponConfig(currentType);
+
+        const swordSwings = swordSwingsRef.current.map((swing) => {
+            const t = Math.min(1, swing.elapsed / swing.duration);
+            return {
+                id: swing.id,
+                x: swing.x,
+                y: swing.y,
+                innerRadius: swing.innerRadius,
+                outerRadius: swing.outerRadius,
+                startAngle: swing.startAngle,
+                currentEndAngle: swing.startAngle + (swing.endAngle - swing.startAngle) * t,
+                life: Math.max(0, swing.life / 0.22),
+            };
+        });
+
+        // Idle sword always at target, visible only when not swinging. Sweeping blade animation preserved.
+        let swordIdle = null;
+        if (currentType === 'SWORD' && currentCfg) {
+            const idleLength = currentCfg.idleLength ?? 44;
+            if (swordSwings.length === 0) {
+                swordIdle = {
+                    x: p.x,
+                    y: p.y,
+                    angle: getMeleeAimAngle(),
+                    length: idleLength,
+                };
+            }
+        }
+
+        let flail = null;
+        if (currentType === 'FLAIL' && currentCfg) {
+            const flailRuntime = flailStateRef.current;
+            const anchorAngle = getMeleeAimAngle();
+            const stickLength = p.halfSize + (currentCfg.stickLength ?? 40);
+            const anchor = {
+                x: p.x + Math.cos(anchorAngle) * stickLength,
+                y: p.y + Math.sin(anchorAngle) * stickLength,
+            };
+            const a1 = normalizeAngle(anchorAngle + flailRuntime.orbitAngle);
+            const a2 = normalizeAngle(a1 + Math.PI);
+            flail = {
+                active: flailRuntime.boosted,
+                player: { x: p.x, y: p.y },
+                anchor,
+                balls: [
+                    {
+                        x: anchor.x + Math.cos(a1) * (currentCfg.orbitRadius ?? 28),
+                        y: anchor.y + Math.sin(a1) * (currentCfg.orbitRadius ?? 28),
+                    },
+                    {
+                        x: anchor.x + Math.cos(a2) * (currentCfg.orbitRadius ?? 28),
+                        y: anchor.y + Math.sin(a2) * (currentCfg.orbitRadius ?? 28),
+                    },
+                ],
+                ballRadius: currentCfg.ballRadius ?? 10,
+            };
+        }
+
+        return {
+            weaponType: currentType,
+            swordIdle,
+            swordSwings,
+            flail,
+        };
+    }
+    
+
     function updateCombat(dt) {
         const p = playerRef.current;
         const playerStats = playerStatsRef.current;
@@ -1240,8 +1653,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             if (!playerStats.alive) continue;
 
             if (enemy.takeDamageCooldown <= 0) {
-                const damageToEnemy = Math.max(1, playerStats.atk - enemy.def);
-                enemyTakeDamage(enemy, damageToEnemy);
+                resolveEnemyHit(enemy, createHitOptions('melee', 0));
                 enemy.takeDamageCooldown = 0.25;
             }
 
@@ -1338,6 +1750,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
                 updateTurret(dt);
+                updateMeleeWeapons(dt);
                 handleBurstFire(dt);
                 updateTurretAutoFire(dt)
                 updateEnemyAi(dt);
@@ -1361,6 +1774,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 weaponType: activeWeaponTypeRef.current,
                 damageTexts: damageTextsRef.current,
                 shake: shakeRef.current,
+                meleeVisuals: getMeleeVisualState(),
             };
 
 
@@ -1394,6 +1808,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
 
     function handleShopPurchase(upgradeFunction, cost) {
+        //const activeWeaponMain = getMainWeaponConfig();
+
         if (upgradeFunction == 'range') {
             playerStatsRef.current.range += 20;
         }
@@ -1413,7 +1829,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
         else if (upgradeFunction == "heal") {
             playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
-
         }
         else {
             console.log(`Error has occured with purchasing your shop upgrade.`)

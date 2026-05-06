@@ -13,6 +13,7 @@ function drawScene(ctx, canvas, gameState) {
         secondaryTurretAngles,
         targetEnemyId,
         weaponType,
+        meleeVisuals,
     } = gameState;
 
     // --- BACKGROUND ---
@@ -28,6 +29,100 @@ function drawScene(ctx, canvas, gameState) {
         player.halfSize * 2,
         player.halfSize * 2
     );
+
+    // --- MELEE VISUALS ---
+    // Only show idle sword if not swinging
+    if (meleeVisuals?.swordIdle && (!meleeVisuals?.swordSwings || meleeVisuals.swordSwings.length === 0)) {
+        const swordOrigin = worldToScreen(meleeVisuals.swordIdle.x, meleeVisuals.swordIdle.y, camera, canvas);
+        const swordTip = {
+            sx: swordOrigin.sx + Math.cos(meleeVisuals.swordIdle.angle) * meleeVisuals.swordIdle.length,
+            sy: swordOrigin.sy + Math.sin(meleeVisuals.swordIdle.angle) * meleeVisuals.swordIdle.length,
+        };
+        ctx.save();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(swordOrigin.sx, swordOrigin.sy);
+        ctx.lineTo(swordTip.sx, swordTip.sy);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Show sweeping blade during swing (use last swordSwings entry)
+    if (meleeVisuals?.swordSwings && meleeVisuals.swordSwings.length > 0) {
+        const swing = meleeVisuals.swordSwings[meleeVisuals.swordSwings.length - 1];
+        const swordOrigin = worldToScreen(swing.x, swing.y, camera, canvas);
+        const t = Math.min(1, swing.life); // already normalized in getMeleeVisualState
+        const bladeAngle = swing.currentEndAngle;
+        const bladeLength = 44; // match idleLength default
+        const swordTip = {
+            sx: swordOrigin.sx + Math.cos(bladeAngle) * bladeLength,
+            sy: swordOrigin.sy + Math.sin(bladeAngle) * bladeLength,
+        };
+        ctx.save();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(swordOrigin.sx, swordOrigin.sy);
+        ctx.lineTo(swordTip.sx, swordTip.sy);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    if (meleeVisuals?.swordSwings?.length) {
+        for (const swing of meleeVisuals.swordSwings) {
+            const center = worldToScreen(swing.x, swing.y, camera, canvas);
+            ctx.save();
+            ctx.globalAlpha = Math.max(0.12, Math.min(0.9, swing.life));
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            // Outer arc (fan edge)
+            ctx.moveTo(center.sx, center.sy);
+            ctx.arc(center.sx, center.sy, swing.outerRadius, swing.startAngle, swing.currentEndAngle, swing.currentEndAngle < swing.startAngle);
+            // Inner arc (back to center)
+            ctx.lineTo(center.sx + Math.cos(swing.currentEndAngle) * swing.innerRadius, center.sy + Math.sin(swing.currentEndAngle) * swing.innerRadius);
+            ctx.arc(center.sx, center.sy, swing.innerRadius, swing.currentEndAngle, swing.startAngle, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    if (meleeVisuals?.flail) {
+        const playerPoint = worldToScreen(meleeVisuals.flail.player.x, meleeVisuals.flail.player.y, camera, canvas);
+        const anchor = worldToScreen(meleeVisuals.flail.anchor.x, meleeVisuals.flail.anchor.y, camera, canvas);
+        const ballA = worldToScreen(meleeVisuals.flail.balls[0].x, meleeVisuals.flail.balls[0].y, camera, canvas);
+        const ballB = worldToScreen(meleeVisuals.flail.balls[1].x, meleeVisuals.flail.balls[1].y, camera, canvas);
+
+        ctx.save();
+        ctx.strokeStyle = '#d1d5db';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(playerPoint.sx, playerPoint.sy);
+        ctx.lineTo(anchor.sx, anchor.sy);
+        ctx.stroke();
+
+        ctx.strokeStyle = meleeVisuals.flail.active ? '#fbbf24' : '#64748b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(anchor.sx, anchor.sy);
+        ctx.lineTo(ballA.sx, ballA.sy);
+        ctx.moveTo(anchor.sx, anchor.sy);
+        ctx.lineTo(ballB.sx, ballB.sy);
+        ctx.stroke();
+
+        const br = meleeVisuals.flail.ballRadius;
+        ctx.fillStyle = meleeVisuals.flail.active ? '#fde68a' : '#94a3b8';
+        ctx.beginPath();
+        ctx.arc(ballA.sx, ballA.sy, br, 0, Math.PI * 2);
+        ctx.arc(ballB.sx, ballB.sy, br, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    const isMeleeWeapon = weaponType === 'SWORD' || weaponType === 'FLAIL';
 
     // --- TURRETS ---
     function drawTurret(angle, config) {
@@ -56,41 +151,36 @@ function drawScene(ctx, canvas, gameState) {
         ctx.restore();
     }
 
-    // --- Draw secondary turret ranges ---
-    for (let idx = 1; idx < turrets.length; idx++) {
-        const config = turrets[idx];
-        const angle = secondaryTurretAngles[idx - 1] || 0;
-        const range = playerStats.range * (config.rangeMultiplier ?? 1);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(122, 154, 191, 0.18)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([6, 6]);
-        ctx.beginPath();
-        ctx.arc(sx, sy, range, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-    }
+    if (!isMeleeWeapon) {
+        // --- Draw secondary turret ranges ---
+        for (let idx = 1; idx < turrets.length; idx++) {
+            const config = turrets[idx];
+            const angle = secondaryTurretAngles[idx - 1] || 0;
+            const range = playerStats.range * (config.rangeMultiplier ?? 1);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(122, 154, 191, 0.18)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.arc(sx, sy, range, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
 
-    // --- Draw main turret and secondaries ---
-    //console.log('mainTurretAngle', mainTurretAngle, 'secondaryTurretAngles', secondaryTurretAngles);
-    //console.log('turrets:', turrets);
-    const mainLength = turrets[0]?.length ?? 26;
-    const mainWidth = turrets[0]?.width ?? 10;
-    // --- Draw main turret and secondaries ---
-    if (weaponType === 'DOUBLE') {
-        drawTurret(mainTurretAngle, { ...turrets[0], isMain: true });
-        drawTurret(secondaryTurretAngles[0] || 0, { isMain: false, baseOffset: 0.25 });
-    } else if (weaponType === 'TRIPLE') {
-        drawTurret(mainTurretAngle, { ...turrets[0], isMain: true });
-        drawTurret(secondaryTurretAngles[0] || 0, { isMain: false, baseOffset: 0.25 });
-        drawTurret(secondaryTurretAngles[1] || 0, { isMain: false, baseOffset: -0.25 });
-    } else if (weaponType === 'BURST') {
-        drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: '#222' });
-    } else if (weaponType === 'EXPLOSIVE') {
-        drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: '#e22' });
-    } else {
-        drawTurret(mainTurretAngle, { ...turrets[0], isMain: true });
+        // --- Draw main turret and secondaries ---
+        if (weaponType === 'DOUBLE') {
+            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true });
+            drawTurret(secondaryTurretAngles[0] || 0, { isMain: false, baseOffset: 0.25 });
+        } else if (weaponType === 'TRIPLE') {
+            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true });
+            drawTurret(secondaryTurretAngles[0] || 0, { isMain: false, baseOffset: 0.25 });
+            drawTurret(secondaryTurretAngles[1] || 0, { isMain: false, baseOffset: -0.25 });
+        } else if (weaponType === 'BURST') {
+            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: '#222' });
+        } else if (weaponType === 'EXPLOSIVE' || weaponType === 'SINGLE') {
+            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: weaponType === 'EXPLOSIVE' ? '#e22' : undefined });
+        }
     }
 
     // --- PROJECTILES ---
