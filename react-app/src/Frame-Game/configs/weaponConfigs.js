@@ -3,7 +3,7 @@ export const WEAPON_CONFIGS = {
         SINGLE: [
             {
                 damage: 5,
-                // cooldown replaces fireInterval
+                cooldown: 0.5,
                 projectileSpeed: 420,
                 spread: 0,
                 projectileType: 'STANDARD',
@@ -13,6 +13,7 @@ export const WEAPON_CONFIGS = {
         DOUBLE: [
             {
                 damage: 3,
+                cooldown: 0.5,
                 projectileSpeed: 420,
                 spread: 0,
                 projectileType: 'STANDARD',
@@ -20,6 +21,7 @@ export const WEAPON_CONFIGS = {
             },
             {
                 damage: 3,
+                cooldown: 0.5,
                 projectileSpeed: 420,
                 spread: 0,
                 projectileType: 'STANDARD',
@@ -29,6 +31,7 @@ export const WEAPON_CONFIGS = {
         TRIPLE: [
             {
                 damage: 3,
+                cooldown: 0.5,
                 projectileSpeed: 420,
                 spread: 0,
                 projectileType: 'STANDARD',
@@ -36,6 +39,7 @@ export const WEAPON_CONFIGS = {
             },
             {
                 damage: 3,
+                cooldown: 0.5,
                 projectileSpeed: 420,
                 spread: 0,
                 projectileType: 'STANDARD',
@@ -43,6 +47,7 @@ export const WEAPON_CONFIGS = {
             },
             {
                 damage: 3,
+                cooldown: 0.5,
                 projectileSpeed: 420,
                 spread: 0,
                 projectileType: 'STANDARD',
@@ -52,6 +57,7 @@ export const WEAPON_CONFIGS = {
         BURST: [
             {
                 damage: 2,
+                cooldown: 0.6,
                 projectileSpeed: 420,
                 burstCount: 3,
                 projectileType: 'STANDARD',
@@ -61,6 +67,7 @@ export const WEAPON_CONFIGS = {
         EXPLOSIVE: [
             {
                 damage: 10,
+                cooldown: 1.0,
                 projectileSpeed: 320,
                 explosionRadius: 60,
                 projectileType: 'EXPLOSIVE',
