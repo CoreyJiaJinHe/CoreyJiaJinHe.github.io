@@ -1,4 +1,5 @@
 import {worldToScreen} from '../utils/MathUtils.js';
+import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from '../configs/enemyArchetypeConfigs.js';
 
 function drawScene(ctx, canvas, gameState) {
     const {
@@ -193,24 +194,168 @@ function drawScene(ctx, canvas, gameState) {
     }
 
     // --- MAIN TURRET RANGE ---
-    const range = playerStats.range;
-    ctx.strokeStyle = 'rgba(154, 209, 255, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(sx, sy, range, 0, Math.PI * 2);
-    ctx.stroke();
+    if (!isMeleeWeapon) {
+        const range = playerStats.range;
+        ctx.strokeStyle = 'rgba(154, 209, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, range, 0, Math.PI * 2);
+        ctx.stroke();
+    }
 
     // --- ENEMIES ---
     for (const enemy of enemies) {
         if (!enemy.alive) continue;
         const { sx: enemySx, sy: enemySy } = worldToScreen(enemy.x, enemy.y, camera, canvas);
-        ctx.fillStyle = '#d64545';
-        ctx.fillRect(
-            enemySx - enemy.halfSize,
-            enemySy - enemy.halfSize,
-            enemy.halfSize * 2,
-            enemy.halfSize * 2
-        );
+        const archetypeCfg = ARCHETYPE_CONFIGS[enemy.archetype] ?? ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.NORMAL];
+
+        // Draw archetype-specific visuals
+        if (enemy.archetype === ENEMY_ARCHETYPES.ARMORED && enemy.shieldHealth > 0) {
+            // Draw shield overlay
+            ctx.save();
+            ctx.globalAlpha = archetypeCfg.shieldAlpha ?? 0.3;
+            ctx.strokeStyle = archetypeCfg.shieldColor ?? archetypeCfg.borderColor ?? archetypeCfg.color;
+            ctx.lineWidth = archetypeCfg.shieldOutlineWidth;
+            const shieldPadding = archetypeCfg.shieldOutlinePadding;
+            ctx.strokeRect(
+                enemySx - enemy.halfSize - shieldPadding,
+                enemySy - enemy.halfSize - shieldPadding,
+                enemy.halfSize * 2 + shieldPadding * 2,
+                enemy.halfSize * 2 + shieldPadding * 2
+            );
+            ctx.restore();
+        }
+
+        if (enemy.archetype === ENEMY_ARCHETYPES.SPAWNER) {
+            // Draw spawner: large center square + 4 satellite squares
+            ctx.save();
+            ctx.fillStyle = archetypeCfg.color;
+            ctx.fillRect(
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
+                enemy.halfSize * 2,
+                enemy.halfSize * 2
+            );
+            
+            // Draw 4 satellites at fixed radius with random (persisted) angles from the enemy instance.
+            const offset = enemy.halfSize * archetypeCfg.satelliteDistanceMultiplier;
+            const satSize = enemy.halfSize * archetypeCfg.satelliteSizeMultiplier;
+            const satColor = archetypeCfg.satelliteColor ?? archetypeCfg.color;
+            const satAlpha = archetypeCfg.satelliteAlpha ?? 1;
+            const satelliteLinkColor = archetypeCfg.satelliteLinkColor ?? archetypeCfg.borderColor ?? archetypeCfg.color;
+            const satelliteLinkWidth = archetypeCfg.satelliteLinkWidth;
+            const satelliteAngles = enemy.spawnerSatelliteAngles ?? [];
+            for (const a of satelliteAngles) {
+                const sx = enemySx + Math.cos(a) * offset;
+                const sy = enemySy + Math.sin(a) * offset;
+
+                // Connector line from spawner core to satellite.
+                ctx.save();
+                ctx.strokeStyle = satelliteLinkColor;
+                ctx.lineWidth = satelliteLinkWidth;
+                ctx.beginPath();
+                ctx.moveTo(enemySx, enemySy);
+                ctx.lineTo(sx, sy);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.globalAlpha = satAlpha;
+                ctx.fillStyle = satColor;
+                ctx.fillRect(sx - satSize, sy - satSize, satSize * 2, satSize * 2);
+                ctx.restore();
+            }
+            
+            ctx.restore();
+        } else if (enemy.archetype === ENEMY_ARCHETYPES.SPEEDSTER) {
+            // Draw speedster with directional indicator
+            ctx.save();
+            ctx.fillStyle = archetypeCfg.color;
+            ctx.fillRect(
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
+                enemy.halfSize * 2,
+                enemy.halfSize * 2
+            );
+            
+            // Draw movement direction arrow
+            if (enemy.speedsterDirection) {
+                ctx.save();
+                ctx.strokeStyle = archetypeCfg.borderColor ?? archetypeCfg.color;
+                ctx.lineWidth = archetypeCfg.directionIndicatorLineWidth;
+                const arrowLen = enemy.halfSize + archetypeCfg.directionIndicatorLengthOffset;
+                const ax = enemySx + enemy.speedsterDirection.x * arrowLen;
+                const ay = enemySy + enemy.speedsterDirection.y * arrowLen;
+                ctx.beginPath();
+                ctx.moveTo(enemySx, enemySy);
+                ctx.lineTo(ax, ay);
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            ctx.restore();
+        } else if (enemy.archetype === ENEMY_ARCHETYPES.SWARM) {
+            // Draw smaller swarm enemy with slightly lighter color
+            ctx.save();
+            ctx.fillStyle = archetypeCfg.color;
+            ctx.fillRect(
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
+                enemy.halfSize * 2,
+                enemy.halfSize * 2
+            );
+            ctx.restore();
+        } else if (enemy.archetype === ENEMY_ARCHETYPES.RANGED) {
+            const turretCfg = archetypeCfg.turretConfig ?? {};
+
+            // Draw ranged enemy attack range using config values.
+            if ((turretCfg.range ?? 0) > 0) {
+                ctx.save();
+                ctx.strokeStyle = turretCfg.rangeIndicatorStrokeColor;
+                ctx.lineWidth = turretCfg.rangeIndicatorLineWidth;
+                ctx.beginPath();
+                ctx.arc(enemySx, enemySy, turretCfg.range, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Draw ranged enemy with turret
+            ctx.save();
+            ctx.fillStyle = archetypeCfg.color;
+            ctx.fillRect(
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
+                enemy.halfSize * 2,
+                enemy.halfSize * 2
+            );
+            
+            // Draw turret barrel
+            const turretLen = enemy.halfSize + turretCfg.barrelLengthOffset;
+            ctx.strokeStyle = archetypeCfg.borderColor ?? archetypeCfg.color;
+            ctx.lineWidth = turretCfg.barrelLineWidth;
+            ctx.beginPath();
+            ctx.moveTo(enemySx, enemySy);
+            ctx.lineTo(
+                enemySx + Math.cos(enemy.turretAngle) * turretLen,
+                enemySy + Math.sin(enemy.turretAngle) * turretLen
+            );
+            ctx.stroke();
+            
+            ctx.restore();
+        } else {
+            // NORMAL archetype
+            ctx.save();
+            ctx.fillStyle = archetypeCfg.color;
+            ctx.fillRect(
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
+                enemy.halfSize * 2,
+                enemy.halfSize * 2
+            );
+            ctx.restore();
+        }
+
+        // Health bar (same for all archetypes)
         const barWidth = enemy.halfSize * 2;
         const barHeight = 6;
         const barX = enemySx - enemy.halfSize;
@@ -220,6 +365,22 @@ function drawScene(ctx, canvas, gameState) {
         ctx.fillRect(barX, barY, barWidth, barHeight);
         ctx.fillStyle = '#4caf50';
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+
+        // Shield health bar for armored
+        if (enemy.archetype === ENEMY_ARCHETYPES.ARMORED && enemy.shieldHealth > 0) {
+            // Use per-enemy max shield so bar remains correct if shield values scale over time.
+            const maxShield = enemy.maxShieldHealth
+                ?? ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.ARMORED]?.shieldHealth
+                ?? Math.max(1, enemy.shieldHealth);
+            const shieldRatio = Math.max(0, Math.min(1, enemy.shieldHealth / Math.max(1, maxShield)));
+            const barY2 = barY - 8;
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(barX, barY2, barWidth, barHeight);
+            ctx.fillStyle = archetypeCfg.shieldColor ?? archetypeCfg.borderColor ?? archetypeCfg.color;
+            ctx.fillRect(barX, barY2, barWidth * shieldRatio, barHeight);
+        }
+
+        // Target highlight
         if (enemy.id === targetEnemyId) {
             const pad = 4;
             ctx.strokeStyle = '#ff3b3b';
