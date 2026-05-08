@@ -274,19 +274,19 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     };
 
-    // function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
-    //     shakeRef.current = Math.max(shakeRef.current, 16);
-    //     const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
-    //     damageTextsRef.current.push({
-    //         id: `explosion-${Date.now()}`,
-    //         x: sx,
-    //         y: sy,
-    //         text: '',
-    //         color: '#ffb347',
-    //         life: 0.7,
-    //         explosionRadius,
-    //     });
-    // }
+    function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
+        shakeRef.current = Math.max(shakeRef.current, 16);
+        const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
+        damageTextsRef.current.push({
+            id: `explosion-${Date.now()}`,
+            x: sx,
+            y: sy,
+            text: '',
+            color: '#ffb347',
+            life: 0.7,
+            explosionRadius,
+        });
+    }
 
     const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
     const firstWeaponUpgradeOpenRef = useRef(firstWeaponUpgradeOpen);
