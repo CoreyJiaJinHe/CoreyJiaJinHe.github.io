@@ -6,9 +6,10 @@ import {
     createDefaultEnemyArchetypeSpawnConfig,
     createDefaultBossConfig,
 } from './configs/difficultyProfiles.js';
-import { WEAPON_CONFIGS } from './configs/weaponConfigs.js';
+import { BASE_TURRET_CONFIG, WEAPON_CONFIGS } from './configs/weaponConfigs.js';
 import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from './configs/enemyArchetypeConfigs.js';
 import { createEnemySystem } from './systems/enemy/enemySystem.js';
+import { createWeaponSystem } from './systems/weapon/weaponSystem.js';
 import FrameGameShopOverlay from './components/Shop.jsx'
 import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
 import FrameGameWeaponUpgradeOverlay from './components/WeaponUpgrade.jsx'
@@ -66,20 +67,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         spawnInterval: 0.5, // Hard cap spawn floor in seconds: regular refill spawn delay will never go below this value.
     });
 
-    // const enemyArchetypeSpawnConfigRef = useRef({
-    //     // Kills needed to fully transition from start -> end weights.
-    //     killsToMaxMix: 250,
-    //     // Tune these values to control how the spawn mix evolves over time.
-    //     // SWARM is intentionally excluded here; swarm enemies are spawner-only.
-    //     archetypeWeightCurves: {
-    //         [ENEMY_ARCHETYPES.NORMAL]: { start: 80, end: 45 },
-    //         [ENEMY_ARCHETYPES.ARMORED]: { start: 5, end: 16 },
-    //         [ENEMY_ARCHETYPES.SPAWNER]: { start: 5, end: 12 },
-    //         [ENEMY_ARCHETYPES.SPEEDSTER]: { start: 5, end: 14 },
-    //         [ENEMY_ARCHETYPES.RANGED]: { start: 5, end: 13 },
-    //     },
-    // });
-
     const enemyArchetypeSpawnConfigRef = useRef(createDefaultEnemyArchetypeSpawnConfig());
 
     const enemySpawnTimerRef = useRef(0);
@@ -112,38 +99,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return { maxActive, spawnInterval, hp, atk, def };
     }
 
-    // function clamp01(v) {
-    //     return Math.max(0, Math.min(1, v));
-    // }
-
-    // function getArchetypeSpawnWeights(kills) {
-    //     const cfg = enemyArchetypeSpawnConfigRef.current;
-    //     const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0;
-    //     // Linear blend progress in [0, 1]: 0 = early-game weights, 1 = late-game weights.
-    //     const t = clamp01(effectiveKills / Math.max(1, cfg.killsToMaxMix));
-
-    //     const weights = {};
-    //     let totalWeight = 0;
-
-    //     for (const [archetype, curve] of Object.entries(cfg.archetypeWeightCurves)) {
-    //         const start = curve?.start ?? 0;
-    //         const end = curve?.end ?? start;
-    //         // Linear interpolation formula: weight = start + (end - start) * t
-    //         const weight = Math.max(0, start + (end - start) * t);
-    //         weights[archetype] = weight;
-    //         totalWeight += weight;
-    //     }
-
-    //     if (totalWeight <= 0) {
-    //         return {
-    //             weights: { [ENEMY_ARCHETYPES.NORMAL]: 1 },
-    //             totalWeight: 1,
-    //         };
-    //     }
-
-    //     return { weights, totalWeight };
-    // }
-
     function getEnemySystem() {
         return createEnemySystem({
             refs: {
@@ -163,412 +118,15 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             },
             getDifficultyFromKills,
             getCombatCallbacks: () => ({
-                isTurretAligned,
-                normalizeAngle,
-                fireEnemyTurret,
+                isTurretAligned: getWeaponSystem().isTurretAligned,
+                normalizeAngle: getWeaponSystem().normalizeAngle,
+                fireEnemyTurret: getWeaponSystem().fireEnemyTurret,
             }),
         });
     }
     function pickRandomEnemyArchetype(kills) {
         return getEnemySystem().pickRandomEnemyArchetype(kills);
     }
-
-    // function pickRandomEnemyArchetype(kills) {
-    //     const { weights, totalWeight } = getArchetypeSpawnWeights(kills);
-    //     // Weighted random roll in [0, totalWeight).
-    //     let roll = Math.random() * totalWeight;
-
-    //     for (const [archetype, weight] of Object.entries(weights)) {
-    //         if (weight <= 0) continue;
-    //         roll -= weight;
-    //         if (roll <= 0) return archetype;
-    //     }
-
-    //     return ENEMY_ARCHETYPES.NORMAL;
-    // }
-
-    // function createEnemy(player, statOverrides = {}, archetype = ENEMY_ARCHETYPES.NORMAL) {
-    //     function updateEnemyAi(dt) {
-    //         const p = playerRef.current;
-    //         const cfg = getEnemyAiConfig();
-
-    //         for (const enemy of enemiesRef.current) {
-    //             if (!enemy.alive) continue;
-
-    //             const dx = p.x - enemy.x;
-    //             const dy = p.y - enemy.y;
-    //             const dist = Math.hypot(dx, dy);
-    //             const toPlayer = normalize2D(dx, dy);
-
-    //             const contactRange = p.halfSize + enemy.halfSize - 1;
-
-    //             if (dist <= enemy.desiredRange) {
-    //                 enemy.aiState = 'attack-range';
-    //             } else if (dist <= cfg.aggroRadius) {
-    //                 enemy.aiState = 'chase';
-    //             } else if (enemy.aiState === 'chase' || enemy.aiState === 'attack-range') {
-    //                 enemy.aiState = Math.random() < 0.5 ? 'idle-zigzag' : 'idle-move';
-    //             }
-
-    //             enemy.aiTimer -= dt;
-
-    //             if (enemy.aiState === 'idle-zigzag') {
-    //                 if (enemy.aiTimer <= 0) {
-    //                     enemy.aiTimer = randomBetween(cfg.repathIntervalMin, cfg.repathIntervalMax);
-    //                     enemy.wanderAngle += randomBetween(-0.9, 0.9);
-    //                 }
-
-    //                 enemy.strafePhase += dt * cfg.strafeFrequency;
-    //                 const strafe = Math.sin(enemy.strafePhase) * cfg.strafeAmplitude;
-
-    //                 const forwardX = Math.cos(enemy.wanderAngle);
-    //                 const forwardY = Math.sin(enemy.wanderAngle);
-    //                 const rightX = -forwardY;
-    //                 const rightY = forwardX;
-
-    //                 enemy.x += (forwardX * cfg.idleDriftSpeed + rightX * strafe) * dt;
-    //                 enemy.y += (forwardY * cfg.idleDriftSpeed + rightY * strafe) * dt;
-    //             }
-
-    //             if (enemy.aiState === 'idle-move') {
-    //                 enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
-    //                 enemy.x += enemy.idleMoveDir.x * cfg.idleMoveSpeed * dt;
-    //                 enemy.y += enemy.idleMoveDir.y * cfg.idleMoveSpeed * dt;
-
-    //                 if (enemy.idleMoveRemaining <= 0) {
-    //                     enemy.idleMoveDir = pickRandomIdleMoveDirection();
-    //                     enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
-    //                 }
-    //             }
-
-    //             if (enemy.aiState === 'chase') {
-    //                 enemy.x += toPlayer.x * enemy.speed * dt;
-    //                 enemy.y += toPlayer.y * enemy.speed * dt;
-    //             }
-
-    //             if (enemy.aiState === 'attack-range') {
-    //                 if (dist > contactRange) {
-    //                     enemy.x += toPlayer.x * cfg.contactPullSpeed * dt;
-    //                     enemy.y += toPlayer.y * cfg.contactPullSpeed * dt;
-    //                 } else {
-    //                     enemy.strafePhase += dt * cfg.strafeFrequency;
-    //                     const orbitDir = Math.sin(enemy.strafePhase);
-    //                     const tangentX = -toPlayer.y;
-    //                     const tangentY = toPlayer.x;
-
-    //                     enemy.x += tangentX * orbitDir * cfg.idleDriftSpeed * dt;
-    //                     enemy.y += tangentY * orbitDir * cfg.idleDriftSpeed * dt;
-
-    //                     if (dist < contactRange * 0.7) {
-    //                         enemy.x -= toPlayer.x * cfg.pushOutSpeed * dt;
-    //                         enemy.y -= toPlayer.y * cfg.pushOutSpeed * dt;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     const cfg = getEnemyAiConfig();
-    //     const archetypeCfg = ARCHETYPE_CONFIGS[archetype];
-    //     const halfSize = 18 * (archetypeCfg?.sizeMultiplier ?? 1);
-    //     const spawnOrigin = statOverrides.spawnOrigin ?? player;
-    //     const minSpawnDistance = statOverrides.spawnDistanceMin ?? worldBandsRef.current.spawnMinRadius;
-    //     const maxSpawnDistance = statOverrides.spawnDistanceMax ?? worldBandsRef.current.spawnMaxRadius;
-
-    //     const angle = Math.random() * Math.PI * 2;
-    //     const distance = randomBetween(minSpawnDistance, maxSpawnDistance);
-    //     const x = spawnOrigin.x + Math.cos(angle) * distance;
-    //     const y = spawnOrigin.y + Math.sin(angle) * distance;
-
-    //     const baseDifficulty = getDifficultyFromKills(killsRef.current);
-    //     const baseHp = statOverrides.hp ?? baseDifficulty.hp;
-    //     const baseAtk = statOverrides.atk ?? baseDifficulty.atk;
-    //     const baseDef = statOverrides.def ?? baseDifficulty.def;
-
-    //     const hpMultiplier = archetypeCfg?.hpMultiplier ?? 1;
-    //     const atkMultiplier = archetypeCfg?.atkMultiplier ?? 1;
-    //     const defMultiplier = archetypeCfg?.defMultiplier ?? 1;
-    //     const speedMultiplier = archetypeCfg?.speedMultiplier ?? 1;
-
-    //     const enemy = {
-    //         id: crypto.randomUUID(),
-    //         x,
-    //         y,
-    //         halfSize,
-    //         hp: Math.ceil(baseHp * hpMultiplier),
-    //         maxHp: Math.ceil(baseHp * hpMultiplier),
-    //         atk: Math.ceil(baseAtk * atkMultiplier),
-    //         def: Math.ceil(baseDef * defMultiplier),
-    //         alive: true,
-    //         damagePlayerCooldown: 0,
-    //         takeDamageCooldown: 0,
-    //         archetype,
-    //         speed: cfg.chaseSpeed * speedMultiplier,
-    //         aiState: pickRandomInitialAiState(),
-    //         aiTimer: 0,
-    //         wanderAngle: Math.random() * Math.PI * 2,
-    //         strafePhase: Math.random() * Math.PI * 2,
-    //         desiredRange: cfg.attackRange * (archetypeCfg?.aggroRadiusMultiplier ?? 1),
-    //         idleMoveDir: pickRandomIdleMoveDirection(),
-    //         idleMoveRemaining: randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax),
-    //     };
-
-    //     // Archetype-specific state
-    //     if (archetype === ENEMY_ARCHETYPES.ARMORED) {
-    //         enemy.shieldHealth = archetypeCfg.shieldHealth;
-    //         enemy.maxShieldHealth = archetypeCfg.shieldHealth;
-    //     }
-    //     if (archetype === ENEMY_ARCHETYPES.SPAWNER) {
-    //         enemy.spawnTimer = archetypeCfg.spawnInterval;
-    //         enemy.spawnedSwarmIds = [];
-    //         // Persisted random satellite layout so satellites are random-but-stable per spawner.
-    //         const baseAngle = Math.random() * Math.PI * 2;
-    //         enemy.spawnerSatelliteAngles = Array.from({ length: 4 }, (_, i) => {
-    //             const evenlySpaced = baseAngle + i * (Math.PI / 2);
-    //             const jitter = randomBetween(-0.45, 0.45);
-    //             return evenlySpaced + jitter;
-    //         });
-    //     }
-    //     if (archetype === ENEMY_ARCHETYPES.SWARM) {
-    //         enemy.spawnerParentId = statOverrides.spawnerParentId || null;
-    //     }
-    //     if (archetype === ENEMY_ARCHETYPES.SPEEDSTER) {
-    //         const directions = [
-    //             { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-    //             { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 },
-    //         ];
-    //         enemy.speedsterDirection = directions[Math.floor(Math.random() * 8)];
-    //     }
-    //     if (archetype === ENEMY_ARCHETYPES.RANGED) {
-    //         enemy.turretAngle = 0;
-    //         enemy.turretCooldown = 0;
-    //         enemy.rangedOrbitSign = Math.random() < 0.5 ? -1 : 1;
-    //     }
-
-    //     return enemy;
-    // }
-
-
-    // function getActiveEnemyCountInBand() {
-    //     const activeRadiusSq = worldBandsRef.current.activeRadius * worldBandsRef.current.activeRadius;
-
-    //     return enemiesRef.current.reduce((count, enemy) => {
-    //         if (!enemy.alive) return count;
-    //         if (enemy.isBoss) return count;
-    //         if (distanceSqToPlayer(enemy.x, enemy.y, playerRef.current.x, playerRef.current.y) > activeRadiusSq) return count;
-    //         return count + 1;
-    //     }, 0);
-    // }
-
-    // function getEnemyAiConfig() {
-    //     return ENEMY_AI_DIFFICULTY_PROFILES[pacingProfileRef.current];
-    // }
-
-    // function pickRandomIdleMoveDirection() {
-    //     const dirs = [
-    //         { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-    //         { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 },
-    //     ];
-    //     const d = dirs[Math.floor(Math.random() * dirs.length)];
-    //     const n = normalize2D(d.x, d.y);
-    //     return { x: n.x, y: n.y };
-    // }
-
-    // function pickRandomInitialAiState() {
-    //     const states = ['idle-zigzag', 'idle-move', 'chase', 'attack-range'];
-    //     return states[Math.floor(Math.random() * states.length)];
-    // }
-
-    // function updateSpeedsterMovement(enemy, dt) {
-    //     const cfg = getEnemyAiConfig();
-    //     const p = playerRef.current;
-    //     const dx = p.x - enemy.x;
-    //     const dy = p.y - enemy.y;
-    //     const dist = Math.hypot(dx, dy);
-        
-    //     // Speedsters only move in straight lines (one of 8 cardinal/diagonal directions)
-    //     // No zigzag or strafe
-    //     if (dist <= enemy.desiredRange) {
-    //         enemy.aiState = 'attack-range';
-    //     } else if (dist <= cfg.aggroRadius) {
-    //         enemy.aiState = 'chase';
-    //     } else {
-    //         enemy.aiState = 'idle-move';
-    //     }
-        
-    //     if (enemy.aiState === 'chase') {
-    //         const dirNorm = normalize2D(dx, dy);
-    //         enemy.speedsterDirection = dirNorm;
-    //         enemy.x += dirNorm.x * enemy.speed * dt;
-    //         enemy.y += dirNorm.y * enemy.speed * dt;
-    //     } else if (enemy.aiState === 'attack-range') {
-    //         const dirNorm = normalize2D(dx, dy);
-    //         enemy.speedsterDirection = dirNorm;
-    //         enemy.x += dirNorm.x * enemy.speed * dt;
-    //         enemy.y += dirNorm.y * enemy.speed * dt;
-    //     } else if (enemy.aiState === 'idle-move') {
-    //         enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
-    //         const dir = enemy.speedsterDirection;
-    //         enemy.x += dir.x * enemy.speed * dt;
-    //         enemy.y += dir.y * enemy.speed * dt;
-            
-    //         if (enemy.idleMoveRemaining <= 0) {
-    //             const directions = [
-    //                 { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-    //                 { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 },
-    //             ];
-    //             enemy.speedsterDirection = directions[Math.floor(Math.random() * 8)];
-    //             enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
-    //         }
-    //     }
-    // }
-
-    // function updateSpawnerEnemy(enemy, dt) {
-    //     const cfg = getEnemyAiConfig();
-    //     const archetypeCfg = ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.SPAWNER];
-    //     const p = playerRef.current;
-    //     const dx = p.x - enemy.x;
-    //     const dy = p.y - enemy.y;
-    //     const dist = Math.hypot(dx, dy);
-    //     const toPlayer = normalize2D(dx, dy);
-        
-    //     const contactRange = p.halfSize + enemy.halfSize - 1;
-        
-    //     // Spawners have large aggro radius
-    //     const spawnerAggroRadius = cfg.aggroRadius * (archetypeCfg.aggroRadiusMultiplier ?? 1.5);
-        
-    //     if (dist <= enemy.desiredRange) {
-    //         enemy.aiState = 'attack-range';
-    //     } else if (dist <= spawnerAggroRadius) {
-    //         enemy.aiState = 'chase';
-    //     } else {
-    //         enemy.aiState = 'idle-move';
-    //     }
-        
-    //     // Slow movement for spawner
-    //     if (enemy.aiState === 'chase') {
-    //         enemy.x += toPlayer.x * enemy.speed * dt;
-    //         enemy.y += toPlayer.y * enemy.speed * dt;
-    //     } else if (enemy.aiState === 'idle-move') {
-    //         enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
-    //         enemy.x += enemy.idleMoveDir.x * enemy.speed * dt;
-    //         enemy.y += enemy.idleMoveDir.y * enemy.speed * dt;
-            
-    //         if (enemy.idleMoveRemaining <= 0) {
-    //             enemy.idleMoveDir = pickRandomIdleMoveDirection();
-    //             enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
-    //         }
-    //     }
-        
-    //     // Spawner spawn logic
-    //     enemy.spawnTimer = Math.max(0, enemy.spawnTimer - dt);
-    //     const swarmIds = enemy.spawnedSwarmIds.filter(id => {
-    //         const swarm = enemiesRef.current.find(e => e.id === id && e.alive);
-    //         return swarm !== undefined;
-    //     });
-    //     enemy.spawnedSwarmIds = swarmIds;
-        
-    //     if (enemy.spawnTimer <= 0 && swarmIds.length < archetypeCfg.swarmCap) {
-    //         const newSwarm = createEnemy(
-    //             playerRef.current,
-    //             {
-    //                 spawnerParentId: enemy.id,
-    //                 // Spawn swarm close to the spawner body (not around the player ring).
-    //                 spawnOrigin: { x: enemy.x, y: enemy.y },
-    //                 spawnDistanceMin: enemy.halfSize + 6,
-    //                 spawnDistanceMax: enemy.halfSize + 20,
-    //             },
-    //             ENEMY_ARCHETYPES.SWARM
-    //         );
-    //         enemiesRef.current.push(newSwarm);
-    //         enemy.spawnedSwarmIds.push(newSwarm.id);
-    //         enemy.spawnTimer = archetypeCfg.spawnInterval;
-    //     }
-    // }
-
-    // function updateSwarmMovement(enemy, dt) {
-    //     const cfg = getEnemyAiConfig();
-    //     const archetypeCfg = ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.SPAWNER];
-    //     const p = playerRef.current;
-        
-    //     const spawner = enemiesRef.current.find(e => e.id === enemy.spawnerParentId && e.alive);
-        
-    //     if (!spawner) {
-    //         // Spawner is dead, treat as normal enemy
-    //         const dx = p.x - enemy.x;
-    //         const dy = p.y - enemy.y;
-    //         const dist = Math.hypot(dx, dy);
-    //         const toPlayer = normalize2D(dx, dy);
-    //         const contactRange = p.halfSize + enemy.halfSize - 1;
-            
-    //         if (dist <= enemy.desiredRange) {
-    //             enemy.aiState = 'attack-range';
-    //         } else if (dist <= cfg.aggroRadius) {
-    //             enemy.aiState = 'chase';
-    //         } else {
-    //             enemy.aiState = 'idle-move';
-    //         }
-            
-    //         if (enemy.aiState === 'chase') {
-    //             enemy.x += toPlayer.x * enemy.speed * dt;
-    //             enemy.y += toPlayer.y * enemy.speed * dt;
-    //         } else if (enemy.aiState === 'idle-move') {
-    //             enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
-    //             enemy.x += enemy.idleMoveDir.x * cfg.idleMoveSpeed * dt;
-    //             enemy.y += enemy.idleMoveDir.y * cfg.idleMoveSpeed * dt;
-                
-    //             if (enemy.idleMoveRemaining <= 0) {
-    //                 enemy.idleMoveDir = pickRandomIdleMoveDirection();
-    //                 enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
-    //             }
-    //         }
-    //         return;
-    //     }
-        
-    //     const dx = p.x - enemy.x;
-    //     const dy = p.y - enemy.y;
-    //     const distToPlayer = Math.hypot(dx, dy);
-    //     const toPlayer = normalize2D(dx, dy);
-        
-    //     const dxToSpawner = spawner.x - enemy.x;
-    //     const dyToSpawner = spawner.y - enemy.y;
-    //     const distToSpawner = Math.hypot(dxToSpawner, dyToSpawner);
-    //     const retentionDistance = archetypeCfg.swarmRetentionDistance;
-        
-    //     // If spawner is chasing, all swarm chase
-    //     const spawnerChasing = spawner.aiState === 'chase' || spawner.aiState === 'attack-range';
-        
-    //     if (distToPlayer <= enemy.desiredRange) {
-    //         enemy.aiState = 'attack-range';
-    //     } else if (distToPlayer <= cfg.aggroRadius || spawnerChasing) {
-    //         enemy.aiState = 'chase';
-    //     } else if (distToSpawner > retentionDistance) {
-    //         enemy.aiState = 'chase'; // Return to spawner
-    //     } else {
-    //         enemy.aiState = 'idle-move';
-    //     }
-        
-    //     if (enemy.aiState === 'chase') {
-    //         if (distToSpawner > retentionDistance) {
-    //             // Move toward spawner
-    //             const toSpawner = normalize2D(dxToSpawner, dyToSpawner);
-    //             enemy.x += toSpawner.x * enemy.speed * dt;
-    //             enemy.y += toSpawner.y * enemy.speed * dt;
-    //         } else {
-    //             // Move toward player
-    //             enemy.x += toPlayer.x * enemy.speed * dt;
-    //             enemy.y += toPlayer.y * enemy.speed * dt;
-    //         }
-    //     } else if (enemy.aiState === 'idle-move') {
-    //         enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
-    //         enemy.x += enemy.idleMoveDir.x * cfg.idleMoveSpeed * dt;
-    //         enemy.y += enemy.idleMoveDir.y * cfg.idleMoveSpeed * dt;
-            
-    //         if (enemy.idleMoveRemaining <= 0) {
-    //             enemy.idleMoveDir = pickRandomIdleMoveDirection();
-    //             enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
-    //         }
-    //     }
-    // }
     
     function createEnemy(player, statOverrides = {}, archetype = ENEMY_ARCHETYPES.NORMAL) {
         return getEnemySystem().createEnemy(player, statOverrides, archetype);
@@ -577,206 +135,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function updateEnemyAi(dt) {
         getEnemySystem().updateEnemyAi(dt);
     }
-
-    // function updateEnemyAi(dt) {
-    //     const p = playerRef.current;
-    //     const cfg = getEnemyAiConfig();
-    //     const playerPrev = previousPlayerPositionRef.current;
-
-    //     // Per-frame player movement vector used by ranged AI to classify intent:
-    //     // moving away, moving toward, moving sideways, or standing still.
-    //     const playerMoveX = p.x - playerPrev.x;
-    //     const playerMoveY = p.y - playerPrev.y;
-    //     const playerMoveLen = Math.hypot(playerMoveX, playerMoveY);
-    //     const hasPlayerMoved = playerMoveLen > 0.001;
-    //     const playerMoveDir = hasPlayerMoved
-    //         ? normalize2D(playerMoveX, playerMoveY)
-    //         : { x: 0, y: 0 };
-
-    //     for (const enemy of enemiesRef.current) {
-    //         if (!enemy.alive) continue;
-
-    //         // Archetype-specific AI
-    //         if (enemy.archetype === ENEMY_ARCHETYPES.SPEEDSTER) {
-    //             updateSpeedsterMovement(enemy, dt);
-    //             continue;
-    //         }
-    //         if (enemy.archetype === ENEMY_ARCHETYPES.SPAWNER) {
-    //             updateSpawnerEnemy(enemy, dt);
-    //             continue;
-    //         }
-    //         if (enemy.archetype === ENEMY_ARCHETYPES.SWARM) {
-    //             updateSwarmMovement(enemy, dt);
-    //             continue;
-    //         }
-
-    //         if (enemy.archetype === ENEMY_ARCHETYPES.RANGED) {
-    //             const turretCfg = ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.RANGED].turretConfig;
-    //             const dx = p.x - enemy.x;
-    //             const dy = p.y - enemy.y;
-    //             const dist = Math.hypot(dx, dy);
-    //             const toPlayer = normalize2D(dx, dy);
-
-    //             // Keep ranged enemies just inside turret range.
-    //             const idealDistance = Math.max(0, turretCfg.range - 10);
-    //             const distanceTolerance = 10;
-    //             const radialIntentThreshold = 0.25;
-
-    //             // Positive radial intent means the player is moving away from this enemy.
-    //             const radialIntent = hasPlayerMoved
-    //                 ? (playerMoveDir.x * toPlayer.x + playerMoveDir.y * toPlayer.y)
-    //                 : 0;
-
-    //             let moveX = 0;
-    //             let moveY = 0;
-
-    //             // Phase 1: always re-enter and hold the ideal firing band.
-    //             if (dist > idealDistance + distanceTolerance) {
-    //                 enemy.aiState = 'chase';
-    //                 moveX = toPlayer.x; // pursue to get back in range
-    //                 moveY = toPlayer.y;
-    //             } else if (dist < idealDistance - distanceTolerance) {
-    //                 enemy.aiState = 'attack-range';
-    //                 moveX = -toPlayer.x; // flee to restore standoff distance
-    //                 moveY = -toPlayer.y;
-    //             } else {
-    //                 enemy.aiState = 'attack-range';
-
-    //                 // Phase 2: once at ideal distance, react to player motion.
-    //                 if (!hasPlayerMoved) {
-    //                     // Stationary player: circle around target while holding distance.
-    //                     const orbitSign = enemy.rangedOrbitSign ?? 1;
-    //                     const tangentX = -toPlayer.y;
-    //                     const tangentY = toPlayer.x;
-    //                     moveX = tangentX * orbitSign;
-    //                     moveY = tangentY * orbitSign;
-    //                 } else if (radialIntent > radialIntentThreshold) {
-    //                     moveX = toPlayer.x; // player moving away -> pursue
-    //                     moveY = toPlayer.y;
-    //                 } else if (radialIntent < -radialIntentThreshold) {
-    //                     moveX = -toPlayer.x; // player moving toward -> flee
-    //                     moveY = -toPlayer.y;
-    //                 } else {
-    //                     moveX = playerMoveDir.x; // player moving sideways -> follow
-    //                     moveY = playerMoveDir.y;
-    //                 }
-
-    //                 // Small radial correction while following/orbiting to hold ideal distance.
-    //                 const idealDenom = Math.max(idealDistance, 1);
-    //                 const radialError = (dist - idealDistance) / idealDenom;
-    //                 const correction = Math.max(-0.65, Math.min(0.65, radialError));
-    //                 moveX += toPlayer.x * correction;
-    //                 moveY += toPlayer.y * correction;
-    //             }
-
-    //             const moveDir = normalize2D(moveX, moveY);
-    //             enemy.x += moveDir.x * enemy.speed * dt;
-    //             enemy.y += moveDir.y * enemy.speed * dt;
-
-    //             // Ranged enemy turret aiming and firing (post-move values).
-    //             const aimDx = p.x - enemy.x;
-    //             const aimDy = p.y - enemy.y;
-    //             const aimDist = Math.hypot(aimDx, aimDy);
-    //             const targetAngle = Math.atan2(aimDy, aimDx);
-    //             let delta = normalizeAngle(targetAngle - enemy.turretAngle);
-    //             const maxStep = turretCfg.turnSpeed * dt;
-    //             if (Math.abs(delta) <= maxStep) {
-    //                 enemy.turretAngle = targetAngle;
-    //             } else {
-    //                 enemy.turretAngle += Math.sign(delta) * maxStep;
-    //                 enemy.turretAngle = normalizeAngle(enemy.turretAngle);
-    //             }
-
-    //             enemy.turretCooldown = Math.max(0, enemy.turretCooldown - dt);
-    //             if (
-    //                 enemy.turretCooldown <= 0
-    //                 && isTurretAligned(enemy.turretAngle, targetAngle, turretCfg.alignTolerance)
-    //                 && aimDist <= turretCfg.range
-    //             ) {
-    //                 fireEnemyTurret(enemy, p);
-    //                 enemy.turretCooldown = turretCfg.cooldown;
-    //             }
-
-    //             continue;
-    //         }
-
-    //         // ... Normal AI (for NORMAL, ARMORED, RANGED)
-    //         const dx = p.x - enemy.x;
-    //         const dy = p.y - enemy.y;
-    //         const dist = Math.hypot(dx, dy);
-    //         const toPlayer = normalize2D(dx, dy);
-
-    //         const contactRange = p.halfSize + enemy.halfSize - 1;
-
-    //         if (dist <= enemy.desiredRange) {
-    //             enemy.aiState = 'attack-range';
-    //         } else if (dist <= cfg.aggroRadius) {
-    //             enemy.aiState = 'chase';
-    //         } else if (enemy.aiState === 'chase' || enemy.aiState === 'attack-range') {
-    //             enemy.aiState = Math.random() < 0.5 ? 'idle-zigzag' : 'idle-move';
-    //         }
-
-    //         enemy.aiTimer -= dt;
-
-    //         if (enemy.aiState === 'idle-zigzag') {
-    //             if (enemy.aiTimer <= 0) {
-    //                 enemy.aiTimer = randomBetween(cfg.repathIntervalMin, cfg.repathIntervalMax);
-    //                 enemy.wanderAngle += randomBetween(-0.9, 0.9);
-    //             }
-
-    //             enemy.strafePhase += dt * cfg.strafeFrequency;
-    //             const strafe = Math.sin(enemy.strafePhase) * cfg.strafeAmplitude;
-
-    //             const forwardX = Math.cos(enemy.wanderAngle);
-    //             const forwardY = Math.sin(enemy.wanderAngle);
-    //             const rightX = -forwardY;
-    //             const rightY = forwardX;
-
-    //             enemy.x += (forwardX * cfg.idleDriftSpeed + rightX * strafe) * dt;
-    //             enemy.y += (forwardY * cfg.idleDriftSpeed + rightY * strafe) * dt;
-    //         }
-
-    //         if (enemy.aiState === 'idle-move') {
-    //             enemy.idleMoveRemaining -= cfg.idleMoveSpeed * dt;
-    //             enemy.x += enemy.idleMoveDir.x * cfg.idleMoveSpeed * dt;
-    //             enemy.y += enemy.idleMoveDir.y * cfg.idleMoveSpeed * dt;
-
-    //             if (enemy.idleMoveRemaining <= 0) {
-    //                 enemy.idleMoveDir = pickRandomIdleMoveDirection();
-    //                 enemy.idleMoveRemaining = randomBetween(cfg.idleMoveSegmentMin, cfg.idleMoveSegmentMax);
-    //             }
-    //         }
-
-    //         if (enemy.aiState === 'chase') {
-    //             enemy.x += toPlayer.x * enemy.speed * dt;
-    //             enemy.y += toPlayer.y * enemy.speed * dt;
-    //         }
-
-    //         if (enemy.aiState === 'attack-range') {
-    //             if (dist > contactRange) {
-    //                 enemy.x += toPlayer.x * cfg.contactPullSpeed * dt;
-    //                 enemy.y += toPlayer.y * cfg.contactPullSpeed * dt;
-    //             } else {
-    //                 enemy.strafePhase += dt * cfg.strafeFrequency;
-    //                 const orbitDir = Math.sin(enemy.strafePhase);
-    //                 const tangentX = -toPlayer.y;
-    //                 const tangentY = toPlayer.x;
-
-    //                 enemy.x += tangentX * orbitDir * cfg.idleDriftSpeed * dt;
-    //                 enemy.y += tangentY * orbitDir * cfg.idleDriftSpeed * dt;
-
-    //                 if (dist < contactRange * 0.7) {
-    //                     enemy.x -= toPlayer.x * cfg.pushOutSpeed * dt;
-    //                     enemy.y -= toPlayer.y * cfg.pushOutSpeed * dt;
-    //                 }
-    //             }
-    //         }
-
-    //     }
-
-    //     previousPlayerPositionRef.current = { x: p.x, y: p.y };
-    // }
-
 
     const keysRef = useRef(new Set());
     const mouseSeekModeRef = useRef(false);
@@ -792,6 +150,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         mouseSeekModeRef.current = resolved;
         setMouseSeekEnabled(resolved);
     }
+
+    function setTargetEnemyId(nextValue) {
+        targetEnemyIdRef.current = nextValue;
+        setTargetEnemyIdView(nextValue);
+    }
+
 
     function getAliveEnemiesSortedByDistance() {
         const p = playerRef.current;
@@ -837,93 +201,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         getEnemySystem().updateEnemyPopulation(dt);
     }
 
-
-    // function updateEnemyPopulation(dt, canvas) {
-    //     const y = killsRef.current;
-    //     const scaled = getDifficultyFromKills(y);
-    //     const activeCount = getActiveEnemyCountInBand();
-
-    //     if (activeCount >= scaled.maxActive) {
-    //         enemySpawnTimerRef.current = 0;
-    //         return;
-    //     }
-
-    //     enemySpawnTimerRef.current += dt;
-
-    //     if (enemySpawnTimerRef.current >= scaled.spawnInterval) {
-    //         enemySpawnTimerRef.current = 0;
-    //         const archetype = pickRandomEnemyArchetype(y);
-
-    //         enemiesRef.current.push(
-    //             createEnemy(playerRef.current, {
-    //                 hp: scaled.hp,
-    //                 atk: scaled.atk,
-    //                 def: scaled.def,
-    //             }, archetype)
-    //         );
-    //     }
-    // }
-
-    // const bossConfigRef = useRef({
-    //     killsPerBoss: 50,
-    //     spawnDelay: 2.0,
-    //     nextBossAt: 50,
-    //     maxSimultaneousBosses: {
-    //         [PROFILE.P1]: 1,
-    //         [PROFILE.P2]: 1,
-    //         [PROFILE.P3]: 3,
-    //     },
-    //     pendingBossSpawn: false,
-    // });
-    
     const bossConfigRef = useRef(createDefaultBossConfig());
     
     const bossSpawnTimerRef = useRef(0);
     const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
     const bossesDefeatedRef = useRef(0);
 
-    // function createBoss(player, scaled) {
-    //     return {
-    //         ...createEnemy(player, {
-    //             hp: Math.floor(scaled.hp * 6),
-    //             atk: Math.max(2, Math.floor(scaled.atk * 2)),
-    //             def: Math.max(2, scaled.def + 2),
-    //         }),
-    //         halfSize: 30,
-    //         isBoss: true,
-    //     };
-    // }
-
-    // function updateBossSpawn(dt, canvas) {
-    //     const cfg = bossConfigRef.current;
-    //     const kills = killsRef.current;
-    //     const profile = pacingProfileRef.current;
-
-    //     if (kills < cfg.nextBossAt) {
-    //         bossSpawnTimerRef.current = 0;
-    //         cfg.pendingBossSpawn = false;
-    //         return;
-    //     }
-
-    //     const maxAllowed = cfg.maxSimultaneousBosses[profile];
-    //     const aliveBosSCount = enemiesRef.current.filter((e) => e.alive && e.isBoss).length;
-
-    //     if (aliveBosSCount >= maxAllowed) {
-    //         // Queue the spawn, don't proceed
-    //         cfg.pendingBossSpawn = true;
-    //         bossSpawnTimerRef.current = 0;
-    //         return;
-    //     }
-
-    //     cfg.pendingBossSpawn = false;
-    //     bossSpawnTimerRef.current += dt;
-    //     if (bossSpawnTimerRef.current >= cfg.spawnDelay) {
-    //         bossSpawnTimerRef.current = 0;
-    //         const scaled = getDifficultyFromKills(kills);
-    //         enemiesRef.current.push(createBoss(playerRef.current, scaled));
-    //         cfg.nextBossAt += cfg.killsPerBoss;
-    //     }
-    // }
     function updateBossSpawn(dt, canvas) {
         getEnemySystem().updateBossSpawn(dt);
     }
@@ -978,13 +261,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         setTargetEnemyId(sorted[nextIndex].id);
     }
 
-    function setTargetEnemyId(nextValue) {
-        targetEnemyIdRef.current = nextValue;
-        setTargetEnemyIdView(nextValue);
-    }
-
-
-
     const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
     const shakeRef = useRef(0); // Current shake intensity
 
@@ -998,8 +274,52 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     };
 
+    // function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
+    //     shakeRef.current = Math.max(shakeRef.current, 16);
+    //     const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
+    //     damageTextsRef.current.push({
+    //         id: `explosion-${Date.now()}`,
+    //         x: sx,
+    //         y: sy,
+    //         text: '',
+    //         color: '#ffb347',
+    //         life: 0.7,
+    //         explosionRadius,
+    //     });
+    // }
+
     const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
     const firstWeaponUpgradeOpenRef = useRef(firstWeaponUpgradeOpen);
+    
+    function applyPlayerProjectileDamage(amount) {
+        playerTakeDamage(amount, playerRef.current.x, playerRef.current.y, true);
+        if (playerStatsRef.current.hp <= 0) {
+            playerStatsRef.current.alive = false;
+        }
+        setPlayerStatsView({ ...playerStatsRef.current });
+    }
+
+    // COMMENTED OUT (duplicate): local squareOverlapsCircle conflicts with imported helper.
+    // function squareOverlapsCircle(square, circle) {
+    //     const closestX = Math.max(
+    //         square.x - square.halfSize,
+    //         Math.min(circle.x, square.x + square.halfSize)
+    //     );
+    //     const closestY = Math.max(
+    //         square.y - square.halfSize,
+    //         Math.min(circle.y, square.y + square.halfSize)
+    //     );
+    //     const dx = circle.x - closestX;
+    //     const dy = circle.y - closestY;
+    //     return dx * dx + dy * dy <= circle.radius * circle.radius;
+    // }
+
+
+    function enemyTakeDamage(enemy, amount) {
+        enemy.hp -= amount;
+        const { sx, sy } = worldToScreen(enemy.x, enemy.y, cameraRef.current, canvasRef.current);
+        triggerEffects(sx, sy, `-${amount}`, '#ffcc00');
+    }
 
     function onEnemyKilled(enemy) {
         enemy.hp = 0;
@@ -1091,28 +411,89 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         advancedDropsRef.current = advancedDropsRef.current.filter((d) => d.alive);
     }
 
+    // COMMENTED OUT (duplicate block): second copy of effect/state/difficulty/enemy-system wiring.
+    // useEffect(() => {
+    //     firstWeaponUpgradeOpenRef.current = firstWeaponUpgradeOpen;
+    // }, [firstWeaponUpgradeOpen]);
+    //
+    // const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
+    // const bossesDefeatedRef = useRef(0);
+    //
+    // function getDifficultyFromKills(kills) {
+    //     const d = DIFFICULTY_PROFILES[pacingProfileRef.current];
+    //     const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0;
+    //     const extraActive = Math.floor(effectiveKills / d.killsPerExtraActive);
+    //     const profileMaxActive = Math.min(d.maxActiveCap, d.maxActiveBase + extraActive);
+    //     const spawnStepCount = Math.floor(effectiveKills / d.killsPerSpawnStep);
+    //     const profileSpawnInterval = Math.max(d.spawnIntervalMin, d.spawnIntervalBase - spawnStepCount * d.spawnStep);
+    //     const hp = d.enemyHpBase + Math.floor(effectiveKills / d.killsPerHpStep) * d.hpStep;
+    //     const atk = d.enemyAtkBase + Math.floor(effectiveKills / d.killsPerAtkStep) * d.atkStep;
+    //     const def = d.enemyDefBase + Math.floor(effectiveKills / d.killsPerDefStep) * d.defStep;
+    //     const maxActive = Math.min(enemySpawnConfigRef.current.maxActive, profileMaxActive);
+    //     const spawnInterval = Math.max(enemySpawnConfigRef.current.spawnInterval, profileSpawnInterval);
+    //     return { maxActive, spawnInterval, hp, atk, def };
+    // }
+    //
+    // function getEnemySystem() {
+    //     return createEnemySystem({
+    //         refs: {
+    //             playerRef,
+    //             previousPlayerPositionRef,
+    //             enemiesRef,
+    //             worldBandsRef,
+    //             enemySpawnTimerRef,
+    //             killsRef,
+    //             scaledEnemiesEnabledRef,
+    //             pacingProfileRef,
+    //             bossSpawnTimerRef,
+    //         },
+    //         configRefs: {
+    //             enemyArchetypeSpawnConfigRef,
+    //             bossConfigRef,
+    //         },
+    //         getDifficultyFromKills,
+    //         getCombatCallbacks: () => ({
+    //             isTurretAligned: getWeaponSystem().isTurretAligned,
+    //             normalizeAngle: getWeaponSystem().normalizeAngle,
+    //             fireEnemyTurret: getWeaponSystem().fireEnemyTurret,
+    //         }),
+    //     });
+    // }
+    //
+    // function pickRandomEnemyArchetype(kills) {
+    //     return getEnemySystem().pickRandomEnemyArchetype(kills);
+    // }
+    //
+    // function createEnemy(player, statOverrides = {}, archetype = ENEMY_ARCHETYPES.NORMAL) {
+    //     return getEnemySystem().createEnemy(player, statOverrides, archetype);
+    // }
+    //
+    // function updateEnemyAi(dt) {
+    //     getEnemySystem().updateEnemyAi(dt);
+    // }
+
     // --- Weapon type and turrets ---
     const weaponTypeKeys = Object.keys(WEAPON_CONFIGS);
     const [activeWeaponType, setActiveWeaponType] = useState('EXPLOSIVE');
     const activeWeaponTypeRef = useRef(activeWeaponType);
-    useEffect(() => {
-        activeWeaponTypeRef.current = activeWeaponType;
-    }, [activeWeaponType]);
+    // useEffect(() => {
+    //     activeWeaponTypeRef.current = activeWeaponType;
+    // }, [activeWeaponType]);
 
-    function getActiveTurrets() {
-        return WEAPON_CONFIGS[activeWeaponTypeRef.current] || [];
-    }
+    // function getActiveTurrets() {
+    //     return WEAPON_CONFIGS[activeWeaponTypeRef.current] || [];
+    // }
 
 
-    function selectAdvancedWeaponUpgrade(weaponType) {
-        if (!WEAPON_CONFIGS[weaponType]) {
-            console.error('Invalid weapon upgrade selection:', weaponType);
-            return;
-        }
-        setActiveWeaponType(weaponType);
-        setFirstWeaponUpgradeOpen(false);
-        firstWeaponUpgradeOpenRef.current = false
-    }
+    // function selectAdvancedWeaponUpgrade(weaponType) {
+    //     if (!WEAPON_CONFIGS[weaponType]) {
+    //         console.error('Invalid weapon upgrade selection:', weaponType);
+    //         return;
+    //     }
+    //     setActiveWeaponType(weaponType);
+    //     setFirstWeaponUpgradeOpen(false);
+    //     firstWeaponUpgradeOpenRef.current = false
+    // }
 
     // Ensure turretCooldowns and all logic sync when weapon type changes
     useEffect(() => {
@@ -1122,36 +503,108 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         // secondaryTurretAnglesRef.current = [0, 0];
     }, [activeWeaponType]);
 
-    const turretRef = useRef({
-        angle: 0,
-        turnSpeed: Math.PI * 1.4,
-        length: 26,
-        width: 10,
-        alignTolerance: 0.12,
-        fireCooldown: 0,
-        cooldown: 0.35,
-        projectileSpeed: 420,
-    });
+
+    useEffect(() => {
+        activeWeaponTypeRef.current = activeWeaponType;
+        if (weaponSystemRef.current) {
+            weaponSystemRef.current.syncWeaponType();
+        }
+    }, [activeWeaponType]);
+
+    const weaponSystemRef = useRef(null);
+
+    
+    const turretRef = useRef({ ...BASE_TURRET_CONFIG });
     // Secondary turret angles (for up to 2 secondaries)
     const secondaryTurretAnglesRef = useRef([0, 0]);
 
-    // --- Main turret auto-fire flag (for future upgrade) ---
-    const [mainTurretAutoFireEnabled, setMainTurretAutoFireEnabled] = useState(true); // Set to true to enable auto-fire for main turret
+    // --- Main turret auto-fire flag ---
+    const [mainTurretAutoFireEnabled, setMainTurretAutoFireEnabled] = useState(true);
+    
+    // // --- Unified turret cooldown state: one entry per turret (main + all secondaries) ---
+    // const turretCooldownsRef = useRef(getActiveTurrets().map(() => ({ fireCooldown: 0 })));
 
-    // --- Unified turret cooldown state: one entry per turret (main + all secondaries) ---
-    const turretCooldownsRef = useRef(getActiveTurrets().map(() => ({ fireCooldown: 0 })));
-
+    const mainTurretAutoFireEnabledRef = useRef(mainTurretAutoFireEnabled);
+    
+    useEffect(() => {
+        mainTurretAutoFireEnabledRef.current = mainTurretAutoFireEnabled;
+    }, [mainTurretAutoFireEnabled]);
+    const turretCooldownsRef = useRef([]);
+    
     const projectilesRef = useRef([]);
     const fireRequestRef = useRef(false);
 
-    function isMeleeWeaponType(type) {
-        return type === 'SWORD' || type === 'FLAIL';
-    }
+    // function isMeleeWeaponType(type) {
+    //     return type === 'SWORD' || type === 'FLAIL';
+    // }
 
-    function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
-        const list = WEAPON_CONFIGS[type] || [];
-        return list[0] || null;
-    }
+    // function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
+    //     const list = WEAPON_CONFIGS[type] || [];
+    //     return list[0] || null;
+    // }
+
+
+    // COMMENTED OUT (duplicate): the active meleeCooldownsRef is declared below with burst state.
+    // const meleeCooldownsRef = useRef({
+    //     sword: 0,
+    // });
+    // COMMENTED OUT (duplicate helpers): active implementations are delegated through getWeaponSystem() below.
+    // function normalizeAngle(angle) {
+    //     while (angle > Math.PI) angle -= Math.PI * 2;
+    //     while (angle < -Math.PI) angle += Math.PI * 2;
+    //     return angle;
+    // }
+    //
+    // function getTargetEnemy() {
+    //     return enemiesRef.current.find(
+    //         (enemy) => enemy.alive && enemy.id === targetEnemyIdRef.current
+    //     ) ?? null;
+    // }
+    //
+    // function getTargetAngle() {
+    //     const target = getTargetEnemy();
+    //     const p = playerRef.current;
+    //
+    //     if (!target) {
+    //         return null;
+    //     }
+    //
+    //     return Math.atan2(target.y - p.y, target.x - p.x);
+    // }
+    //
+    // function getTurretMuzzlePosition(idx) {
+    //     const p = playerRef.current;
+    //     let angle, length;
+    //     if (idx === 0) {
+    //         angle = turretRef.current.angle;
+    //         length = turretRef.current.length;
+    //     } else {
+    //         angle = secondaryTurretAnglesRef.current[idx - 1] || 0;
+    //         length = turretRef.current.length * 0.7;
+    //     }
+    //     const muzzleDistance = p.halfSize + length;
+    //     return {
+    //         x: p.x + Math.cos(angle) * muzzleDistance,
+    //         y: p.y + Math.sin(angle) * muzzleDistance,
+    //     };
+    // }
+    //
+    // function getSecondaryTurretTarget(idx, alreadyTargeted) {
+    //     const config = getActiveTurrets()[idx];
+    //     const p = playerRef.current;
+    //     let closest = null, minDist = Infinity;
+    //     for (const enemy of enemiesRef.current) {
+    //         if (!enemy.alive) continue;
+    //         if (alreadyTargeted.has(enemy.id)) continue;
+    //         const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+    //         if (dist < minDist && dist <= playerStatsRef.current.range * (config.rangeMultiplier ?? 1)) {
+    //             closest = enemy;
+    //             minDist = dist;
+    //         }
+    //     }
+    //     return closest;
+    // }
+
 
     const swordSwingsRef = useRef([]);
     const meleeAimAngleRef = useRef(0);
@@ -1159,147 +612,179 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         orbitAngle: 0,
         boosted: false,
         boostTimer: 0,
-        cooldown: 0,
         enemyHitCooldowns: {},
     });
 
-    const meleeCooldownsRef = useRef({
-        sword: 0,
+    const meleeCooldownsRef = useRef({ cooldown: 0 });
+    const burstStateRef = useRef({
+        shotsRemaining: 0,
+        burstTimer: 0,
+        burstInterval: WEAPON_CONFIGS.BURST?.[0]?.burstInterval ?? 0.15,
+        burstCount: WEAPON_CONFIGS.BURST?.[0]?.burstCount ?? 3,
+        target: null,
+        firing: false,
     });
+
+    function getWeaponSystem() {
+        if (!weaponSystemRef.current) {
+            weaponSystemRef.current = createWeaponSystem({
+                refs: {
+                    playerRef,
+                    enemiesRef,
+                    playerStatsRef,
+                    targetEnemyIdRef,
+                    activeWeaponTypeRef,
+                    mainTurretAutoFireEnabledRef,
+                    turretRef,
+                    secondaryTurretAnglesRef,
+                    turretCooldownsRef,
+                    projectilesRef,
+                    fireRequestRef,
+                    burstStateRef,
+                    swordSwingsRef,
+                    meleeAimAngleRef,
+                    flailStateRef,
+                    meleeCooldownsRef,
+                    cameraRef,
+                    canvasRef,
+                },
+                callbacks: {
+                    resolveEnemyHit,
+                    onEnemyKilled,
+                    onPlayerHit: applyPlayerProjectileDamage,
+                    onExplosion: triggerExplosionEffect,
+                },
+            });
+        }
+
+        return weaponSystemRef.current;
+    }
+
+    function selectAdvancedWeaponUpgrade(weaponType) {
+        if (!WEAPON_CONFIGS[weaponType]) {
+            console.error('Invalid weapon upgrade selection:', weaponType);
+            return;
+        }
+        setActiveWeaponType(weaponType);
+        setFirstWeaponUpgradeOpen(false);
+        firstWeaponUpgradeOpenRef.current = false;
+    }
+
+    function getActiveTurrets() {
+        return getWeaponSystem().getActiveTurrets();
+    }
+
+    function isMeleeWeaponType(type) {
+        return getWeaponSystem().isMeleeWeaponType(type);
+    }
+
+    function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
+        return getWeaponSystem().getMainWeaponConfig(type);
+    }
+
     function normalizeAngle(angle) {
-        while (angle > Math.PI) angle -= Math.PI * 2;
-        while (angle < -Math.PI) angle += Math.PI * 2;
-        return angle;
+        return getWeaponSystem().normalizeAngle(angle);
     }
 
     function getTargetEnemy() {
-        return enemiesRef.current.find(
-            (enemy) => enemy.alive && enemy.id === targetEnemyIdRef.current
-        ) ?? null;
+        return getWeaponSystem().getTargetEnemy();
     }
 
     function getTargetAngle() {
-        const target = getTargetEnemy();
-        const p = playerRef.current;
-
-        if (!target) {
-            return null;
-        }
-
-        return Math.atan2(target.y - p.y, target.x - p.x);
+        return getWeaponSystem().getTargetAngle();
     }
 
     function getTurretMuzzlePosition(idx) {
-        const p = playerRef.current;
-        let angle, length;
-        if (idx === 0) {
-            angle = turretRef.current.angle;
-            length = turretRef.current.length;
-        } else {
-            angle = secondaryTurretAnglesRef.current[idx - 1] || 0;
-            length = turretRef.current.length * 0.7;
-        }
-        const muzzleDistance = p.halfSize + length;
-        return {
-            x: p.x + Math.cos(angle) * muzzleDistance,
-            y: p.y + Math.sin(angle) * muzzleDistance,
-        };
+        return getWeaponSystem().getTurretMuzzlePosition(idx);
     }
 
-    // --- Secondary Turret Helpers ---
     function getSecondaryTurretTarget(idx, alreadyTargeted) {
-        // idx: 1 or 2 (secondary turrets)
-        const config = getActiveTurrets()[idx];
-        const p = playerRef.current;
-        let closest = null, minDist = Infinity;
-        for (const enemy of enemiesRef.current) {
-            if (!enemy.alive) continue;
-            if (alreadyTargeted.has(enemy.id)) continue;
-            const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
-            if (dist < minDist && dist <= playerStatsRef.current.range * (config.rangeMultiplier ?? 1)) {
-                closest = enemy;
-                minDist = dist;
-            }
-        }
-        return closest;
+        return getWeaponSystem().getSecondaryTurretTarget(idx, alreadyTargeted);
     }
 
     function rotateTurretAngle(current, target, turnSpeed, dt) {
-        let delta = normalizeAngle(target - current);
-        const maxStep = turnSpeed * dt;
-        if (Math.abs(delta) <= maxStep) {
-            return target;
-        } else {
-            return normalizeAngle(current + Math.sign(delta) * maxStep);
-        }
+        return getWeaponSystem().rotateTurretAngle(current, target, turnSpeed, dt);
     }
 
     function isTurretAligned(current, target, tolerance = 0.13) {
-        return Math.abs(normalizeAngle(target - current)) <= tolerance;
+        return getWeaponSystem().isTurretAligned(current, target, tolerance);
     }
 
-    function getEffectiveRange(config) {
-        return playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
-    }
-
-    // --- Generalized turret fire (used for both main and secondary turrets) ---
     function fireTurret(idx, target) {
-        const config = getActiveTurrets()[idx];
-        if (!config || !target) return false;
-        if (isMeleeWeaponType(activeWeaponTypeRef.current)) return false;
-        // Burst weapon logic (main turret only)
-        if (activeWeaponTypeRef.current === 'BURST' && idx === 0) {
-            // Only start burst if not already firing
-            if (!burstStateRef.current.firing) {
-                // Only initialize burst state; do NOT fire the first shot here
-                burstStateRef.current.shotsRemaining = (config.burstCount || 3);
-                burstStateRef.current.burstTimer = 0; // Fire immediately on next handleBurstFire
-                burstStateRef.current.burstInterval = config.burstInterval || 0.15;
-                burstStateRef.current.target = target;
-                burstStateRef.current.firing = true;
-            }
-            return true;
-        }
-        // Standard projectile logic (single, double, triple, secondary, etc)
-        const muzzle = getTurretMuzzlePosition(idx);
-        const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
-        const effectiveRange = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
-        if (distance > effectiveRange) return false;
-        const speed = config.projectileSpeed;
-        const dirX = (target.x - muzzle.x) / distance;
-        const dirY = (target.y - muzzle.y) / distance;
-        // EXPLOSIVE weapon: mark projectile and add explosionRadius
-        if (config.projectileType === 'EXPLOSIVE') {
-            projectilesRef.current.push({
-                id: crypto.randomUUID(),
-                x: muzzle.x,
-                y: muzzle.y,
-                radius: 8,
-                vx: dirX * speed,
-                vy: dirY * speed,
-                damage: config.damage,
-                alive: true,
-                maxDistance: effectiveRange,
-                traveled: 0,
-                projectileType: 'EXPLOSIVE',
-                explosionRadius: config.explosionRadius || 60,
-            });
-        } else {
-            projectilesRef.current.push({
-                id: crypto.randomUUID(),
-                x: muzzle.x,
-                y: muzzle.y,
-                radius: 5,
-                vx: dirX * speed,
-                vy: dirY * speed,
-                damage: config.damage,
-                alive: true,
-                maxDistance: effectiveRange,
-                traveled: 0,
-            });
-        }
-        return true;
+        return getWeaponSystem().fireTurret(idx, target);
     }
+
+    // COMMENTED OUT (legacy weapon block): replaced by createWeaponSystem wrappers above.
+    // function rotateTurretAngle(current, target, turnSpeed, dt) {
+    //     let delta = normalizeAngle(target - current);
+    //     const maxStep = turnSpeed * dt;
+    //     if (Math.abs(delta) <= maxStep) {
+    //         return target;
+    //     } else {
+    //         return normalizeAngle(current + Math.sign(delta) * maxStep);
+    //     }
+    // }
+    //
+    // function isTurretAligned(current, target, tolerance = 0.13) {
+    //     return Math.abs(normalizeAngle(target - current)) <= tolerance;
+    // }
+    //
+    // function getEffectiveRange(config) {
+    //     return playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
+    // }
+    //
+    // function fireTurret(idx, target) {
+    //     const config = getActiveTurrets()[idx];
+    //     if (!config || !target) return false;
+    //     if (isMeleeWeaponType(activeWeaponTypeRef.current)) return false;
+    //     if (activeWeaponTypeRef.current === 'BURST' && idx === 0) {
+    //         if (!burstStateRef.current.firing) {
+    //             burstStateRef.current.shotsRemaining = (config.burstCount || 3);
+    //             burstStateRef.current.burstTimer = 0;
+    //             burstStateRef.current.burstInterval = config.burstInterval || 0.15;
+    //             burstStateRef.current.target = target;
+    //             burstStateRef.current.firing = true;
+    //         }
+    //         return true;
+    //     }
+    //     const muzzle = getTurretMuzzlePosition(idx);
+    //     const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
+    //     const effectiveRange = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
+    //     if (distance > effectiveRange) return false;
+    //     const speed = config.projectileSpeed;
+    //     const dirX = (target.x - muzzle.x) / distance;
+    //     const dirY = (target.y - muzzle.y) / distance;
+    //     if (config.projectileType === 'EXPLOSIVE') {
+    //         projectilesRef.current.push({
+    //             id: crypto.randomUUID(),
+    //             x: muzzle.x,
+    //             y: muzzle.y,
+    //             radius: 8,
+    //             vx: dirX * speed,
+    //             vy: dirY * speed,
+    //             damage: config.damage,
+    //             alive: true,
+    //             maxDistance: effectiveRange,
+    //             traveled: 0,
+    //             projectileType: 'EXPLOSIVE',
+    //             explosionRadius: config.explosionRadius || 60,
+    //         });
+    //     } else {
+    //         projectilesRef.current.push({
+    //             id: crypto.randomUUID(),
+    //             x: muzzle.x,
+    //             y: muzzle.y,
+    //             radius: 5,
+    //             vx: dirX * speed,
+    //             vy: dirY * speed,
+    //             damage: config.damage,
+    //             alive: true,
+    //             maxDistance: effectiveRange,
+    //             traveled: 0,
+    //         });
+    //     }
+    //     return true;
+    // }
     // function setTurretCooldown(idx, cooldown) {
     //     if (!Array.isArray(turretCooldownsRef.current)) turretCooldownsRef.current = [];
     //     while (turretCooldownsRef.current.length <= idx) {
@@ -1309,177 +794,39 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     // }
     // --- Unified auto-fire logic for all turrets (main and secondary) ---
     function updateTurretAutoFire(dt) {
-        if (isMeleeWeaponType(activeWeaponTypeRef.current)) {
-            return;
-        }
-
-        const activeTurrets = getActiveTurrets();
-        // Main turret auto-fire (if enabled)
-        if (mainTurretAutoFireEnabled && activeTurrets.length > 0) {
-            const cooldown = Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt);
-            if (cooldown > 0) {
-                turretCooldownsRef.current[0] = { fireCooldown: cooldown };
-            } else {
-                const target = getTargetEnemy();
-                if (target) {
-                    const targetAngle = Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x);
-                    if (isTurretAligned(turretRef.current.angle, targetAngle, turretRef.current.alignTolerance)) {
-                        const fired = fireTurret(0, target);
-                        if (fired)
-                            turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
-                    } else {
-                        turretCooldownsRef.current[0] = { fireCooldown: 0 }; // Not aligned, keep cooldown at 0
-                    }
-                } else {
-                    turretCooldownsRef.current[0] = { fireCooldown: 0 }; // No target, keep cooldown at 0
-                }
-            }
-        } else if (activeTurrets.length > 0) {
-            const cooldown = Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt);
-            turretCooldownsRef.current[0] = { fireCooldown: cooldown };
-        }
-
-        // Secondary turrets
-        const newAngles = [...secondaryTurretAnglesRef.current];
-        const targetedEnemyIds = new Set();
-        for (let idx = 1; idx < activeTurrets.length; idx++) {
-            const config = activeTurrets[idx];
-            let cooldown = Math.max(0, turretCooldownsRef.current[idx].fireCooldown - dt);
-            // Target selection
-            const target = getSecondaryTurretTarget(idx, targetedEnemyIds);
-            if (target) targetedEnemyIds.add(target.id);
-            // Rotation
-            let currentAngle = secondaryTurretAnglesRef.current[idx - 1] || 0;
-            let targetAngle = target ? Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x) : currentAngle;
-            let newAngle = rotateTurretAngle(currentAngle, targetAngle, Math.PI * 1.8, dt);
-            newAngles[idx - 1] = newAngle;
-            // Firing
-            if (cooldown > 0) {
-                turretCooldownsRef.current[idx] = { fireCooldown: cooldown };
-                continue; // Still cooling down, skip firing
-            } else if (target && isTurretAligned(newAngle, targetAngle)) {
-                const fired = fireTurret(idx, target);
-                if (fired) {
-                    console.log(`Secondary turret ${idx} firing at target ${target.id}. Cooldown: ${getActiveTurrets()[idx].cooldown}s`);
-                    turretCooldownsRef.current[idx] = { fireCooldown: getActiveTurrets()[idx].cooldown };
-                } else {
-                    turretCooldownsRef.current[idx] = { fireCooldown: 0 };
-                }
-            } else {
-                turretCooldownsRef.current[idx] = { fireCooldown: 0 };
-            }
-        }
-        secondaryTurretAnglesRef.current = newAngles;
+        getWeaponSystem().updateTurretAutoFire(dt);
     }
 
     // --- Main turret aim and player-controlled fire ---
     function updateTurret(dt) {
-        const turret = turretRef.current;
-        const targetAngle = getTargetAngle();
-        // console.log(`Trying to fire. Cooldown: ${turretCooldownsRef.current[0].fireCooldown.toFixed(2)}, FireRequest: ${fireRequestRef.current}`);
-        // console.log(`Turret details: ${turretRef}`)
-        turretCooldownsRef.current[0] = { fireCooldown: Math.max(0, turretCooldownsRef.current[0].fireCooldown - dt) };
-        if (targetAngle === null) {
-            fireRequestRef.current = false;
-            return;
-        }
-        const delta = normalizeAngle(targetAngle - turret.angle);
-        const maxStep = turret.turnSpeed * dt;
-        if (Math.abs(delta) <= maxStep) {
-            turret.angle = targetAngle;
-        } else {
-            turret.angle += Math.sign(delta) * maxStep;
-            turret.angle = normalizeAngle(turret.angle);
-        }
-        const remainingDelta = Math.abs(normalizeAngle(targetAngle - turret.angle));
-        const isAligned = remainingDelta <= turret.alignTolerance;
-        // Player-controlled fire: only allow fireRequestRef to be honored if cooldown is zero
-
-        if (isMeleeWeaponType(activeWeaponTypeRef.current)) {
-            return;
-        }
-
-        if (!mainTurretAutoFireEnabled && fireRequestRef.current) {
-            if (isAligned && turretCooldownsRef.current[0]?.fireCooldown <= 0) {
-                // Burst weapon: queue burst sequence and process burst
-                if (activeWeaponTypeRef.current === 'BURST') {
-                    const fired = fireTurret(0, getTargetEnemy());
-                    if (fired) {
-                        // Cooldown will be set after burst completes
-                    }
-                    handleBurstFire(dt);
-                    fireRequestRef.current = false;
-                } else {
-                    // Standard fire
-                    const fired = fireTurret(0, getTargetEnemy());
-                    if (fired) {
-                        turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
-                    }
-                    fireRequestRef.current = false;
-                }
-            }
-            // If cooldown is not up, ignore fireRequestRef until next eligible frame
-        }
+        getWeaponSystem().updateTurret(dt);
     }
-    // Use the config from WEAPON_CONFIGS for burst defaults
-    const burstDefaults = WEAPON_CONFIGS.BURST?.[0] || { burstInterval: 0.15, burstCount: 3 };
-    const burstStateRef = useRef({
-        shotsRemaining: 0,
-        burstTimer: 0,
-        burstInterval: burstDefaults.burstInterval,
-        burstCount: burstDefaults.burstCount,
-        target: null,
-        firing: false,
-    });
+    // COMMENTED OUT (duplicate): burstStateRef is already declared above and owned by weapon system.
+    // const burstDefaults = WEAPON_CONFIGS.BURST?.[0] || { burstInterval: 0.15, burstCount: 3 };
+    // const burstStateRef = useRef({
+    //     shotsRemaining: 0,
+    //     burstTimer: 0,
+    //     burstInterval: burstDefaults.burstInterval,
+    //     burstCount: burstDefaults.burstCount,
+    //     target: null,
+    //     firing: false,
+    // });
 
     // --- Burst fire handler ---
     function handleBurstFire(dt) {
-        if (activeWeaponTypeRef.current !== 'BURST' || !burstStateRef.current.firing) return;
-        burstStateRef.current.burstTimer -= dt;
-        while (burstStateRef.current.shotsRemaining > 0 && burstStateRef.current.burstTimer <= 0) {
-            // Fire a projectile
-            const config = getActiveTurrets()[0];
-            const muzzle = getTurretMuzzlePosition(0);
-            const target = burstStateRef.current.target;
-            if (target) {
-                const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
-                const effectiveRange = playerStatsRef.current.range * (config.rangeMultiplier ?? 1);
-                if (distance <= effectiveRange) {
-                    const speed = config.projectileSpeed;
-                    const dirX = (target.x - muzzle.x) / distance;
-                    const dirY = (target.y - muzzle.y) / distance;
-                    projectilesRef.current.push({
-                        id: crypto.randomUUID(),
-                        x: muzzle.x,
-                        y: muzzle.y,
-                        radius: 5,
-                        vx: dirX * speed,
-                        vy: dirY * speed,
-                        damage: config.damage,
-                        alive: true,
-                        maxDistance: effectiveRange,
-                        traveled: 0,
-                    });
-                }
-            }
-            burstStateRef.current.shotsRemaining--;
-            // Only set burstTimer > 0 after the first shot; for first shot, fire immediately
-            burstStateRef.current.burstTimer += burstStateRef.current.burstInterval;
-        }
-        // If all shots fired, start cooldown
-        if (burstStateRef.current.shotsRemaining <= 0) {
-            burstStateRef.current.firing = false;
-            turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
-        }
+        getWeaponSystem().handleBurstFire(dt);
     }
     // --- Burst weapon state ---
 
-    function enemyTakeDamage(enemy, amount) {
-        enemy.hp -= amount;
-        const { sx, sy } = worldToScreen(enemy.x, enemy.y, cameraRef.current, canvasRef.current);
-        triggerEffects(sx, sy, `-${amount}`, "#ffcc00");
-    };
+    // COMMENTED OUT (duplicate): primary enemyTakeDamage is declared earlier.
+    // function enemyTakeDamage(enemy, amount) {
+    //     enemy.hp -= amount;
+    //     const { sx, sy } = worldToScreen(enemy.x, enemy.y, cameraRef.current, canvasRef.current);
+    //     triggerEffects(sx, sy, `-${amount}`, "#ffcc00");
+    // };
 
+     /* LEGACY PROJECTILE IMPLEMENTATION (COMMENTED FOR ROLLBACK ONLY):
+         canonical active logic is in systems/weapon/weaponSystem.js -> updateProjectiles().
     function updateProjectiles(dt, canvas) {
         for (const projectile of projectilesRef.current) {
             if (!projectile.alive) {
@@ -1563,6 +910,95 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
 
         projectilesRef.current = projectilesRef.current.filter((projectile) => projectile.alive);
+    }
+    */
+
+    // function updateProjectiles(dt, canvas) {
+    //     for (const projectile of projectilesRef.current) {
+    //         if (!projectile.alive) {
+    //             continue;
+    //         }
+
+    //         projectile.x += projectile.vx * dt;
+    //         projectile.y += projectile.vy * dt;
+
+    //         const stepDistance = Math.hypot(projectile.vx * dt, projectile.vy * dt);
+    //         projectile.traveled += stepDistance;
+
+    //         let exploded = false;
+
+    //         if (projectile.traveled >= projectile.maxDistance) {
+    //             projectile.alive = false;
+    //             // Explode if explosive
+    //             if (projectile.projectileType === 'EXPLOSIVE') exploded = true;
+    //             continue;
+    //         }
+
+    //         for (const enemy of enemiesRef.current) {
+    //             if (!enemy.alive) {
+    //                 continue;
+    //             }
+
+    //             const hit =
+    //                 Math.abs(projectile.x - enemy.x) < projectile.radius + enemy.halfSize &&
+    //                 Math.abs(projectile.y - enemy.y) < projectile.radius + enemy.halfSize;
+
+    //             if (!hit) {
+    //                 continue;
+    //             }
+
+    //             // Explosive: trigger AoE
+    //             if (projectile.projectileType === 'EXPLOSIVE') {
+    //                 exploded = true;
+    //             } else {
+    //                 projectile.alive = false;
+    //                 resolveEnemyHit(enemy, createHitOptions('projectile', projectile.damage));
+    //                 if (enemy.hp <= 0) onEnemyKilled(enemy);
+    //             }
+    //             break;
+    //         }
+
+    //         // Handle explosion if needed
+    //         if (exploded) {
+    //             projectile.alive = false;
+    //             // AoE damage to all enemies in radius
+    //             for (const enemy of enemiesRef.current) {
+    //                 if (!enemy.alive) continue;
+    //                 const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
+    //                 if (dist <= (projectile.explosionRadius || 60) + (enemy.halfSize || 0)) {
+    //                     // Optional: radial falloff (full damage at center, half at edge)
+    //                     let falloff = 1;
+    //                     if (dist > (projectile.explosionRadius || 60) * 0.5) {
+    //                         falloff = 0.5 + 0.5 * ((projectile.explosionRadius || 60) - dist) / ((projectile.explosionRadius || 60) * 0.5);
+    //                         falloff = Math.max(0.5, falloff);
+    //                     }
+    //                     resolveEnemyHit(
+    //                         enemy,
+    //                         createHitOptions('explosion', projectile.damage * falloff)
+    //                     );
+    //                     if (enemy.hp <= 0) onEnemyKilled(enemy);
+    //                 }
+    //             }
+    //             // Visual effect: shake and explosion effect
+    //             shakeRef.current = Math.max(shakeRef.current, 16);
+    //             // Add explosion effect to damageTextsRef for visuals
+    //             damageTextsRef.current.push({
+    //                 id: 'explosion-' + Date.now(),
+    //                 x: worldToScreen(projectile.x, projectile.y, cameraRef.current, canvasRef.current).sx,
+    //                 y: worldToScreen(projectile.x, projectile.y, cameraRef.current, canvasRef.current).sy,
+    //                 text: '',
+    //                 color: '#ffb347',
+    //                 life: 0.7,
+    //                 explosionRadius: projectile.explosionRadius || 60,
+    //             });
+    //         }
+    //     }
+
+    //     projectilesRef.current = projectilesRef.current.filter((projectile) => projectile.alive);
+    // }
+
+    function updateProjectiles(dt, canvas) {
+        return getWeaponSystem().updateProjectiles(dt);
     }
 
     function setupCanvas(canvas) {
@@ -1758,36 +1194,37 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }
 
-    function fireEnemyTurret(enemy, targetPos) {
-        const turretCfg = ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.RANGED].turretConfig;
-        const muzzleDistance = enemy.halfSize + 12;
-        const muzzlePos = {
-            x: enemy.x + Math.cos(enemy.turretAngle) * muzzleDistance,
-            y: enemy.y + Math.sin(enemy.turretAngle) * muzzleDistance,
-        };
-        
-        const distance = calculateDistance(muzzlePos.x, muzzlePos.y, targetPos.x, targetPos.y);
-        if (distance > turretCfg.range) return false;
-        
-        const dirX = (targetPos.x - muzzlePos.x) / distance;
-        const dirY = (targetPos.y - muzzlePos.y) / distance;
-        
-        projectilesRef.current.push({
-            id: crypto.randomUUID(),
-            x: muzzlePos.x,
-            y: muzzlePos.y,
-            radius: 5,
-            vx: dirX * turretCfg.projectileSpeed,
-            vy: dirY * turretCfg.projectileSpeed,
-            damage: turretCfg.projectileDamage,
-            alive: true,
-            maxDistance: turretCfg.range,
-            traveled: 0,
-            isEnemyProjectile: true,
-        });
-        
-        return true;
-    }
+    // COMMENTED OUT (legacy helper): enemy firing is delegated via getWeaponSystem().fireEnemyTurret in getEnemySystem callbacks.
+    // function fireEnemyTurret(enemy, targetPos) {
+    //     const turretCfg = ARCHETYPE_CONFIGS[ENEMY_ARCHETYPES.RANGED].turretConfig;
+    //     const muzzleDistance = enemy.halfSize + 12;
+    //     const muzzlePos = {
+    //         x: enemy.x + Math.cos(enemy.turretAngle) * muzzleDistance,
+    //         y: enemy.y + Math.sin(enemy.turretAngle) * muzzleDistance,
+    //     };
+    //
+    //     const distance = calculateDistance(muzzlePos.x, muzzlePos.y, targetPos.x, targetPos.y);
+    //     if (distance > turretCfg.range) return false;
+    //
+    //     const dirX = (targetPos.x - muzzlePos.x) / distance;
+    //     const dirY = (targetPos.y - muzzlePos.y) / distance;
+    //
+    //     projectilesRef.current.push({
+    //         id: crypto.randomUUID(),
+    //         x: muzzlePos.x,
+    //         y: muzzlePos.y,
+    //         radius: 5,
+    //         vx: dirX * turretCfg.projectileSpeed,
+    //         vy: dirY * turretCfg.projectileSpeed,
+    //         damage: turretCfg.projectileDamage,
+    //         alive: true,
+    //         maxDistance: turretCfg.range,
+    //         traveled: 0,
+    //         isEnemyProjectile: true,
+    //     });
+    //
+    //     return true;
+    // }
 
     function resolveEnemyHit(enemy, options = {}) {
         const {
@@ -1836,6 +1273,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return { sourceType, actualDamage };
     }
 
+    /* LEGACY MELEE IMPLEMENTATION (COMMENTED FOR ROLLBACK): moved to systems/weapon/weaponSystem.js
     function getMeleeAimAngle() {
         return meleeAimAngleRef.current;
     }
@@ -1859,7 +1297,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             return false;
         }
 
-        if (meleeCooldownsRef.current.sword > 0) {
+        if (meleeCooldownsRef.current.cooldown > 0) {
             return false;
         }
 
@@ -1886,7 +1324,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             hitEnemyIds: new Set(),
         });
 
-        meleeCooldownsRef.current.sword = swordCfg.cooldown ?? 0.34;
+        meleeCooldownsRef.current.cooldown = swordCfg.cooldown ?? 0.34;
         return true;
     }
 
@@ -1900,14 +1338,14 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             return false;
         }
 
-        const flail = flailStateRef.current;
-        if (flail.cooldown > 0) {
+        if (meleeCooldownsRef.current.cooldown > 0) {
             return false;
         }
 
+        const flail = flailStateRef.current;
         flail.boosted = true;
         flail.boostTimer = flailCfg.boostDuration ?? 1.1;
-        flail.cooldown = flailCfg.cooldown ?? 1.25;
+        meleeCooldownsRef.current.cooldown = flailCfg.cooldown ?? 1.25;
         return true;
     }
 
@@ -1978,10 +1416,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         const p = playerRef.current;
         const flail = flailStateRef.current;
         const anchorAngle = getMeleeAimAngle();
-        const stickLength = p.halfSize + (flailCfg.stickLength ?? 40);
+        const flailLength = p.halfSize + (flailCfg.length ?? 40);
         const anchor = {
-            x: p.x + Math.cos(anchorAngle) * stickLength,
-            y: p.y + Math.sin(anchorAngle) * stickLength,
+            x: p.x + Math.cos(anchorAngle) * flailLength,
+            y: p.y + Math.sin(anchorAngle) * flailLength,
         };
         const orbitRadius = flailCfg.orbitRadius ?? 28;
         const ballRadius = flailCfg.ballRadius ?? 10;
@@ -2088,7 +1526,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
 
         const flail = flailStateRef.current;
-        flail.cooldown = Math.max(0, flail.cooldown - dt);
         if (flail.boosted) {
             flail.boostTimer = Math.max(0, flail.boostTimer - dt);
             if (flail.boostTimer <= 0) flail.boosted = false;
@@ -2108,10 +1545,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         const p = playerRef.current;
         const anchorAngle = getMeleeAimAngle();
-        const stickLength = p.halfSize + (flailCfg.stickLength ?? 40);
+        const flailLength = p.halfSize + (flailCfg.length ?? 40);
         const anchor = {
-            x: p.x + Math.cos(anchorAngle) * stickLength,
-            y: p.y + Math.sin(anchorAngle) * stickLength,
+            x: p.x + Math.cos(anchorAngle) * flailLength,
+            y: p.y + Math.sin(anchorAngle) * flailLength,
         };
         const orbitRadius = flailCfg.orbitRadius ?? 28;
         const ballRadius = flailCfg.ballRadius ?? 10;
@@ -2176,7 +1613,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         const rawTarget = getTargetAngle() ?? meleeAimAngleRef.current;
         meleeAimAngleRef.current = rotateTurretAngle(meleeAimAngleRef.current, rawTarget, turretRef.current.turnSpeed, dt);
 
-        meleeCooldownsRef.current.sword = Math.max(0, meleeCooldownsRef.current.sword - dt);
+        meleeCooldownsRef.current.cooldown = Math.max(0, meleeCooldownsRef.current.cooldown - dt);
 
         if (shouldAutoFireMelee()) {
             if (activeWeaponTypeRef.current === 'SWORD') {
@@ -2213,13 +1650,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         // Idle sword always at target, visible only when not swinging. Sweeping blade animation preserved.
         let swordIdle = null;
         if (currentType === 'SWORD' && currentCfg) {
-            const idleLength = currentCfg.idleLength ?? 44;
+            const swordLength = currentCfg.length ?? 44;
             if (swordSwings.length === 0) {
                 swordIdle = {
                     x: p.x,
                     y: p.y,
                     angle: getMeleeAimAngle(),
-                    length: idleLength,
+                    length: swordLength,
                 };
             }
         }
@@ -2228,10 +1665,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         if (currentType === 'FLAIL' && currentCfg) {
             const flailRuntime = flailStateRef.current;
             const anchorAngle = getMeleeAimAngle();
-            const stickLength = p.halfSize + (currentCfg.stickLength ?? 40);
+            const flailLength = p.halfSize + (currentCfg.length ?? 40);
             const anchor = {
-                x: p.x + Math.cos(anchorAngle) * stickLength,
-                y: p.y + Math.sin(anchorAngle) * stickLength,
+                x: p.x + Math.cos(anchorAngle) * flailLength,
+                y: p.y + Math.sin(anchorAngle) * flailLength,
             };
             const a1 = normalizeAngle(anchorAngle + flailRuntime.orbitAngle);
             const a2 = normalizeAngle(a1 + Math.PI);
@@ -2259,6 +1696,55 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             swordSwings,
             flail,
         };
+    }
+    */
+
+    function getMeleeAimAngle() {
+        return getWeaponSystem().getMeleeAimAngle();
+    }
+
+    function isAngleWithinSweep(angle, start, end) {
+        return getWeaponSystem().isAngleWithinSweep(angle, start, end);
+    }
+
+    function trySwordAttack() {
+        return getWeaponSystem().trySwordAttack();
+    }
+
+    function tryFlailAttack() {
+        return getWeaponSystem().tryFlailAttack();
+    }
+
+    function handleMeleeFireRequest() {
+        return getWeaponSystem().handleMeleeFireRequest();
+    }
+
+    function hasSwordAutoFireTarget() {
+        return getWeaponSystem().hasSwordAutoFireTarget();
+    }
+
+    function hasFlailAutoFireTarget() {
+        return getWeaponSystem().hasFlailAutoFireTarget();
+    }
+
+    function shouldAutoFireMelee() {
+        return getWeaponSystem().shouldAutoFireMelee();
+    }
+
+    function updateSwordSwings(dt) {
+        return getWeaponSystem().updateSwordSwings(dt);
+    }
+
+    function updateFlail(dt) {
+        return getWeaponSystem().updateFlail(dt);
+    }
+
+    function updateMeleeWeapons(dt) {
+        return getWeaponSystem().updateMeleeWeapons(dt);
+    }
+
+    function getMeleeVisualState() {
+        return getWeaponSystem().getMeleeVisualState();
     }
     
 
@@ -2332,26 +1818,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function pruneFarEntities() {
         getEnemySystem().pruneFarEntities();
     }
-
-    // function pruneFarEntities() {
-    //     const {
-    //         despawnRadius,
-    //         bossDespawnRadius,
-    //     } = worldBandsRef.current;
-
-    //     const despawnSq = despawnRadius * despawnRadius;
-    //     const bossDespawnSq = bossDespawnRadius * bossDespawnRadius;
-
-    //     enemiesRef.current = enemiesRef.current.filter((enemy) => {
-    //         if (!enemy.alive) return false;
-
-    //         const d2 = distanceSqToPlayer(enemy.x, enemy.y, playerRef.current.x, playerRef.current.y);
-    //         if (enemy.isBoss) {
-    //             return d2 <= bossDespawnSq;
-    //         }
-    //         return d2 <= despawnSq;
-    //     });
-    // }
 
     const updateEffects = (deltaTime) => {
         // 1. Decay Shake

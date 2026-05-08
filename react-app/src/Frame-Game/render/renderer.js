@@ -56,7 +56,7 @@ function drawScene(ctx, canvas, gameState) {
         const swordOrigin = worldToScreen(swing.x, swing.y, camera, canvas);
         const t = Math.min(1, swing.life); // already normalized in getMeleeVisualState
         const bladeAngle = swing.currentEndAngle;
-        const bladeLength = 44; // match idleLength default
+        const bladeLength = meleeVisuals.swordIdle?.length ?? 44;
         const swordTip = {
             sx: swordOrigin.sx + Math.cos(bladeAngle) * bladeLength,
             sy: swordOrigin.sy + Math.sin(bladeAngle) * bladeLength,
