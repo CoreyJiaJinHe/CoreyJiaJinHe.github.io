@@ -227,17 +227,7 @@ function drawScene(ctx, canvas, gameState) {
         }
 
         if (enemy.archetype === ENEMY_ARCHETYPES.SPAWNER) {
-            // Draw spawner: large center square + 4 satellite squares
-            ctx.save();
-            ctx.fillStyle = archetypeCfg.color;
-            ctx.fillRect(
-                enemySx - enemy.halfSize,
-                enemySy - enemy.halfSize,
-                enemy.halfSize * 2,
-                enemy.halfSize * 2
-            );
-            
-            // Draw 4 satellites at fixed radius with random (persisted) angles from the enemy instance.
+            // Draw spawner: connector lines, then main body, then satellites
             const offset = enemy.halfSize * archetypeCfg.satelliteDistanceMultiplier;
             const satSize = enemy.halfSize * archetypeCfg.satelliteSizeMultiplier;
             const satColor = archetypeCfg.satelliteColor ?? archetypeCfg.color;
@@ -245,11 +235,11 @@ function drawScene(ctx, canvas, gameState) {
             const satelliteLinkColor = archetypeCfg.satelliteLinkColor ?? archetypeCfg.borderColor ?? archetypeCfg.color;
             const satelliteLinkWidth = archetypeCfg.satelliteLinkWidth;
             const satelliteAngles = enemy.spawnerSatelliteAngles ?? [];
+
+            // 1. Draw connector lines first (underneath)
             for (const a of satelliteAngles) {
                 const sx = enemySx + Math.cos(a) * offset;
                 const sy = enemySy + Math.sin(a) * offset;
-
-                // Connector line from spawner core to satellite.
                 ctx.save();
                 ctx.strokeStyle = satelliteLinkColor;
                 ctx.lineWidth = satelliteLinkWidth;
@@ -258,15 +248,29 @@ function drawScene(ctx, canvas, gameState) {
                 ctx.lineTo(sx, sy);
                 ctx.stroke();
                 ctx.restore();
+            }
 
+            // 2. Draw main spawner body
+            ctx.save();
+            ctx.fillStyle = archetypeCfg.color;
+            ctx.fillRect(
+                enemySx - enemy.halfSize,
+                enemySy - enemy.halfSize,
+                enemy.halfSize * 2,
+                enemy.halfSize * 2
+            );
+            ctx.restore();
+
+            // 3. Draw satellites on top
+            for (const a of satelliteAngles) {
+                const sx = enemySx + Math.cos(a) * offset;
+                const sy = enemySy + Math.sin(a) * offset;
                 ctx.save();
                 ctx.globalAlpha = satAlpha;
                 ctx.fillStyle = satColor;
                 ctx.fillRect(sx - satSize, sy - satSize, satSize * 2, satSize * 2);
                 ctx.restore();
             }
-            
-            ctx.restore();
         } else if (enemy.archetype === ENEMY_ARCHETYPES.SPEEDSTER) {
             // Draw speedster with directional indicator
             ctx.save();

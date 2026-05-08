@@ -1,3 +1,5 @@
+import { ENEMY_ARCHETYPES } from './enemyArchetypeConfigs.js';
+
 export const PROFILE = {
     P1: 'p1', // slow
     P2: 'p2', // default
@@ -79,3 +81,33 @@ export const ENEMY_AI_DIFFICULTY_PROFILES = {
         pushOutSpeed: 182,
     }
 };
+
+export function createDefaultEnemyArchetypeSpawnConfig() {
+    return {
+        // Kills needed to fully transition from start -> end weights.
+        killsToMaxMix: 250,
+        // Tune these values to control how the spawn mix evolves over time.
+        // SWARM is intentionally excluded here; swarm enemies are spawner-only.
+        archetypeWeightCurves: {
+            [ENEMY_ARCHETYPES.NORMAL]: { start: 80, end: 45 },
+            [ENEMY_ARCHETYPES.ARMORED]: { start: 5, end: 16 },
+            [ENEMY_ARCHETYPES.SPAWNER]: { start: 5, end: 12 },
+            [ENEMY_ARCHETYPES.SPEEDSTER]: { start: 5, end: 14 },
+            [ENEMY_ARCHETYPES.RANGED]: { start: 5, end: 13 },
+        },
+    };
+}
+
+export function createDefaultBossConfig() {
+    return {
+        killsPerBoss: 50,
+        spawnDelay: 2.0,
+        nextBossAt: 50,
+        maxSimultaneousBosses: {
+            [PROFILE.P1]: 1,
+            [PROFILE.P2]: 1,
+            [PROFILE.P3]: 3,
+        },
+        pendingBossSpawn: false,
+    };
+}
