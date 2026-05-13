@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ToggleableSwitchComponent from '../components/ToggleComponent'
+
 import {
     PROFILE,
     DIFFICULTY_PROFILES,
     createDefaultEnemyArchetypeSpawnConfig,
     createDefaultBossConfig,
 } from './configs/difficultyProfiles.js';
+
 import { BASE_TURRET_CONFIG, WEAPON_CONFIGS } from './configs/weaponConfigs.js';
 import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from './configs/enemyArchetypeConfigs.js';
 import { createEnemySystem } from './systems/enemy/enemySystem.js';
 import { createWeaponSystem } from './systems/weapon/weaponSystem.js';
 import { createCombatSystem } from './systems/combat/combatSystem.js';
 import { createProgressionSystem } from './systems/progression/progressionSystem.js';
+import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
+
 import FrameGameShopOverlay from './components/Shop.jsx'
 import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
 import FrameGameWeaponUpgradeOverlay from './components/WeaponUpgrade.jsx'
@@ -22,7 +26,7 @@ import {
     worldToScreen,
     isOnScreen
 } from './utils/MathUtils.js';
-import {drawScene, drawEffects, drawOffscreenMarkers} from './render/renderer.js';
+import { drawScene, drawEffects, drawOffscreenMarkers } from './render/renderer.js';
 
 function FrameGame1({ largeMode, toggleLargeMode }) {
     const canvasRef = useRef(null);
@@ -100,40 +104,45 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         return { maxActive, spawnInterval, hp, atk, def };
     }
+    const enemySystemRef = useRef(null);
 
     function getEnemySystem() {
-        return createEnemySystem({
-            refs: {
-                playerRef,
-                previousPlayerPositionRef,
-                enemiesRef,
-                worldBandsRef,
-                enemySpawnTimerRef,
-                killsRef,
-                scaledEnemiesEnabledRef,
-                pacingProfileRef,
-                bossSpawnTimerRef,
-            },
-            configRefs: {
-                enemyArchetypeSpawnConfigRef,
-                bossConfigRef,
-            },
-            getDifficultyFromKills,
-            getCombatCallbacks: () => ({
-                isTurretAligned: getWeaponSystem().isTurretAligned,
-                normalizeAngle: getWeaponSystem().normalizeAngle,
-                fireEnemyTurret: getWeaponSystem().fireEnemyTurret,
-            }),
-        });
+        if (!enemySystemRef.current) {
+            enemySystemRef.current = createEnemySystem({
+                refs: {
+                    playerRef,
+                    previousPlayerPositionRef,
+                    enemiesRef,
+                    worldBandsRef,
+                    enemySpawnTimerRef,
+                    killsRef,
+                    scaledEnemiesEnabledRef,
+                    pacingProfileRef,
+                    bossSpawnTimerRef,
+                },
+                configRefs: {
+                    enemyArchetypeSpawnConfigRef,
+                    bossConfigRef,
+                },
+                getDifficultyFromKills,
+                getCombatCallbacks: () => ({
+                    isTurretAligned: getWeaponSystem().isTurretAligned,
+                    normalizeAngle: getWeaponSystem().normalizeAngle,
+                    fireEnemyTurret: getWeaponSystem().fireEnemyTurret,
+                }),
+            });
+        }
+        return enemySystemRef.current;
     }
+
     function pickRandomEnemyArchetype(kills) {
         return getEnemySystem().pickRandomEnemyArchetype(kills);
     }
-    
+
     function createEnemy(player, statOverrides = {}, archetype = ENEMY_ARCHETYPES.NORMAL) {
         return getEnemySystem().createEnemy(player, statOverrides, archetype);
     }
-    
+
     function updateEnemyAi(dt) {
         getEnemySystem().updateEnemyAi(dt);
     }
@@ -159,16 +168,16 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
 
 
-    function getAliveEnemiesSortedByDistance() {
-        const p = playerRef.current;
-        return enemiesRef.current
-            .filter((enemy) => enemy.alive)
-            .sort((a, b) => {
-                const da = (a.x - p.x) ** 2 + (a.y - p.y) ** 2;
-                const db = (b.x - p.x) ** 2 + (b.y - p.y) ** 2;
-                return da - db; // closest first
-            });
-    }
+    // function getAliveEnemiesSortedByDistance() {
+    //     const p = playerRef.current;
+    //     return enemiesRef.current
+    //         .filter((enemy) => enemy.alive)
+    //         .sort((a, b) => {
+    //             const da = (a.x - p.x) ** 2 + (a.y - p.y) ** 2;
+    //             const db = (b.x - p.x) ** 2 + (b.y - p.y) ** 2;
+    //             return da - db; // closest first
+    //         });
+    // }
 
 
     const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
@@ -198,13 +207,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         pacingProfileRef.current = resolved;
         setPacingProfile(resolved);
     }
-    
+
     function updateEnemyPopulation(dt, canvas) {
         getEnemySystem().updateEnemyPopulation(dt);
     }
 
     const bossConfigRef = useRef(createDefaultBossConfig());
-    
+
     const bossSpawnTimerRef = useRef(0);
     const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
     const bossesDefeatedRef = useRef(0);
@@ -217,51 +226,81 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const [targetEnemyIdView, setTargetEnemyIdView] = useState(null);
 
 
-    function cycleTargetReverseClosestToFarthest() {
-        const sorted = getAliveEnemiesSortedByDistance();
+    const targetingSystemRef = useRef(null);
 
-        if (sorted.length === 0) {
-            setTargetEnemyId(null);
-            return;
+    function getTargetingSystem() {
+        if (!targetingSystemRef.current) {
+            targetingSystemRef.current = createTargetingSystem({
+                refs: {
+                    playerRef,
+                    enemiesRef,
+                    targetEnemyIdRef
+                },
+                callbacks: {
+                    setTargetEnemyId: setTargetEnemyId,
+                }
+            });
         }
-
-        const closestId = sorted[0].id;
-        const currentId = targetEnemyIdRef.current;
-        const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
-
-        // Re-anchor to closest if current target is missing or no longer closest.
-        if (currentIndex === -1 || currentId !== closestId) {
-            setTargetEnemyId(closestId);
-            return;
-        }
-
-        // Reverse cycle from closest: closest -> farthest -> ...
-        const prevIndex = (currentIndex - 1 + sorted.length) % sorted.length;
-        setTargetEnemyId(sorted[prevIndex].id);
+        return targetingSystemRef.current;
     }
 
+    function getAliveEnemiesSortedByDistance() {
+        return getTargetingSystem().getAliveEnemiesSortedByDistance();
+    }
+
+    function cycleTargetReverseClosestToFarthest() {
+        return getTargetingSystem().cycleTargetReverseClosestToFarthest();
+    }
 
     function cycleTargetClosestToFarthest() {
-        const sorted = getAliveEnemiesSortedByDistance();
-
-        if (sorted.length === 0) {
-            setTargetEnemyId(null);
-            return;
-        }
-        const closestId = sorted[0].id;
-        const currentId = targetEnemyIdRef.current;
-        const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
-
-        // If no target or target is not closest, snap to closest first.
-        if (currentIndex === -1 || currentId !== closestId) {
-            setTargetEnemyId(closestId);
-            return;
-        }
-
-        // Already on closest: now cycle forward.
-        const nextIndex = (currentIndex + 1) % sorted.length;
-        setTargetEnemyId(sorted[nextIndex].id);
+        return getTargetingSystem().cycleTargetClosestToFarthest();
     }
+
+    // function cycleTargetReverseClosestToFarthest() {
+    //     const sorted = getAliveEnemiesSortedByDistance();
+
+    //     if (sorted.length === 0) {
+    //         setTargetEnemyId(null);
+    //         return;
+    //     }
+
+    //     const closestId = sorted[0].id;
+    //     const currentId = targetEnemyIdRef.current;
+    //     const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
+
+    //     // Re-anchor to closest if current target is missing or no longer closest.
+    //     if (currentIndex === -1 || currentId !== closestId) {
+    //         setTargetEnemyId(closestId);
+    //         return;
+    //     }
+
+    //     // Reverse cycle from closest: closest -> farthest -> ...
+    //     const prevIndex = (currentIndex - 1 + sorted.length) % sorted.length;
+    //     setTargetEnemyId(sorted[prevIndex].id);
+    // }
+
+
+    // function cycleTargetClosestToFarthest() {
+    //     const sorted = getAliveEnemiesSortedByDistance();
+
+    //     if (sorted.length === 0) {
+    //         setTargetEnemyId(null);
+    //         return;
+    //     }
+    //     const closestId = sorted[0].id;
+    //     const currentId = targetEnemyIdRef.current;
+    //     const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
+
+    //     // If no target or target is not closest, snap to closest first.
+    //     if (currentIndex === -1 || currentId !== closestId) {
+    //         setTargetEnemyId(closestId);
+    //         return;
+    //     }
+
+    //     // Already on closest: now cycle forward.
+    //     const nextIndex = (currentIndex + 1) % sorted.length;
+    //     setTargetEnemyId(sorted[nextIndex].id);
+    // }
 
     const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
     const shakeRef = useRef(0); // Current shake intensity
@@ -292,7 +331,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
     const firstWeaponUpgradeOpenRef = useRef(firstWeaponUpgradeOpen);
-    
+
     function applyPlayerProjectileDamage(amount) {
         playerTakeDamage(amount, playerRef.current.x, playerRef.current.y, true);
         if (playerStatsRef.current.hp <= 0) {
@@ -301,31 +340,35 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         setPlayerStatsView({ ...playerStatsRef.current });
     }
 
+    const progressionSystemRef = useRef(null);
 
     function getProgressionSystem() {
-        return createProgressionSystem({
-            refs: {
-                playerRef,
-                playerStatsRef,
-                advancedDropsRef,
-                materialsRef,
-                killsRef,
-                targetEnemyIdRef,
-                bossesDefeatedRef,
-                firstWeaponUpgradeOpenRef
-            },
-            callbacks: {
-                setMaterialsView : setMaterialsView,
-                setKillsView : setKillsView,
-                setTargetEnemyId :setTargetEnemyId,
-                setBossesDefeatedView : setBossesDefeatedView,
-                setPlayerStatsView : setPlayerStatsView,
-                setFirstWeaponUpgradeOpen : setFirstWeaponUpgradeOpen,
-            }
-        });
+        if (!progressionSystemRef.current) {
+            progressionSystemRef.current = createProgressionSystem({
+                refs: {
+                    playerRef,
+                    playerStatsRef,
+                    advancedDropsRef,
+                    materialsRef,
+                    killsRef,
+                    targetEnemyIdRef,
+                    bossesDefeatedRef,
+                    firstWeaponUpgradeOpenRef
+                },
+                callbacks: {
+                    setMaterialsView: setMaterialsView,
+                    setKillsView: setKillsView,
+                    setTargetEnemyId: setTargetEnemyId,
+                    setBossesDefeatedView: setBossesDefeatedView,
+                    setPlayerStatsView: setPlayerStatsView,
+                    setFirstWeaponUpgradeOpen: setFirstWeaponUpgradeOpen,
+                }
+            });
+        }
+        return progressionSystemRef.current;
     }
 
-    function onEnemyKilled(enemy){
+    function onEnemyKilled(enemy) {
         return getProgressionSystem().onEnemyKilled(enemy);
     }
     function grantMaterials(amount) {
@@ -341,100 +384,11 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getProgressionSystem().updateAdvancedDrops();
     }
 
-    // function onEnemyKilled(enemy) {
-    //     enemy.hp = 0;
-    //     enemy.alive = false;
-    //     killsRef.current += 1;
-    //     setKillsView(killsRef.current);
-    //     // Basic material: auto-loot
-    //     grantMaterials(1);
-
-    //     // Advanced drop: rare physical pickup
-    //     maybeSpawnAdvancedDrop(enemy.x, enemy.y);
-
-    //     if (enemy.id === targetEnemyIdRef.current) {
-    //         setTargetEnemyId(null);
-    //     }
-
-    //     if (enemy.isBoss) {
-    //         grantMaterials(4);
-    //         bossesDefeatedRef.current += 1;
-    //         setBossesDefeatedView(bossesDefeatedRef.current);
-    //         if (bossesDefeatedRef.current === 1) {
-    //             setFirstWeaponUpgradeOpen(true);
-    //             firstWeaponUpgradeOpenRef.current = true;
-    //         }
-    //     }
-    // }
-    // function grantMaterials(amount) {
-    //     materialsRef.current += amount;
-    //     setMaterialsView(materialsRef.current);
-    // }
-
-    // function maybeSpawnAdvancedDrop(x, y) {
-    //     const chance = 0.2; // 20%
-    //     if (Math.random() > chance) {
-    //         return;
-    //     }
-
-    //     const modifiers = [
-    //         { stat: 'atk', amount: 1, label: '+ATK' },
-    //         { stat: 'def', amount: 1, label: '+DEF' },
-    //         { stat: 'range', amount: 20, label: '+RANGE' },
-    //         { stat: 'maxHP', amount: 2, label: '+MAX HP' },
-    //         { stat: 'speed', amount: 20, label: '+SPEED' },
-    //     ];
-
-    //     const mod = modifiers[Math.floor(Math.random() * modifiers.length)];
-
-    //     advancedDropsRef.current.push({
-    //         id: crypto.randomUUID(),
-    //         x,
-    //         y,
-    //         radius: 8,
-    //         ...mod,
-    //         alive: true,
-    //     });
-    // }
-    // function applyAdvancedModifier(drop) {
-    //     const stats = playerStatsRef.current;
-    //     const player = playerRef.current;
-
-    //     if (drop.stat === 'atk') stats.atk += drop.amount;
-    //     if (drop.stat === 'def') stats.def += drop.amount;
-    //     if (drop.stat === 'range') stats.range += drop.amount;
-    //     if (drop.stat === 'maxHP') {
-    //         stats.maxHP += drop.amount;
-    //         stats.hp = Math.min(stats.maxHP, stats.hp + drop.amount);
-    //     }
-    //     if (drop.stat === 'speed') player.speed += drop.amount;
-
-    //     setPlayerStatsView({ ...stats });
-    // }
-
-    // function updateAdvancedDrops() {
-    //     const p = playerRef.current;
-
-    //     for (const drop of advancedDropsRef.current) {
-    //         if (!drop.alive) continue;
-
-    //         if (!squareOverlapsCircle(p, drop)) {
-    //             continue;
-    //         }
-
-    //         drop.alive = false;
-    //         applyAdvancedModifier(drop);
-    //     }
-
-    //     advancedDropsRef.current = advancedDropsRef.current.filter((d) => d.alive);
-    // }
-
-
     // --- Weapon type and turrets ---
     const weaponTypeKeys = Object.keys(WEAPON_CONFIGS);
     const [activeWeaponType, setActiveWeaponType] = useState('EXPLOSIVE');
     const activeWeaponTypeRef = useRef(activeWeaponType);
-    
+
     // Ensure turretCooldowns and all logic sync when weapon type changes
     useEffect(() => {
         const newTurrets = WEAPON_CONFIGS[activeWeaponType] || [];
@@ -453,7 +407,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const weaponSystemRef = useRef(null);
 
-    
+
     const turretRef = useRef({ ...BASE_TURRET_CONFIG });
     // Secondary turret angles (for up to 2 secondaries)
     const secondaryTurretAnglesRef = useRef([0, 0]);
@@ -462,12 +416,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const [mainTurretAutoFireEnabled, setMainTurretAutoFireEnabled] = useState(true);
 
     const mainTurretAutoFireEnabledRef = useRef(mainTurretAutoFireEnabled);
-    
+
     useEffect(() => {
         mainTurretAutoFireEnabledRef.current = mainTurretAutoFireEnabled;
     }, [mainTurretAutoFireEnabled]);
     const turretCooldownsRef = useRef([]);
-    
+
     const projectilesRef = useRef([]);
     const fireRequestRef = useRef(false);
 
@@ -832,8 +786,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function getMeleeVisualState() {
         return getWeaponSystem().getMeleeVisualState();
     }
-    
-    function updateCombat(dt){
+
+    function updateCombat(dt) {
         return getCombatSystem().updateCombat(dt);
     }
 
