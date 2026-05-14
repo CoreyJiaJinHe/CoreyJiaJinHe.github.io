@@ -13,7 +13,7 @@ export function createProgressionSystem({
         advancedDropsRef,
         materialsRef,
         killsRef,
-        targetEnemyIdRef,
+        // targetEnemyIdRef,
         bossesDefeatedRef,
         firstWeaponUpgradeOpenRef
 
@@ -22,7 +22,7 @@ export function createProgressionSystem({
     const {
         setMaterialsView,
         setKillsView,
-        setTargetEnemyId,
+        // setTargetEnemyId,
         setBossesDefeatedView,
         setPlayerStatsView,
         setFirstWeaponUpgradeOpen,
@@ -108,9 +108,9 @@ export function createProgressionSystem({
         // Advanced drop: rare physical pickup
         maybeSpawnAdvancedDrop(enemy.x, enemy.y);
 
-        if (enemy.id === targetEnemyIdRef.current) {
-            setTargetEnemyId(null);
-        }
+        // if (enemy.id === targetEnemyIdRef.current) {
+        //     setTargetEnemyId(null);
+        // }
 
         if (enemy.isBoss) {
             grantMaterials(4);

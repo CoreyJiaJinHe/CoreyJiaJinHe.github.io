@@ -12,7 +12,7 @@ export function createCombatSystem({
     const {
         playerRef,
         playerStatsRef,
-        targetEnemyIdRef,
+        //targetEnemyIdRef,
         enemiesRef,
         projectilesRef,
 
@@ -24,9 +24,9 @@ export function createCombatSystem({
     const {
         setPlayerStatsView,
         onEnemyKilled,
-        setTargetEnemyId,
+        // setTargetEnemyId,
         triggerEffects,
-        getAliveEnemiesSortedByDistance,
+        // getAliveEnemiesSortedByDistance,
     } = callbacks;
 
     function playerTakeDamage(amount, x, y, isPlayer) {
@@ -123,13 +123,13 @@ export function createCombatSystem({
         const p = playerRef.current;
         const playerStats = playerStatsRef.current;
 
-        const targetAlive = enemiesRef.current.some(
-            (enemy) => enemy.alive && enemy.id === targetEnemyIdRef.current
-        );
-        if (!targetAlive) {
-            const sorted = getAliveEnemiesSortedByDistance();
-            setTargetEnemyId(sorted.length ? sorted[0].id : null);
-        }
+        // const targetAlive = enemiesRef.current.some(
+        //     (enemy) => enemy.alive && enemy.id === targetEnemyIdRef.current
+        // );
+        // if (!targetAlive) {
+        //     const sorted = getAliveEnemiesSortedByDistance();
+        //     setTargetEnemyId(sorted.length ? sorted[0].id : null);
+        // }
 
         for (const enemy of enemiesRef.current) {
             if (!enemy.alive) continue;

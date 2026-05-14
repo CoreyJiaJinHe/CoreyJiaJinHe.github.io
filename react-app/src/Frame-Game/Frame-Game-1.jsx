@@ -235,6 +235,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return targetingSystemRef.current;
     }
 
+    function ensureValidTarget(){
+        return getTargetingSystem().ensureValidTarget();
+    }
+
     function getAliveEnemiesSortedByDistance() {
         return getTargetingSystem().getAliveEnemiesSortedByDistance();
     }
@@ -296,14 +300,14 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     advancedDropsRef,
                     materialsRef,
                     killsRef,
-                    targetEnemyIdRef,
+                    // targetEnemyIdRef,
                     bossesDefeatedRef,
                     firstWeaponUpgradeOpenRef
                 },
                 callbacks: {
                     setMaterialsView: setMaterialsView,
                     setKillsView: setKillsView,
-                    setTargetEnemyId: setTargetEnemyId,
+                    // setTargetEnemyId: setTargetEnemyId,
                     setBossesDefeatedView: setBossesDefeatedView,
                     setPlayerStatsView: setPlayerStatsView,
                     setFirstWeaponUpgradeOpen: setFirstWeaponUpgradeOpen,
@@ -659,7 +663,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 refs: {
                     playerRef,
                     playerStatsRef,
-                    targetEnemyIdRef,
+                    // targetEnemyIdRef,
                     enemiesRef,
                     projectilesRef,
                     cameraRef,
@@ -667,10 +671,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 },
                 callbacks: {
                     onEnemyKilled,
-                    setTargetEnemyId,
+                    // setTargetEnemyId,
                     setPlayerStatsView: setPlayerStatsView,
                     triggerEffects: triggerEffects,
-                    getAliveEnemiesSortedByDistance: getAliveEnemiesSortedByDistance,
+                    // getAliveEnemiesSortedByDistance: getAliveEnemiesSortedByDistance,
                 },
             });
         }
@@ -777,8 +781,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 pickRandomEnemyArchetype(y)
             )
         );
-        const firstSorted = getAliveEnemiesSortedByDistance();
-        setTargetEnemyId(firstSorted.length ? firstSorted[0].id : null);
+        ensureValidTarget();
+        // const firstSorted = getAliveEnemiesSortedByDistance();
+        // setTargetEnemyId(firstSorted.length ? firstSorted[0].id : null);
 
         const cleanupInput = setupInput(canvas);
 
@@ -802,6 +807,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 handleBurstFire(dt);
                 updateTurretAutoFire(dt)
                 updateEnemyAi(dt);
+                ensureValidTarget();
                 updateCombat(dt);
                 updateProjectiles(dt, canvas);
                 updateEnemyPopulation(dt, canvas);
@@ -911,59 +917,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                         {settingsOpen ? 'Close Settings' : 'Open Settings'}
                     </button>
                 </div>
-
-                {/* {developerMode ? <FrameGameDifficultyPanel
-                    liveDifficulty={liveDifficulty}
-                    scaledEnemiesEnabled={scaledEnemiesEnabled}
-                    pacingProfile={pacingProfile}
-                    bossConfigRef={bossConfigRef}
-                    bossesDefeatedView={bossesDefeatedView}
-                /> : null} */}
-
-                {/* <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
-                                <div>SCALED: {scaledEnemiesEnabled ? 'ON' : 'OFF'}</div>
-                                <div>PROFILE: {pacingProfile.toUpperCase()}</div>
-                                <div>KILLS/BOSS: {bossConfigRef.current.killsPerBoss}</div>
-                                <div>BOSSES DEFEATED: {bossesDefeatedView}</div>
-                            </div>
-                        </>
-                    )
-                    : null
-                } */}
+                
                 <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
                     <FrameGamePlayerStatOverlay
                         playerStatsView={playerStatsView}
                         materialsView={materialsView}
                         killsView={killsView}
                     />
-                    {/* <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>HP:</span>
-                        <div style={{
-                            width: '120px',
-                            height: '12px',
-                            backgroundColor: '#444',
-                            borderRadius: '4px',
-                            overflow: 'hidden',
-                        }}>
-                            <div style={{
-                                width: `${(playerStatsView.hp / playerStatsView.maxHP) * 100}%`,
-                                height: '100%',
-                                backgroundColor: `hsl(${(playerStatsView.hp / playerStatsView.maxHP) * 120}, 80%, 45%)`,
-                                borderRadius: '4px',
-                                transition: 'width 0.1s, background-color 0.3s',
-                            }} />
-                        </div>
-                        <span>{playerStatsView.hp} / {playerStatsView.maxHP}</span>
-                    </div>
-                    <div>ATK: {playerStatsView.atk}</div>
-                    <div>DEF: {playerStatsView.def}</div>
-                    <div>RANGE: {Math.round(playerStatsView.range)}</div>
-                    <div>
-                        TARGET: {targetEnemyIdView ? 'LOCKED' : 'NONE'}
-                    </div>
-                    <div>MATERIALS: {materialsView}</div>
-                    <div>KILLS: {killsView}</div> */}
-
                 </div>
 
             </div>
@@ -989,12 +949,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     upgradeCountsRef={upgradeCountsRef}
                     upgradeCostRef={upgradeCostRef}
                     pacingProfileRef={pacingProfileRef} />)}
-                {/* 
-                {keybindOpen && (<FrameGameKeybindsOverlay
-                    handleKeybindsClose={handleKeybindsClose}
-                    keybinds={keybinds}
-                />)}
- */}
 
                 {firstWeaponUpgradeOpen && (<FrameGameWeaponUpgradeOverlay
                     handleWeaponUpgradeClose={setFirstWeaponUpgradeOpen}

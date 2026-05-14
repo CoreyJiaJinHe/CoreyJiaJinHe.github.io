@@ -73,10 +73,28 @@ export function createTargetingSystem({
         setTargetEnemyId(sorted[nextIndex].id);
     }
 
+    function ensureValidTarget(){
+        const sorted = getAliveEnemiesSortedByDistance();
+        if (sorted.length === 0) {
+            setTargetEnemyId(null);
+            return;
+        }
+        const closestId = sorted[0].id;
+        const currentId = targetEnemyIdRef.current;
+        const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
+
+        // If no target             or target is not closest, snap to closest first. 
+        // (I don't want it to automatically snap)
+        if (currentIndex === -1 ) { //|| currentId !== closestId
+            setTargetEnemyId(closestId);
+            return;
+        }
+    }
 
     return {
         getAliveEnemiesSortedByDistance,
         cycleTargetReverseClosestToFarthest,
         cycleTargetClosestToFarthest,
+        ensureValidTarget,
     }
 }
