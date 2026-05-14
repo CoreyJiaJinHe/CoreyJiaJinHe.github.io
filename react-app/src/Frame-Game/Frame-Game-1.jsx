@@ -19,6 +19,10 @@ import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
 import FrameGameShopOverlay from './components/Shop.jsx'
 import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
 import FrameGameWeaponUpgradeOverlay from './components/WeaponUpgrade.jsx'
+import FrameGameDifficultyPanel from './components/DifficultyPanel.jsx'
+import FrameGamePlayerStatOverlay from './components/PlayerStat.jsx'
+
+
 import {
     squareOverlapsCircle,
     squaresOverlap,
@@ -167,19 +171,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         setTargetEnemyIdView(nextValue);
     }
 
-
-    // function getAliveEnemiesSortedByDistance() {
-    //     const p = playerRef.current;
-    //     return enemiesRef.current
-    //         .filter((enemy) => enemy.alive)
-    //         .sort((a, b) => {
-    //             const da = (a.x - p.x) ** 2 + (a.y - p.y) ** 2;
-    //             const db = (b.x - p.x) ** 2 + (b.y - p.y) ** 2;
-    //             return da - db; // closest first
-    //         });
-    // }
-
-
     const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
     const scaledEnemiesEnabledRef = useRef(false);
 
@@ -255,52 +246,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function cycleTargetClosestToFarthest() {
         return getTargetingSystem().cycleTargetClosestToFarthest();
     }
-
-    // function cycleTargetReverseClosestToFarthest() {
-    //     const sorted = getAliveEnemiesSortedByDistance();
-
-    //     if (sorted.length === 0) {
-    //         setTargetEnemyId(null);
-    //         return;
-    //     }
-
-    //     const closestId = sorted[0].id;
-    //     const currentId = targetEnemyIdRef.current;
-    //     const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
-
-    //     // Re-anchor to closest if current target is missing or no longer closest.
-    //     if (currentIndex === -1 || currentId !== closestId) {
-    //         setTargetEnemyId(closestId);
-    //         return;
-    //     }
-
-    //     // Reverse cycle from closest: closest -> farthest -> ...
-    //     const prevIndex = (currentIndex - 1 + sorted.length) % sorted.length;
-    //     setTargetEnemyId(sorted[prevIndex].id);
-    // }
-
-
-    // function cycleTargetClosestToFarthest() {
-    //     const sorted = getAliveEnemiesSortedByDistance();
-
-    //     if (sorted.length === 0) {
-    //         setTargetEnemyId(null);
-    //         return;
-    //     }
-    //     const closestId = sorted[0].id;
-    //     const currentId = targetEnemyIdRef.current;
-    //     const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
-
-    //     // If no target or target is not closest, snap to closest first.
-    //     if (currentIndex === -1 || currentId !== closestId) {
-    //         setTargetEnemyId(closestId);
-    //         return;
-    //     }
-
-    //     // Already on closest: now cycle forward.
-    //     const nextIndex = (currentIndex + 1) % sorted.length;
-    //     setTargetEnemyId(sorted[nextIndex].id);
-    // }
 
     const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
     const shakeRef = useRef(0); // Current shake intensity
@@ -564,7 +509,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
 
     const [keybindOpen, setKeybindOpen] = useState(false);
-    const keybindOpenRef = useRef(false)
+    const keybindOpenRef = useRef(keybindOpen);
 
     function handleKeybindsClose() {
         setKeybindOpen(false);
@@ -572,6 +517,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     useEffect(() => {
         keybindOpenRef.current = keybindOpen;
     }, [keybindOpen]);
+
     const keybinds = useRef(
         {
             shop: "b",
@@ -624,7 +570,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             keysRef.current.add(e.key);
             if (e.key === keybinds.current.shop) {
                 e.preventDefault();
-                setShopOpenSync((current) => !current);
+                setShopOpen((current) => !current);
             }
 
             if (e.key === keybinds.current.cycleTarget) {
@@ -847,7 +793,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             cameraRef.current.y = playerRef.current.y;
             // Pause game logic if shop or weapon upgrade popup is open
             //console.log(`KeybindOpenRef.current: ${keybindOpenRef.current}, ${keybindOpen}`)
-            if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current || keybindOpenRef.current)) {
+            if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current || keybindOpenRef.current || settingsOpenRef.current)) {
                 pruneFarEntities();
                 updateAdvancedDrops();
                 updatePlayerMovement(dt, canvas);
@@ -893,17 +839,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             cleanupCanvas();
         };
     }, []);
+
     const [shopOpen, setShopOpen] = useState(false);
-    const shopOpenRef = useRef(false);
+    const shopOpenRef = useRef(shopOpen);
 
-
-    function setShopOpenSync(nextValue) {
-        shopOpenRef.current =
-            typeof nextValue === 'function'
-                ? nextValue(shopOpenRef.current)
-                : nextValue;
-        setShopOpen(shopOpenRef.current);
-    }
+    useEffect(() => {
+            shopOpenRef.current = shopOpen;
+        }, [shopOpen]);
 
     const upgradeCountsRef = useRef(0)
     const upgradeCostRef = useRef(0);
@@ -944,53 +886,41 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const [developerMode, setDeveloperMode] = useState(true);
 
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
+
+
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const settingsOpenRef = useRef(settingsOpen);
+
+    function handleSettingsClose() {
+        setSettingsOpen(false);
+    }
+    useEffect(() => {
+        settingsOpenRef.current = settingsOpen;
+    }, [settingsOpen]);
+
     return (
         <>
             <div className="Frame-Game-1-UI-Row" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                    <ToggleableSwitchComponent
-                        attachFunction={setMouseSeekMode}
-                        onToggle={() => {
-                            setMouseSeekMode((current) => !current)
-                        }}
-                        label="Mouse Seek: "
-                    />
-                    <ToggleableSwitchComponent
-                        attachFunction={setScaledEnemiesEnabledSync}
-                        booleanForFunction={scaledEnemiesEnabled}
-                        label="Scaled Enemies: "
-                    />
 
-                    <ToggleableSwitchComponent
-                        attachFunction={toggleLargeMode}
-                        booleanForFunction={largeMode}
-                        label="Large Mode: "
-                    />
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>Pacing:</span>
-                        <select
-                            value={pacingProfile}
-                            onChange={(e) => setPacingProfileSync(e.target.value)}
-                        >
-                            <option value={PROFILE.P1}>P1 (Slow)</option>
-                            <option value={PROFILE.P2}>P2 (Default)</option>
-                            <option value={PROFILE.P3}>P3 (Chaos)</option>
-                        </select>
-                    </label>
-                    <button onClick={() => setShopOpenSync((current) => !current)}>
+                    <button onClick={() => setShopOpen((current) => !current)}>
                         {shopOpen ? 'Close Shop' : 'Open Shop'}
                     </button>
-                    <button onClick={() => setKeybindOpen((current) => !current)}>
-                        {keybindOpen ? 'Close Keybinds' : 'Open Keybinds'}
+
+                    <button onClick={() => setSettingsOpen((current) => !current)}>
+                        {settingsOpen ? 'Close Settings' : 'Open Settings'}
                     </button>
                 </div>
 
-                {developerMode ?
-                    (
-                        <>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                                <div>MAX ACTIVE: {liveDifficulty.maxActive}</div>
-                                <div>SPAWN RATE: {liveDifficulty.spawnInterval.toFixed(2)}s</div>
+                {/* {developerMode ? <FrameGameDifficultyPanel
+                    liveDifficulty={liveDifficulty}
+                    scaledEnemiesEnabled={scaledEnemiesEnabled}
+                    pacingProfile={pacingProfile}
+                    bossConfigRef={bossConfigRef}
+                    bossesDefeatedView={bossesDefeatedView}
+                /> : null} */}
+
+                {/* <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
                                 <div>SCALED: {scaledEnemiesEnabled ? 'ON' : 'OFF'}</div>
                                 <div>PROFILE: {pacingProfile.toUpperCase()}</div>
                                 <div>KILLS/BOSS: {bossConfigRef.current.killsPerBoss}</div>
@@ -999,9 +929,14 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                         </>
                     )
                     : null
-                }
+                } */}
                 <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FrameGamePlayerStatOverlay
+                        playerStatsView={playerStatsView}
+                        materialsView={materialsView}
+                        killsView={killsView}
+                    />
+                    {/* <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>HP:</span>
                         <div style={{
                             width: '120px',
@@ -1027,7 +962,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                         TARGET: {targetEnemyIdView ? 'LOCKED' : 'NONE'}
                     </div>
                     <div>MATERIALS: {materialsView}</div>
-                    <div>KILLS: {killsView}</div>
+                    <div>KILLS: {killsView}</div> */}
 
                 </div>
 
@@ -1050,16 +985,16 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 />
                 {shopOpen && (<FrameGameShopOverlay shopUpgradeCallbacks={handleShopPurchase}
                     materialsView={materialsView}
-                    setShopOpenSync={setShopOpen}
+                    handleShopClose={setShopOpen}
                     upgradeCountsRef={upgradeCountsRef}
                     upgradeCostRef={upgradeCostRef}
                     pacingProfileRef={pacingProfileRef} />)}
-
+                {/* 
                 {keybindOpen && (<FrameGameKeybindsOverlay
                     handleKeybindsClose={handleKeybindsClose}
                     keybinds={keybinds}
                 />)}
-
+ */}
 
                 {firstWeaponUpgradeOpen && (<FrameGameWeaponUpgradeOverlay
                     handleWeaponUpgradeClose={setFirstWeaponUpgradeOpen}
@@ -1067,6 +1002,124 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     WEAPON_CONFIGS={WEAPON_CONFIGS}
                     selectAdvancedWeaponUpgrade={selectAdvancedWeaponUpgrade}
                 />)}
+
+                {settingsOpen && (
+                    <div className="Frame-Overlay">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Settings</h2>
+                            {/* Keybinds overlay when opened from settings - rendered last so it appears on top */}
+                            {keybindOpen && settingsOpen && (
+                                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11 }}>
+                                    <FrameGameKeybindsOverlay
+                                        handleKeybindsClose={handleKeybindsClose}
+                                        keybinds={keybinds}
+                                    />
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                className="Frame-Overlay-Close-Button"
+                                aria-label="Close overlay"
+                                onClick={() => setSettingsOpen(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Gameplay</h3>
+                            <div style={{ display: 'flex', gap: '20px', width: '100%' }}>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '180px' }}>
+                                    <ToggleableSwitchComponent
+                                        attachFunction={setMouseSeekMode}
+                                        onToggle={() => {
+                                            setMouseSeekMode((current) => !current)
+                                        }}
+                                        label="Mouse Seek: "
+                                    />
+                                    <ToggleableSwitchComponent
+                                        attachFunction={setScaledEnemiesEnabledSync}
+                                        booleanForFunction={scaledEnemiesEnabled}
+                                        label="Scaled Enemies: "
+                                    />
+                                    <ToggleableSwitchComponent
+                                        attachFunction={toggleLargeMode}
+                                        booleanForFunction={largeMode}
+                                        label="Large Mode: "
+                                    />
+                                </div>
+                                {!developerMode ? (
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '180px' }}>
+                                        <FrameGameDifficultyPanel
+                                            liveDifficulty={liveDifficulty}
+                                            scaledEnemiesEnabled={scaledEnemiesEnabled}
+                                            pacingProfile={pacingProfile}
+                                            bossConfigRef={bossConfigRef}
+                                            bossesDefeatedView={bossesDefeatedView}
+                                        />
+                                    </div>)
+                                    : null}
+
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Difficulty</h3>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px' }}>
+                                <span style={{ minWidth: '70px', fontWeight: '500' }}>Pacing:</span>
+                                <select
+                                    value={pacingProfile}
+                                    onChange={(e) => setPacingProfileSync(e.target.value)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #666',
+                                        backgroundColor: '#2a2a2a',
+                                        color: '#ffffff',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        transition: 'border-color 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => { e.target.style.borderColor = '#999'; }}
+                                    onMouseLeave={(e) => { e.target.style.borderColor = '#666'; }}
+                                >
+                                    <option value={PROFILE.P1}>P1 (Slow)</option>
+                                    <option value={PROFILE.P2}>P2 (Default)</option>
+                                    <option value={PROFILE.P3}>P3 (Chaos)</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div style={{ borderTop: '1px solid #555', paddingTop: '16px', marginTop: '8px' }}>
+                            <button
+                                onClick={() => setKeybindOpen((current) => !current)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #666',
+                                    backgroundColor: '#3a3a3a',
+                                    color: '#ffffff',
+                                    fontSize: '15px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.backgroundColor = '#4a4a4a';
+                                    e.target.style.borderColor = '#888';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.backgroundColor = '#3a3a3a';
+                                    e.target.style.borderColor = '#666';
+                                }}
+                            >
+                                {keybindOpen ? '✕ Close Keybinds' : '⚙ Open Keybinds'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

@@ -125,16 +125,16 @@
 }
 
 .Home-Page-Frame.day-mode.large {
-  /* Large + day mode overrides */
-  width: min(98vw, 1400px);
-  height: min(94vh, 900px);
+	/* Large + day mode overrides */
+	width: min(98vw, 1400px);
+	height: min(94vh, 900px);
 }
 
 .Home-Page-Frame.night-mode.large {
-  /* Large + night mode overrides */
-  width: min(98vw, 1400px);
-  height: min(94vh, 900px);
-  /* You can also override colors or borders if needed */
+	/* Large + night mode overrides */
+	width: min(98vw, 1400px);
+	height: min(94vh, 900px);
+	/* You can also override colors or borders if needed */
 }
 
 .Home-Page-Frame.day-mode {
@@ -177,7 +177,7 @@
 
 .Home-Page-Article-Example-Work {
 	min-height: 1100px;
-	height:auto;
+	height: auto;
 	white-space: normal;
 }
 
@@ -342,6 +342,44 @@
 	right: 12px;
 	width: 34px;
 	height: 34px;
+	border-radius: 999px;
+	border: 1px solid #6b7280;
+	background-color: #ffffff;
+	color: #111827;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.Frame-Overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(20, 20, 20, 0.92);
+	color: #ffffff;
+	border: 2px solid #888;
+	border-radius: 12px;
+	padding: 20px;
+	z-index: 10;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	overflow: auto;
+}
+
+.Frame-Overlay-Close-Button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	width: 32px;
+	height: 32px;
 	border-radius: 999px;
 	border: 1px solid #6b7280;
 	background-color: #ffffff;

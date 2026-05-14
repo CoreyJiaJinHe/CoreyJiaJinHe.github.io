@@ -7,29 +7,11 @@ function FrameGameWeaponUpgradeOverlay({handleWeaponUpgradeClose,weaponTypeKeys,
 
     return (
         <>
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(20, 20, 20, 0.92)',
-                    color: '#ffffff',
-                    border: '2px solid #888',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    zIndex: 10,
-                    boxSizing: 'border-box',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-            >
+            <div className="Frame-Overlay">
                 <button
                     type="button"
-                    className="Frame-Close-Button"
-                    aria-label="Close popup frame"
+                    className="Frame-Overlay-Close-Button"
+                    aria-label="Close overlay"
                     onClick={() => handleWeaponUpgradeClose(false)}
                 >
                     ×

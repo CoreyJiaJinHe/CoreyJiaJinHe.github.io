@@ -52,26 +52,11 @@ function FrameGameKeybindsOverlay({handleKeybindsClose, keybinds }) {
 
     return (
         <>
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-                    color: '#000000',
-                    border: '2px solid #888',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    zIndex: 10,
-                    boxSizing: 'border-box',
-                }}
-            >
+            <div className="Frame-Overlay">
                 <button
                     type="button"
-                    className="Frame-Close-Button"
-                    aria-label="Close popup frame"
+                    className="Frame-Overlay-Close-Button"
+                    aria-label="Close overlay"
                     onClick={() => { handleKeybindsClose(); setWaitingforKey(null); }}
                 >
                     ×
