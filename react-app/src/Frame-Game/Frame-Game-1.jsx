@@ -126,7 +126,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     ...state,
                     firstWeaponUpgradeOpen: action.value,
                 };
-                
+
             default:
                 return state;
         }
@@ -157,6 +157,14 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         dispatchUi({
             type: resolved ? 'setFirstWeaponUpgradeOpen' : 'closeFirstWeaponUpgrade'
         });
+    }
+
+    function handleKeybindsClose() {
+        dispatchUi({ type: 'setKeybindOpen', value: false });
+    }
+
+    function handleSettingsClose() {
+        dispatchUi({ type: 'setSettingsOpen', value: false });
     }
 
     const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
@@ -287,51 +295,26 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         getEnemySystem().updateEnemyAi(dt);
     }
 
-    const keysRef = useRef(new Set());
-    const mouseSeekModeRef = useRef(false);
-
-    // const [mouseSeekEnabled, setMouseSeekEnabled] = useState(false);
-
-    const mouseRef = useRef({ x: 0, y: 0, inside: false });
-
-    function setMouseSeekMode(nextValue) {
-        const resolved =
-            typeof nextValue === 'function'
-                ? nextValue(mouseSeekModeRef.current)
-                : nextValue;
-
-        mouseSeekModeRef.current = resolved;
-        dispatchUi({ type: 'setMouseSeek', value: resolved });
+    function updateEnemyPopulation(dt, canvas) {
+        getEnemySystem().updateEnemyPopulation(dt);
     }
 
-    // function setMouseSeekMode(nextValue) {
-    //     const resolved =
-    //         typeof nextValue === 'function'
-    //             ? nextValue(mouseSeekModeRef.current)
-    //             : nextValue;
 
-    //     mouseSeekModeRef.current = resolved;
-    //     setMouseSeekEnabled(resolved);
-    // }
+    const bossConfigRef = useRef(createDefaultBossConfig());
+    const bossSpawnTimerRef = useRef(0);
+    const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
+    const bossesDefeatedRef = useRef(0);
 
-    function setTargetEnemyId(nextValue) {
-        targetEnemyIdRef.current = nextValue;
-        setTargetEnemyIdView(nextValue);
+    function updateBossSpawn(dt, canvas) {
+        getEnemySystem().updateBossSpawn(dt);
     }
 
-    // const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
+    function pruneFarEntities() {
+        getEnemySystem().pruneFarEntities();
+    }
+
+
     const scaledEnemiesEnabledRef = useRef(false);
-
-
-    // function setScaledEnemiesEnabledSync(nextValue) {
-    //     const resolved =
-    //         typeof nextValue === 'function'
-    //             ? nextValue(scaledEnemiesEnabledRef.current)
-    //             : nextValue;
-
-    //     scaledEnemiesEnabledRef.current = resolved;
-    //     setScaledEnemiesEnabled(resolved);
-    // }
 
     function setScaledEnemiesEnabledSync(nextValue) {
         const resolved =
@@ -343,18 +326,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         dispatchUi({ type: 'setScaledEnemies', value: resolved });
     }
 
-    // const [pacingProfile, setPacingProfile] = useState(PROFILE.P2);
     const pacingProfileRef = useRef(PROFILE.P2);
-
-    // function setPacingProfileSync(nextValue) {
-    //     const resolved =
-    //         typeof nextValue === 'function'
-    //             ? nextValue(pacingProfileRef.current)
-    //             : nextValue;
-
-    //     pacingProfileRef.current = resolved;
-    //     setPacingProfile(resolved);
-    // }
 
     function setPacingProfileSync(nextValue) {
         const resolved =
@@ -366,22 +338,14 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         dispatchUi({ type: 'setPacingProfile', value: resolved });
     }
 
-    function updateEnemyPopulation(dt, canvas) {
-        getEnemySystem().updateEnemyPopulation(dt);
-    }
-
-    const bossConfigRef = useRef(createDefaultBossConfig());
-
-    const bossSpawnTimerRef = useRef(0);
-    const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
-    const bossesDefeatedRef = useRef(0);
-
-    function updateBossSpawn(dt, canvas) {
-        getEnemySystem().updateBossSpawn(dt);
-    }
 
     const targetEnemyIdRef = useRef(null);
     const [targetEnemyIdView, setTargetEnemyIdView] = useState(null);
+
+    function setTargetEnemyId(nextValue) {
+        targetEnemyIdRef.current = nextValue;
+        setTargetEnemyIdView(nextValue);
+    }
 
 
     const targetingSystemRef = useRef(null);
@@ -416,33 +380,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     function cycleTargetClosestToFarthest() {
         return getTargetingSystem().cycleTargetClosestToFarthest();
-    }
-
-    const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
-    const shakeRef = useRef(0); // Current shake intensity
-
-    // Add a function to trigger effects
-    const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
-        const id = Date.now();
-        damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
-
-        if (isPlayer) {
-            shakeRef.current = 10; // Set shake intensity
-        }
-    };
-
-    function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
-        shakeRef.current = Math.max(shakeRef.current, 16);
-        const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
-        damageTextsRef.current.push({
-            id: `explosion-${Date.now()}`,
-            x: sx,
-            y: sy,
-            text: '',
-            color: '#ffb347',
-            life: 0.7,
-            explosionRadius,
-        });
     }
 
     // const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
@@ -593,16 +530,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return weaponSystemRef.current;
     }
 
-    // function selectAdvancedWeaponUpgrade(weaponType) {
-    //     if (!WEAPON_CONFIGS[weaponType]) {
-    //         console.error('Invalid weapon upgrade selection:', weaponType);
-    //         return;
-    //     }
-    //     setActiveWeaponType(weaponType);
-    //     setFirstWeaponUpgradeOpen(false);
-    //     firstWeaponUpgradeOpenRef.current = false;
-    // }
-
     function selectAdvancedWeaponUpgrade(weaponType) {
         if (!WEAPON_CONFIGS[weaponType]) {
             console.error('Invalid weapon upgrade selection:', weaponType);
@@ -676,32 +603,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getWeaponSystem().updateProjectiles(dt);
     }
 
-    function setupCanvas(canvas) {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
 
-        const observer = new ResizeObserver(() => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-        });
-        observer.observe(canvas);
-        return () => observer.disconnect();
-    }
-
-
-    // const [keybindOpen, setKeybindOpen] = useState(false);
-    // const keybindOpenRef = useRef(keybindOpen);
-
-    function handleKeybindsClose() {
-        dispatchUi({ type: 'setKeybindOpen', value: false });
-    }
-    // function handleKeybindsClose() {
-    //     setKeybindOpen(false);
-    // }
-    // useEffect(() => {
-    //     keybindOpenRef.current = keybindOpen;
-    // }, [keybindOpen]);
-
+    const keysRef = useRef(new Set());
     const keybinds = useRef(
         {
             shop: "b",
@@ -710,6 +613,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             // Add more actions and their default keys here
         }
     );
+
     useEffect(() => {
         const stored = localStorage.getItem('keybinds');
         const savedAt = parseInt(localStorage.getItem('keybinds_saved_at'), 10);
@@ -726,6 +630,19 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             // Saved keybinds are too old or not present, consider them invalid
         }
     }, [])
+
+    const mouseSeekModeRef = useRef(false);
+    const mouseRef = useRef({ x: 0, y: 0, inside: false });
+
+    function setMouseSeekMode(nextValue) {
+        const resolved =
+            typeof nextValue === 'function'
+                ? nextValue(mouseSeekModeRef.current)
+                : nextValue;
+
+        mouseSeekModeRef.current = resolved;
+        dispatchUi({ type: 'setMouseSeek', value: resolved });
+    }
 
     const handleMouseMove = useEffectEvent((e, canvas) => {
         if (keybindOpen) {
@@ -792,81 +709,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     });
 
-    // function setupInput(canvas) {
-    //     const onMouseMove = (e) => {
-    //         if (keybindOpenRef.current) {
-    //             e.preventDefault();
-    //             e.stopPropagation();
-    //             return;
-    //         }
-    //         const rect = canvas.getBoundingClientRect();
-    //         mouseRef.current.x = e.clientX - rect.left;
-    //         mouseRef.current.y = e.clientY - rect.top;
-    //         mouseRef.current.inside = true;
-    //     };
-
-    //     const onMouseLeave = () => {
-    //         mouseRef.current.inside = false;
-    //     };
-
-    //     const onKeyDown = (e) => {
-    //         if (keybindOpenRef.current) {
-    //             e.preventDefault();
-    //             e.stopPropagation();
-    //             return;
-    //         }
-
-    //         keysRef.current.add(e.key);
-    //         if (e.key === keybinds.current.shop) {
-    //             e.preventDefault();
-    //             setShopOpen((current) => !current);
-    //         }
-
-    //         if (e.key === keybinds.current.cycleTarget) {
-    //             e.preventDefault();
-    //             if (!tabPressedRef.current) {
-    //                 if (e.shiftKey) {
-    //                     cycleTargetReverseClosestToFarthest();
-    //                 } else {
-    //                     cycleTargetClosestToFarthest();
-    //                 }
-    //                 tabPressedRef.current = true;
-    //             }
-    //         }
-    //         if (e.key === keybinds.current.fire) {
-    //             e.preventDefault();
-    //             if (!e.repeat) {
-    //                 fireRequestRef.current = true;
-    //             }
-    //         }
-    //     };
-
-    //     const onKeyUp = (e) => {
-    //         if (keybindOpenRef.current) {
-    //             e.preventDefault();
-    //             e.stopPropagation();
-    //             return;
-    //         }
-
-
-    //         keysRef.current.delete(e.key);
-    //         if (e.key === keybinds.current.cycleTarget) {
-    //             tabPressedRef.current = false;
-    //         }
-    //     };
-
-    //     canvas.addEventListener('mousemove', onMouseMove);
-    //     canvas.addEventListener('mouseleave', onMouseLeave);
-    //     window.addEventListener('keydown', onKeyDown);
-    //     window.addEventListener('keyup', onKeyUp);
-
-    //     return () => {
-    //         canvas.removeEventListener('mousemove', onMouseMove);
-    //         canvas.removeEventListener('mouseleave', onMouseLeave);
-    //         window.removeEventListener('keydown', onKeyDown);
-    //         window.removeEventListener('keyup', onKeyUp);
-    //     };
-    // }
     function setupInput(canvas) {
         const onMouseMove = (e) => handleMouseMove(e, canvas);
         const onMouseLeave = () => handleMouseLeave();
@@ -1000,9 +842,34 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getCombatSystem().updateCombat(dt);
     }
 
-    function pruneFarEntities() {
-        getEnemySystem().pruneFarEntities();
+
+    const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
+    const shakeRef = useRef(0); // Current shake intensity
+
+    // Add a function to trigger effects
+    const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
+        const id = Date.now();
+        damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
+
+        if (isPlayer) {
+            shakeRef.current = 10; // Set shake intensity
+        }
+    };
+
+    function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
+        shakeRef.current = Math.max(shakeRef.current, 16);
+        const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
+        damageTextsRef.current.push({
+            id: `explosion-${Date.now()}`,
+            x: sx,
+            y: sy,
+            text: '',
+            color: '#ffb347',
+            life: 0.7,
+            explosionRadius,
+        });
     }
+
 
     const updateEffects = (deltaTime) => {
         // 1. Decay Shake
@@ -1022,7 +889,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen) {
             return;
         }
-        
+
         pruneFarEntities();
         updateAdvancedDrops();
         updatePlayerMovement(dt, canvas);
@@ -1039,6 +906,18 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         updateEffects(dt);
     });
 
+
+    function setupCanvas(canvas) {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        const observer = new ResizeObserver(() => {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        });
+        observer.observe(canvas);
+        return () => observer.disconnect();
+    }
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -1075,24 +954,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
             cameraRef.current.x = playerRef.current.x;
             cameraRef.current.y = playerRef.current.y;
-            // Pause game logic if shop or weapon upgrade popup is open
-            //console.log(`KeybindOpenRef.current: ${keybindOpenRef.current}, ${keybindOpen}`)
-            // if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current || keybindOpenRef.current || settingsOpenRef.current)) {
-            //     pruneFarEntities();
-            //     updateAdvancedDrops();
-            //     updatePlayerMovement(dt, canvas);
-            //     updateTurret(dt);
-            //     updateMeleeWeapons(dt);
-            //     handleBurstFire(dt);
-            //     updateTurretAutoFire(dt)
-            //     updateEnemyAi(dt);
-            //     ensureValidTarget();
-            //     updateCombat(dt);
-            //     updateProjectiles(dt, canvas);
-            //     updateEnemyPopulation(dt, canvas);
-            //     updateBossSpawn(dt, canvas);
-            //     updateEffects(dt);
-            // }
 
             runGameFrame(dt, canvas);
 
@@ -1126,13 +987,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             cleanupCanvas();
         };
     }, []);
-
-    // const [shopOpen, setShopOpen] = useState(false);
-    const shopOpenRef = useRef(shopOpen);
-
-    useEffect(() => {
-        shopOpenRef.current = shopOpen;
-    }, [shopOpen]);
 
     const upgradeCountsRef = useRef(0)
     const upgradeCostRef = useRef(0);
@@ -1169,25 +1023,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         setPlayerStatsView({ ...playerStatsRef.current });
     }
 
-
-    // const [developerMode, setDeveloperMode] = useState(true);
-
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
-
-
-    // const [settingsOpen, setSettingsOpen] = useState(false);
-    const settingsOpenRef = useRef(settingsOpen);
-
-    // function handleSettingsClose() {
-    //     setSettingsOpen(false);
-    // }
-    function handleSettingsClose() {
-        dispatchUi({ type: 'setSettingsOpen', value: false });
-    }
-
-    useEffect(() => {
-        settingsOpenRef.current = settingsOpen;
-    }, [settingsOpen]);
 
     return (
         <>
