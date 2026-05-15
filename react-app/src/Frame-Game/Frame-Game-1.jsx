@@ -17,6 +17,7 @@ import { createWeaponSystem } from './systems/weapon/weaponSystem.js';
 import { createCombatSystem } from './systems/combat/combatSystem.js';
 import { createProgressionSystem } from './systems/progression/progressionSystem.js';
 import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
+import { createEffectsSystem } from './systems/effects/effectsSystem.js';
 
 import FrameGameShopOverlay from './components/Shop.jsx'
 import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
@@ -846,44 +847,73 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const damageTextsRef = useRef([]); // Array of { id, x, y, text, color, life }
     const shakeRef = useRef(0); // Current shake intensity
 
-    // Add a function to trigger effects
-    const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
-        const id = Date.now();
-        damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
+    const effectsSystemRef = useRef(null);
 
-        if (isPlayer) {
-            shakeRef.current = 10; // Set shake intensity
+    function getEffectsSystem() {
+        if (!effectsSystemRef.current) {
+            effectsSystemRef.current = createEffectsSystem({
+                refs: {
+                    damageTextsRef,
+                    shakeRef,
+                    cameraRef,
+                    canvasRef
+                },
+            });
         }
-    };
+        return effectsSystemRef.current;
+    }
+
+    function triggerEffects(x, y, text, color = "white", isPlayer = false) {
+        return getEffectsSystem().triggerEffects(x, y, text, color, isPlayer);
+    }
 
     function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
-        shakeRef.current = Math.max(shakeRef.current, 16);
-        const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
-        damageTextsRef.current.push({
-            id: `explosion-${Date.now()}`,
-            x: sx,
-            y: sy,
-            text: '',
-            color: '#ffb347',
-            life: 0.7,
-            explosionRadius,
-        });
+        return getEffectsSystem().triggerExplosionEffect(worldX, worldY, explosionRadius);
+    }
+
+    function updateEffects(dt) {
+        return getEffectsSystem().updateEffects(dt);
     }
 
 
-    const updateEffects = (deltaTime) => {
-        // 1. Decay Shake
-        if (shakeRef.current > 0) {
-            shakeRef.current *= 0.9; // Smoothly reduce shake
-            if (shakeRef.current < 0.1) shakeRef.current = 0;
-        }
+    // Add a function to trigger effects
+    // const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
+    //     const id = Date.now();
+    //     damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
 
-        // 2. Decay Damage Text
-        damageTextsRef.current = damageTextsRef.current.filter(item => {
-            item.life -= 0.02; // Reduce opacity over time
-            return item.life > 0;
-        });
-    };
+    //     if (isPlayer) {
+    //         shakeRef.current = 10; // Set shake intensity
+    //     }
+    // };
+
+    // function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
+    //     shakeRef.current = Math.max(shakeRef.current, 16);
+    //     const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
+    //     damageTextsRef.current.push({
+    //         id: `explosion-${Date.now()}`,
+    //         x: sx,
+    //         y: sy,
+    //         text: '',
+    //         color: '#ffb347',
+    //         life: 0.7,
+    //         explosionRadius,
+    //     });
+    // }
+
+
+    // const updateEffects = (deltaTime) => {
+    //     // 1. Decay Shake
+    //     if (shakeRef.current > 0) {
+    //         shakeRef.current *= 0.9; // Smoothly reduce shake
+    //         if (shakeRef.current < 0.1) shakeRef.current = 0;
+    //     }
+
+    //     // 2. Decay Damage Text
+    //     damageTextsRef.current = damageTextsRef.current.filter(item => {
+    //         item.life -= 0.02; // Reduce opacity over time
+    //         return item.life > 0;
+    //     });
+    // };
 
     const runGameFrame = useEffectEvent((dt, canvas) => {
         if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen) {
@@ -994,38 +1024,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function applyShopPurchase(upgradeType,cost) {
         progressionSystemRef.current.applyShopPurchase(upgradeType, cost);
     }
-
-
-    // function handleShopPurchase(upgradeFunction, cost) {
-    //     //const activeWeaponMain = getMainWeaponConfig();
-
-    //     if (upgradeFunction == 'range') {
-    //         playerStatsRef.current.range += 20;
-    //     }
-    //     else if (upgradeFunction == 'atk') {
-    //         playerStatsRef.current.atk += 1;
-    //     }
-    //     else if (upgradeFunction == 'def') {
-    //         playerStatsRef.current.def += 1;
-    //     }
-    //     else if (upgradeFunction == 'maxHP') {
-    //         playerStatsRef.current.maxHP += 2;
-    //         playerStatsRef.current.hp += 2;
-    //     }
-    //     else if (upgradeFunction == 'speed') {
-    //         playerRef.current.speed += 20;
-
-    //     }
-    //     else if (upgradeFunction == "heal") {
-    //         playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
-    //     }
-    //     else {
-    //         console.log(`Error has occured with purchasing your shop upgrade.`)
-    //     }
-    //     materialsRef.current -= cost;
-    //     setMaterialsView(materialsRef.current);
-    //     setPlayerStatsView({ ...playerStatsRef.current });
-    // }
 
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
 
