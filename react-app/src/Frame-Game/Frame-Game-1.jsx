@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, useReducer } from 'react';
+
+
 import ToggleableSwitchComponent from '../components/ToggleComponent'
 
 import {
@@ -35,6 +37,140 @@ import { drawScene, drawEffects, drawOffscreenMarkers } from './render/renderer.
 function FrameGame1({ largeMode, toggleLargeMode }) {
     const canvasRef = useRef(null);
 
+    const initialUiState = {
+        mouseSeekEnabled: false,
+        scaledEnemiesEnabled: false,
+        pacingProfile: PROFILE.P2,
+        firstWeaponUpgradeOpen: true,
+        keybindOpen: false,
+        shopOpen: false,
+        developerMode: true,
+        settingsOpen: false,
+    };
+
+    function uiReducer(state, action) {
+        switch (action.type) {
+            case 'toggleMouseSeek':
+                return {
+                    ...state,
+                    mouseSeekEnabled: !state.mouseSeekEnabled,
+                };
+
+            case 'setMouseSeek':
+                return {
+                    ...state,
+                    mouseSeekEnabled: action.value,
+                };
+
+            case 'setScaledEnemies':
+                return {
+                    ...state,
+                    scaledEnemiesEnabled: action.value,
+                };
+
+            case 'setPacingProfile':
+                return {
+                    ...state,
+                    pacingProfile: action.value,
+                };
+
+            case 'closeFirstWeaponUpgrade':
+                return {
+                    ...state,
+                    firstWeaponUpgradeOpen: false,
+                };
+
+            case 'toggleShop':
+                return {
+                    ...state,
+                    shopOpen: !state.shopOpen,
+                };
+
+            case 'setShopOpen':
+                return {
+                    ...state,
+                    shopOpen: action.value,
+                };
+
+            case 'toggleSettings':
+                return {
+                    ...state,
+                    settingsOpen: !state.settingsOpen,
+                };
+
+            case 'setSettingsOpen':
+                return {
+                    ...state,
+                    settingsOpen: action.value,
+                };
+
+            case 'toggleKeybinds':
+                return {
+                    ...state,
+                    keybindOpen: !state.keybindOpen,
+                };
+
+            case 'setKeybindOpen':
+                return {
+                    ...state,
+                    keybindOpen: action.value,
+                };
+
+            case 'setDeveloperMode':
+                return {
+                    ...state,
+                    developerMode: action.value,
+                };
+            case 'setFirstWeaponUpgradeOpen':
+                return {
+                    ...state,
+                    firstWeaponUpgradeOpen: action.value,
+                };
+                
+            default:
+                return state;
+        }
+    }
+
+    function resolveReducerValue(nextValue, currentValue) {
+        return typeof nextValue === 'function' ? nextValue(currentValue) : nextValue;
+    }
+
+    function setShopOpen(nextValue) {
+        const resolved = resolveReducerValue(nextValue, shopOpen);
+        dispatchUi({ type: 'setShopOpen', value: resolved });
+    }
+
+    function setSettingsOpen(nextValue) {
+        const resolved = resolveReducerValue(nextValue, settingsOpen);
+        dispatchUi({ type: 'setSettingsOpen', value: resolved });
+    }
+
+    function setKeybindOpen(nextValue) {
+        const resolved = resolveReducerValue(nextValue, keybindOpen);
+        dispatchUi({ type: 'setKeybindOpen', value: resolved });
+    }
+
+    function setFirstWeaponUpgradeOpen(nextValue) {
+        const resolved = resolveReducerValue(nextValue, firstWeaponUpgradeOpen);
+        firstWeaponUpgradeOpenRef.current = resolved;
+        dispatchUi({
+            type: resolved ? 'setFirstWeaponUpgradeOpen' : 'closeFirstWeaponUpgrade'
+        });
+    }
+
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
+
+    const {
+        mouseSeekEnabled,
+        scaledEnemiesEnabled,
+        pacingProfile,
+        firstWeaponUpgradeOpen,
+        keybindOpen,
+        shopOpen,
+        developerMode,
+        settingsOpen,
+    } = uiState;
 
 
     const playerRef = useRef({ x: 400, y: 300, halfSize: 20, speed: 200 });
@@ -153,7 +289,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const keysRef = useRef(new Set());
     const mouseSeekModeRef = useRef(false);
-    const [mouseSeekEnabled, setMouseSeekEnabled] = useState(false);
+
+    // const [mouseSeekEnabled, setMouseSeekEnabled] = useState(false);
+
     const mouseRef = useRef({ x: 0, y: 0, inside: false });
 
     function setMouseSeekMode(nextValue) {
@@ -163,17 +301,37 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 : nextValue;
 
         mouseSeekModeRef.current = resolved;
-        setMouseSeekEnabled(resolved);
+        dispatchUi({ type: 'setMouseSeek', value: resolved });
     }
+
+    // function setMouseSeekMode(nextValue) {
+    //     const resolved =
+    //         typeof nextValue === 'function'
+    //             ? nextValue(mouseSeekModeRef.current)
+    //             : nextValue;
+
+    //     mouseSeekModeRef.current = resolved;
+    //     setMouseSeekEnabled(resolved);
+    // }
 
     function setTargetEnemyId(nextValue) {
         targetEnemyIdRef.current = nextValue;
         setTargetEnemyIdView(nextValue);
     }
 
-    const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
+    // const [scaledEnemiesEnabled, setScaledEnemiesEnabled] = useState(false);
     const scaledEnemiesEnabledRef = useRef(false);
 
+
+    // function setScaledEnemiesEnabledSync(nextValue) {
+    //     const resolved =
+    //         typeof nextValue === 'function'
+    //             ? nextValue(scaledEnemiesEnabledRef.current)
+    //             : nextValue;
+
+    //     scaledEnemiesEnabledRef.current = resolved;
+    //     setScaledEnemiesEnabled(resolved);
+    // }
 
     function setScaledEnemiesEnabledSync(nextValue) {
         const resolved =
@@ -182,12 +340,21 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 : nextValue;
 
         scaledEnemiesEnabledRef.current = resolved;
-        setScaledEnemiesEnabled(resolved);
+        dispatchUi({ type: 'setScaledEnemies', value: resolved });
     }
 
-
-    const [pacingProfile, setPacingProfile] = useState(PROFILE.P2);
+    // const [pacingProfile, setPacingProfile] = useState(PROFILE.P2);
     const pacingProfileRef = useRef(PROFILE.P2);
+
+    // function setPacingProfileSync(nextValue) {
+    //     const resolved =
+    //         typeof nextValue === 'function'
+    //             ? nextValue(pacingProfileRef.current)
+    //             : nextValue;
+
+    //     pacingProfileRef.current = resolved;
+    //     setPacingProfile(resolved);
+    // }
 
     function setPacingProfileSync(nextValue) {
         const resolved =
@@ -196,7 +363,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 : nextValue;
 
         pacingProfileRef.current = resolved;
-        setPacingProfile(resolved);
+        dispatchUi({ type: 'setPacingProfile', value: resolved });
     }
 
     function updateEnemyPopulation(dt, canvas) {
@@ -235,7 +402,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return targetingSystemRef.current;
     }
 
-    function ensureValidTarget(){
+    function ensureValidTarget() {
         return getTargetingSystem().ensureValidTarget();
     }
 
@@ -278,7 +445,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         });
     }
 
-    const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
+    // const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
     const firstWeaponUpgradeOpenRef = useRef(firstWeaponUpgradeOpen);
 
     function applyPlayerProjectileDamage(amount) {
@@ -300,14 +467,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     advancedDropsRef,
                     materialsRef,
                     killsRef,
-                    // targetEnemyIdRef,
                     bossesDefeatedRef,
                     firstWeaponUpgradeOpenRef
                 },
                 callbacks: {
                     setMaterialsView: setMaterialsView,
                     setKillsView: setKillsView,
-                    // setTargetEnemyId: setTargetEnemyId,
                     setBossesDefeatedView: setBossesDefeatedView,
                     setPlayerStatsView: setPlayerStatsView,
                     setFirstWeaponUpgradeOpen: setFirstWeaponUpgradeOpen,
@@ -428,14 +593,25 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return weaponSystemRef.current;
     }
 
+    // function selectAdvancedWeaponUpgrade(weaponType) {
+    //     if (!WEAPON_CONFIGS[weaponType]) {
+    //         console.error('Invalid weapon upgrade selection:', weaponType);
+    //         return;
+    //     }
+    //     setActiveWeaponType(weaponType);
+    //     setFirstWeaponUpgradeOpen(false);
+    //     firstWeaponUpgradeOpenRef.current = false;
+    // }
+
     function selectAdvancedWeaponUpgrade(weaponType) {
         if (!WEAPON_CONFIGS[weaponType]) {
             console.error('Invalid weapon upgrade selection:', weaponType);
             return;
         }
+
         setActiveWeaponType(weaponType);
-        setFirstWeaponUpgradeOpen(false);
         firstWeaponUpgradeOpenRef.current = false;
+        dispatchUi({ type: 'closeFirstWeaponUpgrade' });
     }
 
     function getActiveTurrets() {
@@ -512,15 +688,19 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return () => observer.disconnect();
     }
 
-    const [keybindOpen, setKeybindOpen] = useState(false);
-    const keybindOpenRef = useRef(keybindOpen);
+
+    // const [keybindOpen, setKeybindOpen] = useState(false);
+    // const keybindOpenRef = useRef(keybindOpen);
 
     function handleKeybindsClose() {
-        setKeybindOpen(false);
+        dispatchUi({ type: 'setKeybindOpen', value: false });
     }
-    useEffect(() => {
-        keybindOpenRef.current = keybindOpen;
-    }, [keybindOpen]);
+    // function handleKeybindsClose() {
+    //     setKeybindOpen(false);
+    // }
+    // useEffect(() => {
+    //     keybindOpenRef.current = keybindOpen;
+    // }, [keybindOpen]);
 
     const keybinds = useRef(
         {
@@ -547,68 +727,151 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     }, [])
 
+    const handleMouseMove = useEffectEvent((e, canvas) => {
+        if (keybindOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        mouseRef.current.x = e.clientX - rect.left;
+        mouseRef.current.y = e.clientY - rect.top;
+        mouseRef.current.inside = true;
+    });
+
+    const handleMouseLeave = useEffectEvent(() => {
+        mouseRef.current.inside = false;
+    });
+
+    const handleKeyDown = useEffectEvent((e) => {
+        if (keybindOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        keysRef.current.add(e.key);
+
+        if (e.key === keybinds.current.shop) {
+            e.preventDefault();
+            setShopOpen((current) => !current);
+        }
+
+        if (e.key === keybinds.current.cycleTarget) {
+            e.preventDefault();
+            if (!tabPressedRef.current) {
+                if (e.shiftKey) {
+                    cycleTargetReverseClosestToFarthest();
+                } else {
+                    cycleTargetClosestToFarthest();
+                }
+                tabPressedRef.current = true;
+            }
+        }
+
+        if (e.key === keybinds.current.fire) {
+            e.preventDefault();
+            if (!e.repeat) {
+                fireRequestRef.current = true;
+            }
+        }
+    });
+
+    const handleKeyUp = useEffectEvent((e) => {
+        if (keybindOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        keysRef.current.delete(e.key);
+
+        if (e.key === keybinds.current.cycleTarget) {
+            tabPressedRef.current = false;
+        }
+    });
+
+    // function setupInput(canvas) {
+    //     const onMouseMove = (e) => {
+    //         if (keybindOpenRef.current) {
+    //             e.preventDefault();
+    //             e.stopPropagation();
+    //             return;
+    //         }
+    //         const rect = canvas.getBoundingClientRect();
+    //         mouseRef.current.x = e.clientX - rect.left;
+    //         mouseRef.current.y = e.clientY - rect.top;
+    //         mouseRef.current.inside = true;
+    //     };
+
+    //     const onMouseLeave = () => {
+    //         mouseRef.current.inside = false;
+    //     };
+
+    //     const onKeyDown = (e) => {
+    //         if (keybindOpenRef.current) {
+    //             e.preventDefault();
+    //             e.stopPropagation();
+    //             return;
+    //         }
+
+    //         keysRef.current.add(e.key);
+    //         if (e.key === keybinds.current.shop) {
+    //             e.preventDefault();
+    //             setShopOpen((current) => !current);
+    //         }
+
+    //         if (e.key === keybinds.current.cycleTarget) {
+    //             e.preventDefault();
+    //             if (!tabPressedRef.current) {
+    //                 if (e.shiftKey) {
+    //                     cycleTargetReverseClosestToFarthest();
+    //                 } else {
+    //                     cycleTargetClosestToFarthest();
+    //                 }
+    //                 tabPressedRef.current = true;
+    //             }
+    //         }
+    //         if (e.key === keybinds.current.fire) {
+    //             e.preventDefault();
+    //             if (!e.repeat) {
+    //                 fireRequestRef.current = true;
+    //             }
+    //         }
+    //     };
+
+    //     const onKeyUp = (e) => {
+    //         if (keybindOpenRef.current) {
+    //             e.preventDefault();
+    //             e.stopPropagation();
+    //             return;
+    //         }
+
+
+    //         keysRef.current.delete(e.key);
+    //         if (e.key === keybinds.current.cycleTarget) {
+    //             tabPressedRef.current = false;
+    //         }
+    //     };
+
+    //     canvas.addEventListener('mousemove', onMouseMove);
+    //     canvas.addEventListener('mouseleave', onMouseLeave);
+    //     window.addEventListener('keydown', onKeyDown);
+    //     window.addEventListener('keyup', onKeyUp);
+
+    //     return () => {
+    //         canvas.removeEventListener('mousemove', onMouseMove);
+    //         canvas.removeEventListener('mouseleave', onMouseLeave);
+    //         window.removeEventListener('keydown', onKeyDown);
+    //         window.removeEventListener('keyup', onKeyUp);
+    //     };
+    // }
     function setupInput(canvas) {
-        const onMouseMove = (e) => {
-            if (keybindOpenRef.current) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-            const rect = canvas.getBoundingClientRect();
-            mouseRef.current.x = e.clientX - rect.left;
-            mouseRef.current.y = e.clientY - rect.top;
-            mouseRef.current.inside = true;
-        };
-
-        const onMouseLeave = () => {
-            mouseRef.current.inside = false;
-        };
-
-        const onKeyDown = (e) => {
-            if (keybindOpenRef.current) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-
-            keysRef.current.add(e.key);
-            if (e.key === keybinds.current.shop) {
-                e.preventDefault();
-                setShopOpen((current) => !current);
-            }
-
-            if (e.key === keybinds.current.cycleTarget) {
-                e.preventDefault();
-                if (!tabPressedRef.current) {
-                    if (e.shiftKey) {
-                        cycleTargetReverseClosestToFarthest();
-                    } else {
-                        cycleTargetClosestToFarthest();
-                    }
-                    tabPressedRef.current = true;
-                }
-            }
-            if (e.key === keybinds.current.fire) {
-                e.preventDefault();
-                if (!e.repeat) {
-                    fireRequestRef.current = true;
-                }
-            }
-        };
-
-        const onKeyUp = (e) => {
-            if (keybindOpenRef.current) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-
-
-            keysRef.current.delete(e.key);
-            if (e.key === keybinds.current.cycleTarget) {
-                tabPressedRef.current = false;
-            }
-        };
+        const onMouseMove = (e) => handleMouseMove(e, canvas);
+        const onMouseLeave = () => handleMouseLeave();
+        const onKeyDown = (e) => handleKeyDown(e);
+        const onKeyUp = (e) => handleKeyUp(e);
 
         canvas.addEventListener('mousemove', onMouseMove);
         canvas.addEventListener('mouseleave', onMouseLeave);
@@ -622,7 +885,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             window.removeEventListener('keyup', onKeyUp);
         };
     }
-
 
     function updatePlayerMovement(dt, canvas) {
         const p = playerRef.current;
@@ -663,7 +925,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 refs: {
                     playerRef,
                     playerStatsRef,
-                    // targetEnemyIdRef,
                     enemiesRef,
                     projectilesRef,
                     cameraRef,
@@ -671,10 +932,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 },
                 callbacks: {
                     onEnemyKilled,
-                    // setTargetEnemyId,
                     setPlayerStatsView: setPlayerStatsView,
                     triggerEffects: triggerEffects,
-                    // getAliveEnemiesSortedByDistance: getAliveEnemiesSortedByDistance,
                 },
             });
         }
@@ -759,6 +1018,28 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         });
     };
 
+    const runGameFrame = useEffectEvent((dt, canvas) => {
+        if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen) {
+            return;
+        }
+        
+        pruneFarEntities();
+        updateAdvancedDrops();
+        updatePlayerMovement(dt, canvas);
+        updateTurret(dt);
+        updateMeleeWeapons(dt);
+        handleBurstFire(dt);
+        updateTurretAutoFire(dt);
+        updateEnemyAi(dt);
+        ensureValidTarget();
+        updateCombat(dt);
+        updateProjectiles(dt, canvas);
+        updateEnemyPopulation(dt, canvas);
+        updateBossSpawn(dt, canvas);
+        updateEffects(dt);
+    });
+
+
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -782,8 +1063,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             )
         );
         ensureValidTarget();
-        // const firstSorted = getAliveEnemiesSortedByDistance();
-        // setTargetEnemyId(firstSorted.length ? firstSorted[0].id : null);
 
         const cleanupInput = setupInput(canvas);
 
@@ -798,22 +1077,25 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             cameraRef.current.y = playerRef.current.y;
             // Pause game logic if shop or weapon upgrade popup is open
             //console.log(`KeybindOpenRef.current: ${keybindOpenRef.current}, ${keybindOpen}`)
-            if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current || keybindOpenRef.current || settingsOpenRef.current)) {
-                pruneFarEntities();
-                updateAdvancedDrops();
-                updatePlayerMovement(dt, canvas);
-                updateTurret(dt);
-                updateMeleeWeapons(dt);
-                handleBurstFire(dt);
-                updateTurretAutoFire(dt)
-                updateEnemyAi(dt);
-                ensureValidTarget();
-                updateCombat(dt);
-                updateProjectiles(dt, canvas);
-                updateEnemyPopulation(dt, canvas);
-                updateBossSpawn(dt, canvas);
-                updateEffects(dt);
-            }
+            // if (!(shopOpenRef.current || firstWeaponUpgradeOpenRef.current || keybindOpenRef.current || settingsOpenRef.current)) {
+            //     pruneFarEntities();
+            //     updateAdvancedDrops();
+            //     updatePlayerMovement(dt, canvas);
+            //     updateTurret(dt);
+            //     updateMeleeWeapons(dt);
+            //     handleBurstFire(dt);
+            //     updateTurretAutoFire(dt)
+            //     updateEnemyAi(dt);
+            //     ensureValidTarget();
+            //     updateCombat(dt);
+            //     updateProjectiles(dt, canvas);
+            //     updateEnemyPopulation(dt, canvas);
+            //     updateBossSpawn(dt, canvas);
+            //     updateEffects(dt);
+            // }
+
+            runGameFrame(dt, canvas);
+
             const gameState = {
                 player: playerRef.current,
                 playerStats: playerStatsRef.current,
@@ -832,11 +1114,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             };
 
 
+            animFrameId = requestAnimationFrame(loop);
             drawScene(ctx, canvas, gameState);
 
-            animFrameId = requestAnimationFrame(loop);
         }
-
         animFrameId = requestAnimationFrame(loop);
 
         return () => {
@@ -846,12 +1127,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }, []);
 
-    const [shopOpen, setShopOpen] = useState(false);
+    // const [shopOpen, setShopOpen] = useState(false);
     const shopOpenRef = useRef(shopOpen);
 
     useEffect(() => {
-            shopOpenRef.current = shopOpen;
-        }, [shopOpen]);
+        shopOpenRef.current = shopOpen;
+    }, [shopOpen]);
 
     const upgradeCountsRef = useRef(0)
     const upgradeCostRef = useRef(0);
@@ -889,17 +1170,21 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
 
 
-    const [developerMode, setDeveloperMode] = useState(true);
+    // const [developerMode, setDeveloperMode] = useState(true);
 
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
 
 
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    // const [settingsOpen, setSettingsOpen] = useState(false);
     const settingsOpenRef = useRef(settingsOpen);
 
+    // function handleSettingsClose() {
+    //     setSettingsOpen(false);
+    // }
     function handleSettingsClose() {
-        setSettingsOpen(false);
+        dispatchUi({ type: 'setSettingsOpen', value: false });
     }
+
     useEffect(() => {
         settingsOpenRef.current = settingsOpen;
     }, [settingsOpen]);
@@ -909,15 +1194,15 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             <div className="Frame-Game-1-UI-Row" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
 
-                    <button onClick={() => setShopOpen((current) => !current)}>
+                    <button onClick={() => dispatchUi({ type: 'toggleShop' })}>
                         {shopOpen ? 'Close Shop' : 'Open Shop'}
                     </button>
 
-                    <button onClick={() => setSettingsOpen((current) => !current)}>
+                    <button onClick={() => dispatchUi({ type: 'toggleSettings' })}>
                         {settingsOpen ? 'Close Settings' : 'Open Settings'}
                     </button>
                 </div>
-                
+
                 <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
                     <FrameGamePlayerStatOverlay
                         playerStatsView={playerStatsView}
@@ -974,7 +1259,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                                 type="button"
                                 className="Frame-Overlay-Close-Button"
                                 aria-label="Close overlay"
-                                onClick={() => setSettingsOpen(false)}
+                                onClick={() => dispatchUi({ type: 'setSettingsOpen', value: false })}
                             >
                                 ×
                             </button>
@@ -1047,7 +1332,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
                         <div style={{ borderTop: '1px solid #555', paddingTop: '16px', marginTop: '8px' }}>
                             <button
-                                onClick={() => setKeybindOpen((current) => !current)}
+                                onClick={() => dispatchUi({ type: 'toggleKeybinds' })}
                                 style={{
                                     width: '100%',
                                     padding: '12px 16px',
