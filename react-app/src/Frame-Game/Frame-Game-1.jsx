@@ -530,6 +530,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         return weaponSystemRef.current;
     }
+    const hasChosenAdvancedWeaponRef = useRef(false);
 
     function selectAdvancedWeaponUpgrade(weaponType) {
         if (!WEAPON_CONFIGS[weaponType]) {
@@ -538,6 +539,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
 
         setActiveWeaponType(weaponType);
+        hasChosenAdvancedWeaponRef.current = true; // important
         firstWeaponUpgradeOpenRef.current = false;
         dispatchUi({ type: 'closeFirstWeaponUpgrade' });
     }
@@ -875,46 +877,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getEffectsSystem().updateEffects(dt);
     }
 
-
-    // Add a function to trigger effects
-    // const triggerEffects = (x, y, text, color = "white", isPlayer = false) => {
-    //     const id = Date.now();
-    //     damageTextsRef.current.push({ id, x, y, text, color, life: 1.0 });
-
-    //     if (isPlayer) {
-    //         shakeRef.current = 10; // Set shake intensity
-    //     }
-    // };
-
-    // function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
-    //     shakeRef.current = Math.max(shakeRef.current, 16);
-    //     const { sx, sy } = worldToScreen(worldX, worldY, cameraRef.current, canvasRef.current);
-    //     damageTextsRef.current.push({
-    //         id: `explosion-${Date.now()}`,
-    //         x: sx,
-    //         y: sy,
-    //         text: '',
-    //         color: '#ffb347',
-    //         life: 0.7,
-    //         explosionRadius,
-    //     });
-    // }
-
-
-    // const updateEffects = (deltaTime) => {
-    //     // 1. Decay Shake
-    //     if (shakeRef.current > 0) {
-    //         shakeRef.current *= 0.9; // Smoothly reduce shake
-    //         if (shakeRef.current < 0.1) shakeRef.current = 0;
-    //     }
-
-    //     // 2. Decay Damage Text
-    //     damageTextsRef.current = damageTextsRef.current.filter(item => {
-    //         item.life -= 0.02; // Reduce opacity over time
-    //         return item.life > 0;
-    //     });
-    // };
-
     const runGameFrame = useEffectEvent((dt, canvas) => {
         if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen) {
             return;
@@ -954,6 +916,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         const ctx = canvas.getContext('2d');
 
         const cleanupCanvas = setupCanvas(canvas);
+        loadSave(); // <- before enemy spawn so difficulty scaling uses loaded kills
+
 
         const { startCount } = enemySpawnConfigRef.current;
 
@@ -1020,12 +984,94 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const upgradeCountsRef = useRef(0)
     const upgradeCostRef = useRef(0);
-    
-    function applyShopPurchase(upgradeType,cost) {
+
+    function applyShopPurchase(upgradeType, cost) {
         progressionSystemRef.current.applyShopPurchase(upgradeType, cost);
     }
-
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
+
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            const saveFile = {
+                player: { ...playerRef.current },
+                playerStats: { ...playerStatsRef.current },
+                materials: materialsRef.current,
+                kills: killsRef.current,
+                bossesDefeated: bossesDefeatedRef.current,
+                activeWeaponType: activeWeaponTypeRef.current,
+                pacingProfile: pacingProfileRef.current,
+                scaledEnemiesEnabled: scaledEnemiesEnabledRef.current,
+                hasChosenAdvancedWeapon: hasChosenAdvancedWeaponRef.current
+            };
+            localStorage.setItem('frameGameSave', JSON.stringify(saveFile));
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
+
+    function loadSave() {
+        try {
+            const raw = localStorage.getItem('frameGameSave');
+            if (!raw) return;
+
+            const save = JSON.parse(raw);
+
+            // Refs — mutate directly
+            if (save.player) {
+                Object.assign(playerRef.current, save.player);
+                cameraRef.current.x = playerRef.current.x;
+                cameraRef.current.y = playerRef.current.y;
+            }
+            if (save.playerStats) {
+                Object.assign(playerStatsRef.current, save.playerStats);
+            }
+            if (typeof save.materials === 'number') {
+                materialsRef.current = save.materials;
+            }
+            if (typeof save.kills === 'number') {
+                killsRef.current = save.kills;
+            }
+            if (typeof save.bossesDefeated === 'number') {
+                bossesDefeatedRef.current = save.bossesDefeated;
+            }
+
+            // State — use sync setters so refs + reducer both update
+            if (save.pacingProfile) {
+                setPacingProfileSync(save.pacingProfile);
+            }
+            if (typeof save.scaledEnemiesEnabled === 'boolean') {
+                setScaledEnemiesEnabledSync(save.scaledEnemiesEnabled);
+            }
+
+            if (typeof save.hasChosenAdvancedWeapon === 'boolean') {
+                hasChosenAdvancedWeaponRef.current = save.hasChosenAdvancedWeapon;
+            }
+
+            // restore weapon
+            if (save.activeWeaponType && WEAPON_CONFIGS[save.activeWeaponType]) {
+                setActiveWeaponType(save.activeWeaponType);
+            }
+
+            // show only if player has killed at least one boss AND has not chosen advanced weapon yet
+            const shouldShowFirstWeaponUpgrade =
+                bossesDefeatedRef.current > 0 && !hasChosenAdvancedWeaponRef.current;
+
+            setFirstWeaponUpgradeOpen(shouldShowFirstWeaponUpgrade);
+
+            // View state — sync since refs were mutated directly
+            setMaterialsView(materialsRef.current);
+            setKillsView(killsRef.current);
+            setBossesDefeatedView(bossesDefeatedRef.current);
+            setPlayerStatsView({ ...playerStatsRef.current });
+
+        } catch (e) {
+            console.error('Failed to load save:', e);
+        }
+    }
 
     return (
         <>
