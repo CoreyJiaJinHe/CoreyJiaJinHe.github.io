@@ -116,6 +116,34 @@ export function createProgressionSystem({
         }
     }
 
+    function applyShopPurchase(upgradeType,cost){
+        if (upgradeType == 'range') {
+            playerStatsRef.current.range += 20;
+        }
+        else if (upgradeType == 'atk') {
+            playerStatsRef.current.atk += 1;
+        }
+        else if (upgradeType == 'def') {
+            playerStatsRef.current.def += 1;
+        }
+        else if (upgradeType == 'maxHP') {
+            playerStatsRef.current.maxHP += 2;
+            playerStatsRef.current.hp += 2;
+        }
+        else if (upgradeType == 'speed') {
+            playerRef.current.speed += 20;
+
+        }
+        else if (upgradeType == "heal") {
+            playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
+        }
+        else {
+            console.log(`Error has occured with purchasing your shop upgrade.`)
+        }
+        materialsRef.current -= cost;
+        setMaterialsView(materialsRef.current);
+        setPlayerStatsView({ ...playerStatsRef.current });
+    }
 
 
 
@@ -129,6 +157,7 @@ export function createProgressionSystem({
         applyAdvancedModifier,
         updateAdvancedDrops,
         onEnemyKilled,
+        applyShopPurchase
     }
 
 

@@ -990,38 +990,42 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const upgradeCountsRef = useRef(0)
     const upgradeCostRef = useRef(0);
-
-
-    function handleShopPurchase(upgradeFunction, cost) {
-        //const activeWeaponMain = getMainWeaponConfig();
-
-        if (upgradeFunction == 'range') {
-            playerStatsRef.current.range += 20;
-        }
-        else if (upgradeFunction == 'atk') {
-            playerStatsRef.current.atk += 1;
-        }
-        else if (upgradeFunction == 'def') {
-            playerStatsRef.current.def += 1;
-        }
-        else if (upgradeFunction == 'maxHP') {
-            playerStatsRef.current.maxHP += 2;
-            playerStatsRef.current.hp += 2;
-        }
-        else if (upgradeFunction == 'speed') {
-            playerRef.current.speed += 20;
-
-        }
-        else if (upgradeFunction == "heal") {
-            playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
-        }
-        else {
-            console.log(`Error has occured with purchasing your shop upgrade.`)
-        }
-        materialsRef.current -= cost;
-        setMaterialsView(materialsRef.current);
-        setPlayerStatsView({ ...playerStatsRef.current });
+    
+    function applyShopPurchase(upgradeType,cost) {
+        progressionSystemRef.current.applyShopPurchase(upgradeType, cost);
     }
+
+
+    // function handleShopPurchase(upgradeFunction, cost) {
+    //     //const activeWeaponMain = getMainWeaponConfig();
+
+    //     if (upgradeFunction == 'range') {
+    //         playerStatsRef.current.range += 20;
+    //     }
+    //     else if (upgradeFunction == 'atk') {
+    //         playerStatsRef.current.atk += 1;
+    //     }
+    //     else if (upgradeFunction == 'def') {
+    //         playerStatsRef.current.def += 1;
+    //     }
+    //     else if (upgradeFunction == 'maxHP') {
+    //         playerStatsRef.current.maxHP += 2;
+    //         playerStatsRef.current.hp += 2;
+    //     }
+    //     else if (upgradeFunction == 'speed') {
+    //         playerRef.current.speed += 20;
+
+    //     }
+    //     else if (upgradeFunction == "heal") {
+    //         playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
+    //     }
+    //     else {
+    //         console.log(`Error has occured with purchasing your shop upgrade.`)
+    //     }
+    //     materialsRef.current -= cost;
+    //     setMaterialsView(materialsRef.current);
+    //     setPlayerStatsView({ ...playerStatsRef.current });
+    // }
 
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
 
@@ -1064,7 +1068,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                         height: "100%",
                     }}
                 />
-                {shopOpen && (<FrameGameShopOverlay shopUpgradeCallbacks={handleShopPurchase}
+                {shopOpen && (<FrameGameShopOverlay
+                    shopUpgradeCallbacks={applyShopPurchase}
                     materialsView={materialsView}
                     handleShopClose={setShopOpen}
                     upgradeCountsRef={upgradeCountsRef}
