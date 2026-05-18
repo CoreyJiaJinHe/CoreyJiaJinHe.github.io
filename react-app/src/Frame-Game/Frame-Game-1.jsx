@@ -18,6 +18,7 @@ import { createCombatSystem } from './systems/combat/combatSystem.js';
 import { createProgressionSystem } from './systems/progression/progressionSystem.js';
 import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
 import { createEffectsSystem } from './systems/effects/effectsSystem.js';
+import { createQuestSystem, INITIAL_QUEST_DEFS } from './systems/quest/questSystem.js';
 
 import FrameGameShopOverlay from './components/Shop.jsx'
 import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
@@ -533,6 +534,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
 
     function onEnemyKilled(enemy) {
+        getQuestSystem().onEnemyKilled(enemy);
         return getProgressionSystem().onEnemyKilled(enemy);
     }
     function grantMaterials(amount) {
@@ -843,7 +845,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }
 
-
+    //Switch to import later for these four.
     function clampToWorld(x, y, b) {
         return {
             x: Math.max(b.minX, Math.min(b.maxX, x)),
@@ -1035,7 +1037,20 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         pruneFarEntities();
         updateAdvancedDrops();
+
+        const beforeX = playerRef.current.x;
+        const beforeY = playerRef.current.y;
+
         updatePlayerMovement(dt, canvas);
+
+        const dx = playerRef.current.x - beforeX;
+        const dy = playerRef.current.y - beforeY;
+        const traveled = Math.hypot(dx, dy);
+        if (traveled > 0) {
+            getQuestSystem().onDistanceTraveled(traveled);
+        }
+
+
         updateTurret(dt);
         updateMeleeWeapons(dt);
         handleBurstFire(dt);
@@ -1156,7 +1171,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 activeWeaponType: activeWeaponTypeRef.current,
                 pacingProfile: pacingProfileRef.current,
                 scaledEnemiesEnabled: scaledEnemiesEnabledRef.current,
-                hasChosenAdvancedWeapon: hasChosenAdvancedWeaponRef.current
+                hasChosenAdvancedWeapon: hasChosenAdvancedWeaponRef.current,
+                quests: getQuestSystem().getSerializableState(),
+
             };
             localStorage.setItem('frameGameSave', JSON.stringify(saveFile));
         };
@@ -1217,6 +1234,14 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
             setFirstWeaponUpgradeOpen(shouldShowFirstWeaponUpgrade);
 
+            if (typeof save.revivesBought === 'number') {
+                revivesBoughtRef.current = Math.max(0, save.revivesBought);
+            }
+
+            getQuestSystem().setFromSave(save.quests);
+
+            setGameOver(false);
+
             // View state — sync since refs were mutated directly
             setMaterialsView(materialsRef.current);
             setKillsView(killsRef.current);
@@ -1227,6 +1252,33 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             console.error('Failed to load save:', e);
         }
     }
+
+    const [questView, setQuestView] = useState(
+        INITIAL_QUEST_DEFS.map((q) => ({
+            ...q,
+            reward: { ...q.reward },
+            progress: 0,
+            completed: false,
+            rewarded: false,
+        }))
+    );
+    const questsRef = useRef([]);
+    const questSystemRef = useRef(null);
+
+    function getQuestSystem() {
+        if (!questSystemRef.current) {
+            questSystemRef.current = createQuestSystem({
+                refs: { questsRef },
+                callbacks: {
+                    setQuestView,
+                    grantMaterials: (amount) => grantMaterials(amount),
+                },
+            });
+            questSystemRef.current.syncView();
+        }
+        return questSystemRef.current;
+    }
+
 
     return (
         <>
@@ -1245,6 +1297,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
 
             </div>
+
             <div
                 style={{
                     position: 'relative',
@@ -1252,11 +1305,41 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     height: 'min(65vh, 560px)',
                 }}
             >
+                <div className="Frame-Game-1-Active-Quest-Log"
+                    style={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        zIndex: 20,
+                        minWidth: 240,
+                        background: 'rgba(17, 24, 39, 0.85)',
+                        border: '1px solid #374151',
+                        borderRadius: 10,
+                        padding: 10,
+                        color: '#f9fafb',
+                        fontSize: 13,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>Quests</div>
+                    {questView.map((q) => {
+                        const progress = Math.min(q.progress, q.target);
+                        return (
+                            <div key={q.id} style={{ marginBottom: 6, opacity: q.completed ? 0.75 : 1 }}>
+                                <div>{q.completed ? 'Completed: ' : 'Active: '}{q.label}</div>
+                                <div>
+                                    {Math.floor(progress)} / {q.target}
+                                    {q.reward?.materials ? ` | +${q.reward.materials} materials` : ''}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
                 <div className="Frame-Game-1-Stat" style={{
                     position: 'absolute',
                     top: 12,
                     left: 12,
-                    zIndex: 20,
+                    zIndex: 10,
                     pointerEvents: 'none',
                     color: '#fff',
                 }}
