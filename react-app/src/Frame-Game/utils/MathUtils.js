@@ -44,13 +44,12 @@ function worldToScreen(wx, wy, camera, canvas) {
         };
     }
 
-
-
 function distanceSqToPlayer(x, y, playerX, playerY) {
     const dx = x - playerX;
     const dy = y - playerY;
     return dx * dx + dy * dy;
 }
+
 function isOnScreen(sx, sy, canvas, padding = 12) {
     return (
         sx >= -padding &&
@@ -59,4 +58,50 @@ function isOnScreen(sx, sy, canvas, padding = 12) {
         sy <= canvas.height + padding
     );
 }
-export { squareOverlapsCircle, squaresOverlap, calculateDistance, randomBetween, normalize2D, distanceSqToPlayer, worldToScreen, isOnScreen };
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function clampToWorld(x, y, b) {
+  return {
+    x: Math.max(b.minX, Math.min(b.maxX, x)),
+    y: Math.max(b.minY, Math.min(b.maxY, y)),
+  };
+}
+
+function clampPointToWorld(x, y, bounds, halfSize = 0) {
+    if (!bounds) return { x, y };
+    const minX = bounds.minX + halfSize;
+    const maxX = bounds.maxX - halfSize;
+    const minY = bounds.minY + halfSize;
+    const maxY = bounds.maxY - halfSize;
+
+    return {
+        x: clamp(x, minX, maxX),
+        y: clamp(y, minY, maxY),
+    };
+}
+
+function clampCameraToWorld(camX, camY, canvas, b) {
+  const halfW = canvas.width / 2;
+  const halfH = canvas.height / 2;
+  return {
+    x: Math.max(b.minX + halfW, Math.min(b.maxX - halfW, camX)),
+    y: Math.max(b.minY + halfH, Math.min(b.maxY - halfH, camY)),
+  };
+}
+
+export { 
+    squareOverlapsCircle,
+    squaresOverlap,
+    calculateDistance,
+    randomBetween,
+    normalize2D,
+    distanceSqToPlayer,
+    worldToScreen,
+    isOnScreen,
+    clampToWorld,
+    clampPointToWorld,
+    clampCameraToWorld,
+};

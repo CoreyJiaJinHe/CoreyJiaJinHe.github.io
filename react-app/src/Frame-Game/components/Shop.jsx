@@ -89,7 +89,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, handleShopC
                     <button style={fancyButtonsStyle} onClick={() => helper("range", upgradeCostRef.current)}>+20 Range ({upgradeCostView})</button>
                     <button style={fancyButtonsStyle} onClick={() => helper("atk", upgradeCostRef.current)}>+1 ATK ({upgradeCostView})</button>
                     <button style={fancyButtonsStyle} onClick={() => helper("def", upgradeCostRef.current)}>+1 DEF ({upgradeCostView})</button>
-                    <button style={fancyButtonsStyle} onClick={() => helper("hp", upgradeCostRef.current)}>+2 Max HP ({upgradeCostView})</button>
+                    <button style={fancyButtonsStyle} onClick={() => helper("maxHP", upgradeCostRef.current)}>+2 Max HP ({upgradeCostView})</button>
                     <button style={fancyButtonsStyle} onClick={() => helper("speed", upgradeCostRef.current)}>+20 Speed ({upgradeCostView})</button>
                     <button style={fancyButtonsStyle} onClick={() => helper("heal", 5)}>Heal for 5 (5)</button>
                 </div>

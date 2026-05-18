@@ -1,0 +1,140 @@
+Current Project State Summary
+Date: 2026-05-18
+
+Primary Goal
+Developing a realtime combat/survival game with scaling difficulty, archetype-driven enemy behaviors, and modular weapon systems.
+
+Roadmap Status (Pinned)
+[COMPLETED] Core player/enemy mechanics
+[COMPLETED] Pacing system (profile-based difficulty scaling)
+[COMPLETED] Marker/tracker system for permanent objects (advanced drops and bosses)
+[COMPLETED] Enemy AI base behavior refinement
+[COMPLETED] Damage popups and screen shake
+[COMPLETED] Spawn and wave systems
+[COMPLETED] Advanced ranged weapon upgrades (burst, explosive, double, triple)
+[COMPLETED] Keybind rebind system
+[COMPLETED] Player damage stat and turret damage stat unification
+[COMPLETED] Advanced melee weapons (sword, flail)
+[COMPLETED] Archetype implementation and rendering integration (armored, spawner, swarm, speedster, ranged)
+[PENDING] Quest system and rewards integration
+[PENDING] UI/HUD and game over screens
+[COMPLETED] FrameGame resize setting and Home overlay CSS integration
+[PENDING] World boundaries and collision refinements
+[PENDING] VFX/SFX and final polish
+[DONE] Save game data and load
+[PENDING] Weapon upgrade system with:
+- Rarity tiers (common, rare, epic, legendary)
+- Stat-based pool generation
+- Progression through upgrade selections
+[COMPLETED] implement useEffectEvent and useReducer
+[COMPLETED] Persist advanced-weapon selection state in save/load (boss-gated overlay restore)
+
+Recent Architecture Concern
+Core extraction is now complete for enemy, weapon, combat, progression, and targeting modules. The current concern is reducing remaining ref coupling and introducing event-driven side-effect flow without changing gameplay behavior.
+
+Refactor Direction (Planning Only)
+Confidence: High
+
+DONE 1) Keep Frame-Game-1.jsx as orchestrator only
+- Responsibilities: wiring, frame loop ordering, UI overlays, high-level state composition.
+- Remove domain logic from this file over time.
+
+DONE 2) Move domain logic into isolated systems
+- Enemy domain (spawn, AI, archetype state machines, boss flow)
+- Weapon domain (turret aim/fire, melee runtime, burst)
+- Combat domain (hit resolution, shield/armor rules, death/reward events)
+- Progression domain (materials, drops, scaling helpers)
+
+IN PROGRESS 3) Reduce direct ref coupling
+- Replace direct cross-domain ref reads with explicit system inputs.
+- Systems return state patches and emitted events.
+- Keep side effects at orchestration boundary.
+
+IN PROGRESS 4) Use event-driven side effects
+- Emit events for: damage text, shake, pickup, enemy death, boss defeat.
+- One effect processor mutates visual/effect collections.
+
+5) Preserve behavior while extracting
+- Do not change feature behavior during extraction.
+- Extract in phases with strict update-order parity.
+
+Current Snapshot (As of 2026-05-18)
+Confidence: High
+
+- Extracted systems now in use: enemy, weapon, combat, progression, targeting.
+- Target validity ownership is in targeting (ensureValidTarget called from Frame-Game loop).
+- Progression no longer handles target reset responsibilities.
+- Combat no longer performs target re-anchor logic.
+- UI state migration complete for core overlays/settings via useReducer.
+- Input/frame handlers migrated to useEffectEvent where appropriate.
+- Save/load now restores boss progression and advanced-weapon-choice gating logic.
+- Remaining coupling work is primarily ref contract cleanup and side-effect/event orchestration.
+
+Concrete Extraction Map for Frame-Game-1.jsx
+Confidence: High
+
+Target folders
+- react-app/src/Frame-Game/systems/enemy/
+- react-app/src/Frame-Game/systems/weapon/
+- react-app/src/Frame-Game/systems/combat/
+- react-app/src/Frame-Game/systems/progression/
+- react-app/src/Frame-Game/systems/targeting/
+- react-app/src/Frame-Game/systems/effects/
+- react-app/src/Frame-Game/core/
+
+A. DONE: Frame-Game-1.jsx orchestrator boundary is established
+- setupCanvas, setupInput, frame loop ordering, and UI overlays remain in Frame-Game-1.jsx.
+- Domain logic is delegated through system APIs (enemy/weapon/combat/progression/targeting/effects).
+
+B. DONE: Domain extraction to system modules
+- Enemy, weapon, combat, progression, targeting, and effects systems are present and wired.
+- Remaining wrappers in Frame-Game-1.jsx are orchestration adapters, not domain implementations.
+
+C. PENDING: Remaining extraction-related cleanup
+- See Canonical Pending Work section below.
+
+D. PENDING: Event-driven side-effect flow
+- See Canonical Pending Work section below.
+
+Canonical Pending Work
+Confidence: High
+
+Priority 1 - Contract and coupling cleanup
+- [PENDING] Remove stale commented contract params/callbacks in Frame-Game-1.jsx, combatSystem.js, progressionSystem.js.
+- [PENDING] Ensure each system factory accepts only fields it actually uses.
+- [PENDING] Reduce residual direct ref coupling between orchestrator and system internals.
+
+Priority 2 - Event-driven orchestration
+- [PENDING] Emit lightweight events from combat/progression (enemyKilled, bossDefeated, pickupApplied).
+- [PENDING] Route events through one orchestration dispatch point in Frame-Game-1.jsx.
+- [PENDING] Move damage text/shake mutation fully behind event handling while preserving update-order parity.
+
+Priority 3 - Verification and diagnostics
+- [PENDING] Gameplay parity verified for target cycling, drops, rewards, boss popup, and damage visuals.
+- [PENDING] No diagnostics in Frame-Game-1.jsx and all system modules.
+
+Ref Usage Migration Plan
+Confidence: Medium-High
+
+Current issue
+- Any function can mutate any ref, making hidden dependencies and brittle ordering.
+
+Target pattern
+- One game state object passed into systems.
+- Systems produce deterministic state patches and events.
+- Refs remain only as runtime storage at top boundary until migration completes.
+
+Practical transition
+1) Introduce a state facade object in Frame-Game-1 loop.
+2) Adapt one domain at a time to consume facade, not raw refs.
+3) Replace direct writes with returned patches.
+4) Keep behavior parity checks after each extraction.
+
+Definition of Done for Refactor
+Confidence: High
+
+1) Frame-Game-1.jsx is mostly orchestration and UI.
+2) Enemy, weapon, combat, progression, and effects are in separate modules.
+3) Cross-domain direct ref access is eliminated or contained to orchestrator.
+4) System contracts are explicit (inputs, outputs, events).
+5) Gameplay behavior remains unchanged.

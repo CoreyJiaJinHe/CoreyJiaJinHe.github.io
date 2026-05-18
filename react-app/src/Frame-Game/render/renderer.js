@@ -15,11 +15,31 @@ function drawScene(ctx, canvas, gameState) {
         targetEnemyId,
         weaponType,
         meleeVisuals,
+        worldBounds,
     } = gameState;
 
     // --- BACKGROUND ---
     ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    function drawWorldBoundary(ctx, canvas, camera, worldBounds) {
+        if (!worldBounds) return;
+
+        const topLeft = worldToScreen(worldBounds.minX, worldBounds.minY, camera, canvas);
+        const bottomRight = worldToScreen(worldBounds.maxX, worldBounds.maxY, camera, canvas);
+
+        const x = topLeft.sx;
+        const y = topLeft.sy;
+        const w = bottomRight.sx - topLeft.sx;
+        const h = bottomRight.sy - topLeft.sy;
+
+        ctx.save();
+        ctx.strokeStyle = worldBounds.borderColor ?? '#ef4444';
+        ctx.lineWidth = worldBounds.borderWidth ?? 4;
+        ctx.strokeRect(x, y, w, h);
+        ctx.restore();
+    }
+    drawWorldBoundary(ctx, canvas, camera, worldBounds);
 
     // --- PLAYER ---
     const { sx, sy } = worldToScreen(player.x, player.y, camera, canvas);

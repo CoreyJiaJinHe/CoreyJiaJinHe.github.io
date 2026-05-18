@@ -1,6 +1,6 @@
 import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from '../../configs/enemyArchetypeConfigs.js';
 import { ENEMY_AI_DIFFICULTY_PROFILES } from '../../configs/difficultyProfiles.js';
-import { randomBetween, normalize2D, distanceSqToPlayer } from '../../utils/MathUtils.js';
+import { randomBetween, normalize2D, distanceSqToPlayer, clampPointToWorld } from '../../utils/MathUtils.js';
 
 export function createEnemySystem({
     refs,
@@ -13,6 +13,7 @@ export function createEnemySystem({
         previousPlayerPositionRef,
         enemiesRef,
         worldBandsRef,
+        worldBoundsRef,
         enemySpawnTimerRef,
         killsRef,
         scaledEnemiesEnabledRef,
@@ -97,8 +98,13 @@ export function createEnemySystem({
 
         const angle = Math.random() * Math.PI * 2;
         const distance = randomBetween(minSpawnDistance, maxSpawnDistance);
-        const x = spawnOrigin.x + Math.cos(angle) * distance;
-        const y = spawnOrigin.y + Math.sin(angle) * distance;
+
+        const rawX = spawnOrigin.x + Math.cos(angle) * distance;
+        const rawY = spawnOrigin.y + Math.sin(angle) * distance;
+        const clampedSpawn = clampPointToWorld(rawX, rawY, worldBoundsRef.current, halfSize);
+
+        const x = clampedSpawn.x;
+        const y = clampedSpawn.y;
 
         const baseDifficulty = getDifficultyFromKills(killsRef.current);
         const baseHp = statOverrides.hp ?? baseDifficulty.hp;
@@ -539,6 +545,9 @@ export function createEnemySystem({
                     }
                 }
             }
+            const clampedEnemy = clampPointToWorld(enemy.x, enemy.y, worldBoundsRef.current, enemy.halfSize ?? 0);
+            enemy.x = clampedEnemy.x;
+            enemy.y = clampedEnemy.y;
         }
 
         previousPlayerPositionRef.current = { x: p.x, y: p.y };
@@ -615,19 +624,19 @@ export function createEnemySystem({
     function pruneFarEntities() {
         const {
             despawnRadius,
-            bossDespawnRadius,
         } = worldBandsRef.current;
 
         const despawnSq = despawnRadius * despawnRadius;
-        const bossDespawnSq = bossDespawnRadius * bossDespawnRadius;
 
         enemiesRef.current = enemiesRef.current.filter((enemy) => {
             if (!enemy.alive) return false;
 
-            const d2 = distanceSqToPlayer(enemy.x, enemy.y, playerRef.current.x, playerRef.current.y);
+            // Bosses are persistent and should not be distance-culled.
             if (enemy.isBoss) {
-                return d2 <= bossDespawnSq;
+                return true;
             }
+
+            const d2 = distanceSqToPlayer(enemy.x, enemy.y, playerRef.current.x, playerRef.current.y);
             return d2 <= despawnSq;
         });
     }

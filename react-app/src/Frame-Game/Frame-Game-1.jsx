@@ -185,13 +185,20 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const playerRef = useRef({ x: 400, y: 300, halfSize: 20, speed: 200 });
     const previousPlayerPositionRef = useRef({ x: 400, y: 300 });
     const cameraRef = useRef({ x: playerRef.current.x, y: playerRef.current.y });
+    const worldBoundsRef = useRef({
+        minX: -2000,
+        maxX: 2000,
+        minY: -2000,
+        maxY: 2000,
+        borderColor: '#ef4444',
+        borderWidth: 4,
+    });
 
     const worldBandsRef = useRef({
-        activeRadius: 1200,       // counts toward normal population cap
-        despawnRadius: 2200,      // normal enemies removed past this
-        bossDespawnRadius: 3200,  // bosses culled less aggressively
-        spawnMinRadius: 220,      // should match your createEnemy min
-        spawnMaxRadius: 520,      // should match your createEnemy max
+        activeRadius: 1200,  // Radius used when counting regular enemies toward active population limits.
+        despawnRadius: 2200, // Regular enemies beyond this radius are removed.
+        spawnMinRadius: 220, // Minimum spawn distance from player for newly created regular enemies.
+        spawnMaxRadius: 520, // Maximum spawn distance from player for newly created regular enemies.
     });
 
     const playerStatsRef = useRef({
@@ -213,6 +220,110 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const materialsRef = useRef(0);
     const [materialsView, setMaterialsView] = useState(0);
     const advancedDropsRef = useRef([]);
+
+    const [gameOver, setGameOver] = useState(false);
+    const revivesBoughtRef = useRef(0);
+    const BASE_REVIVE_COST = 100;
+
+    function getReviveCost() {
+        return BASE_REVIVE_COST * Math.pow(2, revivesBoughtRef.current);
+    }
+
+    function hardRestartRun() {
+        localStorage.removeItem('frameGameSave');
+
+        const defaultPlayer = { x: 400, y: 300, halfSize: 20, speed: 200 };
+        const defaultPlayerStats = {
+            alive: true,
+            hp: 10,
+            maxHP: 10,
+            atk: 5,
+            meleeBonusPct: 0,
+            projectileBonusPct: 0,
+            explosionBonusPct: 0,
+            def: 2,
+            range: 220,
+            secondaryTurretAngle: 0,
+            secondaryTurretTurnSpeed: Math.PI * 1.8,
+        };
+
+        Object.assign(playerRef.current, defaultPlayer);
+        previousPlayerPositionRef.current = { x: defaultPlayer.x, y: defaultPlayer.y };
+        cameraRef.current = { x: defaultPlayer.x, y: defaultPlayer.y };
+
+        Object.assign(playerStatsRef.current, defaultPlayerStats);
+        setPlayerStatsView({ ...playerStatsRef.current });
+
+        materialsRef.current = 0;
+        killsRef.current = 0;
+        bossesDefeatedRef.current = 0;
+        setMaterialsView(0);
+        setKillsView(0);
+        setBossesDefeatedView(0);
+
+        enemiesRef.current = [];
+        advancedDropsRef.current = [];
+        projectilesRef.current = [];
+        swordSwingsRef.current = [];
+        damageTextsRef.current = [];
+        shakeRef.current = 0;
+
+        targetEnemyIdRef.current = null;
+        setTargetEnemyIdView(null);
+
+        fireRequestRef.current = false;
+        tabPressedRef.current = false;
+        keysRef.current.clear();
+
+        enemySpawnTimerRef.current = 0;
+        bossSpawnTimerRef.current = 0;
+
+        revivesBoughtRef.current = 0;
+        setGameOver(false);
+
+        setShopOpen(false);
+        setSettingsOpen(false);
+        setKeybindOpen(false);
+        setMouseSeekMode(false);
+        setScaledEnemiesEnabledSync(false);
+        setPacingProfileSync(PROFILE.P2);
+
+        hasChosenAdvancedWeaponRef.current = false;
+        setActiveWeaponType('SINGLE');
+        setFirstWeaponUpgradeOpen(initialUiState.firstWeaponUpgradeOpen);
+
+        const y = killsRef.current;
+        const scaled = getDifficultyFromKills(y);
+        const { startCount } = enemySpawnConfigRef.current;
+
+        enemiesRef.current = Array.from({ length: startCount }, () =>
+            createEnemy(
+                playerRef.current,
+                {
+                    hp: scaled.hp,
+                    atk: scaled.atk,
+                    def: scaled.def,
+                },
+                pickRandomEnemyArchetype(y)
+            )
+        );
+        ensureValidTarget();
+    }
+
+    function buyOneLife() {
+        const cost = getReviveCost();
+        if (materialsRef.current < cost) return;
+
+        materialsRef.current -= cost;
+        setMaterialsView(materialsRef.current);
+
+        playerStatsRef.current.alive = true;
+        playerStatsRef.current.hp = Math.max(1, Math.ceil(playerStatsRef.current.maxHP * 0.5));
+        setPlayerStatsView({ ...playerStatsRef.current });
+
+        revivesBoughtRef.current += 1;
+        setGameOver(false);
+    }
 
     const tabPressedRef = useRef(false);
     const enemiesRef = useRef([]);
@@ -263,6 +374,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     previousPlayerPositionRef,
                     enemiesRef,
                     worldBandsRef,
+                    worldBoundsRef,
                     enemySpawnTimerRef,
                     killsRef,
                     scaledEnemiesEnabledRef,
@@ -438,7 +550,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     // --- Weapon type and turrets ---
     const weaponTypeKeys = Object.keys(WEAPON_CONFIGS);
-    const [activeWeaponType, setActiveWeaponType] = useState('EXPLOSIVE');
+    const [activeWeaponType, setActiveWeaponType] = useState('SINGLE');
     const activeWeaponTypeRef = useRef(activeWeaponType);
 
     // Ensure turretCooldowns and all logic sync when weapon type changes
@@ -731,6 +843,35 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }
 
+
+    function clampToWorld(x, y, b) {
+        return {
+            x: Math.max(b.minX, Math.min(b.maxX, x)),
+            y: Math.max(b.minY, Math.min(b.maxY, y)),
+        };
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function clampPointToWorld(x, y, bounds = worldBoundsRef.current, halfSize = 0) {
+        return {
+            x: clamp(x, bounds.minX + halfSize, bounds.maxX - halfSize),
+            y: clamp(y, bounds.minY + halfSize, bounds.maxY - halfSize),
+        };
+    }
+
+    function clampCameraToWorld(camX, camY, canvas, b) {
+        const halfW = canvas.width / 2;
+        const halfH = canvas.height / 2;
+        return {
+            x: Math.max(b.minX + halfW, Math.min(b.maxX - halfW, camX)),
+            y: Math.max(b.minY + halfH, Math.min(b.maxY - halfH, camY)),
+        };
+    }
+
+
     function updatePlayerMovement(dt, canvas) {
         const p = playerRef.current;
         const playerStats = playerStatsRef.current;
@@ -759,8 +900,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             if (keys.has('a') || keys.has('A') || keys.has('ArrowLeft')) p.x -= p.speed * dt;
             if (keys.has('d') || keys.has('D') || keys.has('ArrowRight')) p.x += p.speed * dt;
         }
-
-
+        const clampedPlayer = clampPointToWorld(p.x, p.y, worldBoundsRef.current, p.halfSize ?? 0);
+        p.x = clampedPlayer.x;
+        p.y = clampedPlayer.y;
     }
     const combatSystemRef = useRef(null);
 
@@ -878,6 +1020,15 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
 
     const runGameFrame = useEffectEvent((dt, canvas) => {
+        if (gameOver) return;
+
+        if (!playerStatsRef.current.alive || playerStatsRef.current.hp <= 0) {
+            playerStatsRef.current.alive = false;
+            setGameOver(true);
+            setPlayerStatsView({ ...playerStatsRef.current });
+            return;
+        }
+
         if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen) {
             return;
         }
@@ -946,8 +1097,11 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
             lastTime = timestamp;
 
-            cameraRef.current.x = playerRef.current.x;
-            cameraRef.current.y = playerRef.current.y;
+            const wantedCamX = playerRef.current.x;
+            const wantedCamY = playerRef.current.y;
+            const clampedCam = clampCameraToWorld(wantedCamX, wantedCamY, canvas, worldBoundsRef.current);
+            cameraRef.current.x = clampedCam.x;
+            cameraRef.current.y = clampedCam.y;
 
             runGameFrame(dt, canvas);
 
@@ -966,6 +1120,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 damageTexts: damageTextsRef.current,
                 shake: shakeRef.current,
                 meleeVisuals: getMeleeVisualState(),
+                worldBounds: worldBoundsRef.current,
             };
 
 
@@ -1087,13 +1242,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     </button>
                 </div>
 
-                <div className="Frame-Game-1-Stat" style={{ marginRight: '0px' }}>
-                    <FrameGamePlayerStatOverlay
-                        playerStatsView={playerStatsView}
-                        materialsView={materialsView}
-                        killsView={killsView}
-                    />
-                </div>
+
 
             </div>
             <div
@@ -1103,6 +1252,21 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     height: 'min(65vh, 560px)',
                 }}
             >
+                <div className="Frame-Game-1-Stat" style={{
+                    position: 'absolute',
+                    top: 12,
+                    left: 12,
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                    color: '#fff',
+                }}
+                >
+                    <FrameGamePlayerStatOverlay
+                        playerStatsView={playerStatsView}
+                        materialsView={materialsView}
+                        killsView={killsView}
+                    />
+                </div>
                 <canvas
                     ref={canvasRef}
                     style={{
@@ -1244,6 +1408,42 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                         </div>
                     </div>
                 )}
+                {gameOver && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: 40,
+                            background: 'rgba(0,0,0,0.72)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: 'min(92%, 420px)',
+                                background: '#111827',
+                                border: '1px solid #374151',
+                                borderRadius: 12,
+                                padding: 16,
+                                color: '#f9fafb',
+                            }}
+                        >
+                            <h2 style={{ margin: '0 0 10px 0' }}>Game Over</h2>
+                            <p style={{ margin: '0 0 14px 0', color: '#d1d5db' }}>
+                                Choose restart or buy one life.
+                            </p>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={hardRestartRun}>Restart</button>
+                                <button onClick={buyOneLife}>
+                                    Buy 1 Life ({getReviveCost()} materials)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </>
     );
