@@ -7,7 +7,7 @@ export function createTargetingSystem({
 }) {
 
     const {
-        playerRef, enemiesRef, targetEnemyIdRef
+        playerRef, enemiesRef, targetEnemyIdRef, playerStatsRef
 
     } = refs;
 
@@ -79,6 +79,15 @@ export function createTargetingSystem({
             setTargetEnemyId(null);
             return;
         }
+
+        if (playerStatsRef.current?.autoClosestTargetingEnabled) {
+            const closestId = sorted[0].id;
+            if (targetEnemyIdRef.current !== closestId) {
+                setTargetEnemyId(closestId);
+            }
+            return;
+        }
+
         const closestId = sorted[0].id;
         const currentId = targetEnemyIdRef.current;
         const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);

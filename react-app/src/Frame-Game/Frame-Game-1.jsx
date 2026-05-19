@@ -45,10 +45,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         mouseSeekEnabled: false,
         scaledEnemiesEnabled: false,
         pacingProfile: PROFILE.P2,
-        firstWeaponUpgradeOpen: true,
+        developerMode: true,
+        get firstWeaponUpgradeOpen() { return this.developerMode; }, // Dynamic: always true if developerMode is true
         keybindOpen: false,
         shopOpen: false,
-        developerMode: true,
         settingsOpen: false,
         activeQuestOverlayOpen: false,
     };
@@ -228,6 +228,22 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         hp: 10,
         maxHP: 10,
         atk: 5,
+        weaponDamage: 0,
+        weaponProjectileSpeedBonus: 0,
+        weaponCooldownReduction: 0,
+        secondaryTurretCooldownReductions: [0, 0],
+        secondaryCooldownUpgradeIndex: 0,
+        explosiveRadiusBonus: 0,
+        swordSwingDurationReduction: 0,
+        swordLengthBonus: 0,
+        swordArcSpanBonus: 0,
+        flailOrbitRadiusBonus: 0,
+        flailBallRadiusBonus: 0,
+        flailLengthBonus: 0,
+        flailSpinSpeedBonus: 0,
+        burstProjectileCountBonus: 0,
+        burstCooldownPenalty: 0,
+        autoClosestTargetingEnabled: false,
         meleeBonusPct: 0,
         projectileBonusPct: 0,
         explosionBonusPct: 0,
@@ -239,7 +255,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     });
     const [playerStatsView, setPlayerStatsView] = useState(playerStatsRef.current);
 
-    const materialsRef = useRef(0);
+    const materialsRef = useRef(1000);
     const [materialsView, setMaterialsView] = useState(0);
     const advancedDropsRef = useRef([]);
 
@@ -251,6 +267,11 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return BASE_REVIVE_COST * Math.pow(2, revivesBoughtRef.current);
     }
 
+
+    function startNewGame() {
+        hardRestartRun()
+    }
+
     function hardRestartRun() {
         localStorage.removeItem('frameGameSave');
 
@@ -260,6 +281,22 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             hp: 10,
             maxHP: 10,
             atk: 5,
+            weaponDamage: 0,
+            weaponProjectileSpeedBonus: 0,
+            weaponCooldownReduction: 0,
+            secondaryTurretCooldownReductions: [0, 0],
+            secondaryCooldownUpgradeIndex: 0,
+            explosiveRadiusBonus: 0,
+            swordSwingDurationReduction: 0,
+            swordLengthBonus: 0,
+            swordArcSpanBonus: 0,
+            flailOrbitRadiusBonus: 0,
+            flailBallRadiusBonus: 0,
+            flailLengthBonus: 0,
+            flailSpinSpeedBonus: 0,
+            burstProjectileCountBonus: 0,
+            burstCooldownPenalty: 0,
+            autoClosestTargetingEnabled: false,
             meleeBonusPct: 0,
             projectileBonusPct: 0,
             explosionBonusPct: 0,
@@ -275,12 +312,18 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         Object.assign(playerStatsRef.current, defaultPlayerStats);
         setPlayerStatsView({ ...playerStatsRef.current });
+        Object.assign(turretRef.current, { ...BASE_TURRET_CONFIG });
 
         materialsRef.current = 0;
-        killsRef.current = 0;
-        bossesDefeatedRef.current = 0;
         setMaterialsView(0);
+        if (developerMode)
+        {
+            materialsRef.current = 1000;
+            setMaterialsView(1000);
+        }
+        killsRef.current = 0;
         setKillsView(0);
+        bossesDefeatedRef.current = 0;
         setBossesDefeatedView(0);
 
         enemiesRef.current = [];
@@ -312,7 +355,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         hasChosenAdvancedWeaponRef.current = false;
         setActiveWeaponType('SINGLE');
-        setFirstWeaponUpgradeOpen(initialUiState.firstWeaponUpgradeOpen);
+        dispatchUi({ type: 'setFirstWeaponUpgradeOpen', value: developerMode });
         getQuestSystem().reset();
 
         const y = killsRef.current;
@@ -492,7 +535,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 refs: {
                     playerRef,
                     enemiesRef,
-                    targetEnemyIdRef
+                    targetEnemyIdRef,
+                    playerStatsRef,
                 },
                 callbacks: {
                     setTargetEnemyId: setTargetEnemyId,
@@ -537,6 +581,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 refs: {
                     playerRef,
                     playerStatsRef,
+                    turretRef,
+                    activeWeaponTypeRef,
                     advancedDropsRef,
                     materialsRef,
                     killsRef,
@@ -1183,7 +1229,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const upgradeCostRef = useRef(0);
 
     function applyShopPurchase(upgradeType, cost) {
-        progressionSystemRef.current.applyShopPurchase(upgradeType, cost);
+        return progressionSystemRef.current.applyShopPurchase(upgradeType, cost);
     }
     const liveDifficulty = getDifficultyFromKills(killsRef.current);
 
@@ -1227,6 +1273,33 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             }
             if (save.playerStats) {
                 Object.assign(playerStatsRef.current, save.playerStats);
+            }
+
+            if (typeof playerStatsRef.current.weaponDamage !== 'number') playerStatsRef.current.weaponDamage = 0;
+            if (typeof playerStatsRef.current.weaponProjectileSpeedBonus !== 'number') playerStatsRef.current.weaponProjectileSpeedBonus = 0;
+            if (typeof playerStatsRef.current.weaponCooldownReduction !== 'number') playerStatsRef.current.weaponCooldownReduction = 0;
+            if (!Array.isArray(playerStatsRef.current.secondaryTurretCooldownReductions)) {
+                const legacyValue = typeof playerStatsRef.current.secondaryTurretCooldownReduction === 'number'
+                    ? playerStatsRef.current.secondaryTurretCooldownReduction
+                    : 0;
+                playerStatsRef.current.secondaryTurretCooldownReductions = [legacyValue, legacyValue];
+            }
+            if (typeof playerStatsRef.current.secondaryCooldownUpgradeIndex !== 'number') {
+                playerStatsRef.current.secondaryCooldownUpgradeIndex = 0;
+            }
+            if (typeof playerStatsRef.current.explosiveRadiusBonus !== 'number') playerStatsRef.current.explosiveRadiusBonus = 0;
+            if (typeof playerStatsRef.current.swordSwingDurationReduction !== 'number') playerStatsRef.current.swordSwingDurationReduction = 0;
+            if (typeof playerStatsRef.current.swordLengthBonus !== 'number') playerStatsRef.current.swordLengthBonus = 0;
+            if (typeof playerStatsRef.current.swordArcSpanBonus !== 'number') playerStatsRef.current.swordArcSpanBonus = 0;
+            if (typeof playerStatsRef.current.flailOrbitRadiusBonus !== 'number') playerStatsRef.current.flailOrbitRadiusBonus = 0;
+            if (typeof playerStatsRef.current.flailBallRadiusBonus !== 'number') playerStatsRef.current.flailBallRadiusBonus = 0;
+            if (typeof playerStatsRef.current.flailLengthBonus !== 'number') playerStatsRef.current.flailLengthBonus = 0;
+            if (typeof playerStatsRef.current.flailSpinSpeedBonus !== 'number') playerStatsRef.current.flailSpinSpeedBonus = 0;
+            if (typeof playerStatsRef.current.burstProjectileCountBonus !== 'number') playerStatsRef.current.burstProjectileCountBonus = 0;
+            if (typeof playerStatsRef.current.burstCooldownPenalty !== 'number') playerStatsRef.current.burstCooldownPenalty = 0;
+            if (typeof playerStatsRef.current.autoClosestTargetingEnabled !== 'boolean') playerStatsRef.current.autoClosestTargetingEnabled = false;
+            if (typeof playerStatsRef.current.secondaryTurretTurnSpeed !== 'number') {
+                playerStatsRef.current.secondaryTurretTurnSpeed = Math.PI * 1.8;
             }
             if (typeof save.materials === 'number') {
                 materialsRef.current = save.materials;
@@ -1279,6 +1352,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             console.error('Failed to load save:', e);
         }
     }
+
     const [questView, setQuestView] = useState([]);
     const [questChoicesView, setQuestChoicesView] = useState([]);
     const activeQuestsRef = useRef([]);
@@ -1288,16 +1362,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const completedQuestDetailsRef = useRef([]);
     const [questSelectionOpen, setQuestSelectionOpen] = useState(false);
 
-    // const [questView, setQuestView] = useState(
-    //     INITIAL_QUEST_DEFS.map((q) => ({
-    //         ...q,
-    //         reward: { ...q.reward },
-    //         progress: 0,
-    //         completed: false,
-    //         rewarded: false,
-    //     }))
-    // );
-    // const questsRef = useRef([]);
     const questSystemRef = useRef(null);
     function getQuestSystem() {
         if (!questSystemRef.current) {
@@ -1322,25 +1386,10 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
         return questSystemRef.current;
     }
-    // function getQuestSystem() {
-    //     if (!questSystemRef.current) {
-    //         questSystemRef.current = createQuestSystem({
-    //             refs: { questsRef },
-    //             callbacks: {
-    //                 setQuestView,
-    //                 grantMaterials: (amount) => grantMaterials(amount),
-    //             },
-    //         });
-    //         questSystemRef.current.syncView();
-    //     }
-    //     return questSystemRef.current;
-    // }
-
-
     return (
         <>
             <div className="Frame-Game-1-UI-Row" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '4px' }}>
 
                     <button onClick={() => dispatchUi({ type: 'toggleShop' })}>
                         {shopOpen ? 'Close Shop' : 'Open Shop'}
@@ -1351,24 +1400,22 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     <button onClick={() => dispatchUi({ type: 'toggleSettings' })}>
                         {settingsOpen ? 'Close Settings' : 'Open Settings'}
                     </button>
+                    <button onClick={() => startNewGame()}>New Game</button>
                 </div>
-
-
-
             </div>
 
             <div
                 style={{
                     position: 'relative',
                     width: '100%',
-                    height: 'min(65vh, 560px)',
+                    height: 'min(65vh, 600px)',
                 }}
             >
                 <div className="Frame-Game-1-Active-Quest-Log" style={{
                     position: 'absolute',
                     top: 12,
                     right: 12,
-                    zIndex: 20,
+                    zIndex: 10,
                     minWidth: 220,
                     background: 'rgba(17, 24, 39, 0.85)',
                     border: '1px solid #374151',
@@ -1419,10 +1466,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 {shopOpen && (<FrameGameShopOverlay
                     shopUpgradeCallbacks={applyShopPurchase}
                     materialsView={materialsView}
+                    playerStatsView={playerStatsView}
+                    mainTurretTurnSpeed={turretRef.current.turnSpeed}
                     handleShopClose={setShopOpen}
                     upgradeCountsRef={upgradeCountsRef}
                     upgradeCostRef={upgradeCostRef}
-                    pacingProfileRef={pacingProfileRef} />)}
+                    pacingProfileRef={pacingProfileRef}
+                    activeWeaponType={activeWeaponType} />)}
 
                 {firstWeaponUpgradeOpen && (<FrameGameWeaponUpgradeOverlay
                     handleWeaponUpgradeClose={setFirstWeaponUpgradeOpen}
@@ -1476,7 +1526,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                                         label="Large Mode: "
                                     />
                                 </div>
-                                {!developerMode ? (
+                                {developerMode ? (
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '180px' }}>
                                         <FrameGameDifficultyPanel
                                             liveDifficulty={liveDifficulty}
@@ -1549,9 +1599,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     </div>
                 )}
 
-                
+
                 {activeQuestOverlayOpen && (
-                    <div className="Frame-Overlay" style={{ zIndex: 31 }}>
+                    <div className="Frame-Overlay" style={{ zIndex: 11 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Active Quest Log</h2>
                             <button
@@ -1588,7 +1638,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                 )}
 
                 {questSelectionOpen && (
-                    <div className="Frame-Overlay" style={{ zIndex: 32 }}>
+                    <div className="Frame-Overlay" style={{ zIndex: 12 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Choose a Quest</h2>
                         </div>

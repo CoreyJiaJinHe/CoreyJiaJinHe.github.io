@@ -8,6 +8,8 @@ function normalizeAngle(angle) {
     return angle;
 }
 
+const MAX_SWORD_ARC_SPAN = Math.PI * 1.5;
+
 function getBurstDefaults() {
     return WEAPON_CONFIGS.BURST?.[0] || { burstInterval: 0.15, burstCount: 3 };
 }
@@ -64,6 +66,46 @@ export function createWeaponSystem({
     function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
         const list = WEAPON_CONFIGS[type] || [];
         return list[0] || null;
+    }
+
+    function getPlayerStatValue(key, fallback = 0) {
+        const value = playerStatsRef.current?.[key];
+        return typeof value === 'number' ? value : fallback;
+    }
+
+    function getEffectiveProjectileSpeed(config) {
+        return (config.projectileSpeed ?? BASE_TURRET_CONFIG.projectileSpeed) + getPlayerStatValue('weaponProjectileSpeedBonus', 0);
+    }
+
+    function getEffectiveCooldown(config, idx) {
+        const baseCooldown = config.cooldown ?? BASE_TURRET_CONFIG.cooldown;
+        const mainReduction = getPlayerStatValue('weaponCooldownReduction', 0);
+        const secondaryReductions = playerStatsRef.current?.secondaryTurretCooldownReductions;
+        const secondaryReduction = idx > 0 && Array.isArray(secondaryReductions)
+            ? (secondaryReductions[idx - 1] ?? 0)
+            : 0;
+        const burstPenalty = (activeWeaponTypeRef.current === 'BURST' && idx === 0)
+            ? getPlayerStatValue('burstCooldownPenalty', 0)
+            : 0;
+        return Math.max(0.08, baseCooldown + burstPenalty - mainReduction - secondaryReduction);
+    }
+
+    function getEffectiveSwordStats(config) {
+        return {
+            arcSpan: Math.min(MAX_SWORD_ARC_SPAN, (config.arcSpan ?? (Math.PI * 0.95)) + getPlayerStatValue('swordArcSpanBonus', 0)),
+            swingDuration: Math.max(0.06, (config.swingDuration ?? 0.16) - getPlayerStatValue('swordSwingDurationReduction', 0)),
+            outerRadiusOffset: (config.outerRadiusOffset ?? 52) + getPlayerStatValue('swordLengthBonus', 0),
+            length: (config.length ?? 44) + getPlayerStatValue('swordLengthBonus', 0),
+        };
+    }
+
+    function getEffectiveFlailStats(config) {
+        return {
+            orbitRadius: (config.orbitRadius ?? 28) + getPlayerStatValue('flailOrbitRadiusBonus', 0),
+            ballRadius: (config.ballRadius ?? 10) + getPlayerStatValue('flailBallRadiusBonus', 0),
+            spinSpeed: (config.spinSpeed ?? (Math.PI * 2.2)) + getPlayerStatValue('flailSpinSpeedBonus', 0),
+            length: (config.length ?? 40) + getPlayerStatValue('flailLengthBonus', 0),
+        };
     }
 
     function getTargetEnemy() {
@@ -153,7 +195,8 @@ export function createWeaponSystem({
 
         if (activeWeaponTypeRef.current === 'BURST' && idx === 0) {
             if (!burstStateRef.current.firing) {
-                burstStateRef.current.shotsRemaining = config.burstCount || 3;
+                const burstBonus = Math.max(0, Math.floor(getPlayerStatValue('burstProjectileCountBonus', 0)));
+                burstStateRef.current.shotsRemaining = (config.burstCount || 3) + burstBonus;
                 burstStateRef.current.burstTimer = 0;
                 burstStateRef.current.burstInterval = config.burstInterval || 0.15;
                 burstStateRef.current.target = target;
@@ -167,7 +210,7 @@ export function createWeaponSystem({
         const effectiveRange = getEffectiveRange(config);
         if (distance > effectiveRange) return false;
 
-        const speed = config.projectileSpeed;
+        const speed = getEffectiveProjectileSpeed(config);
         const dirX = (target.x - muzzle.x) / distance;
         const dirY = (target.y - muzzle.y) / distance;
 
@@ -186,7 +229,7 @@ export function createWeaponSystem({
 
         if (config.projectileType === 'EXPLOSIVE') {
             projectile.projectileType = 'EXPLOSIVE';
-            projectile.explosionRadius = config.explosionRadius || 60;
+            projectile.explosionRadius = (config.explosionRadius || 60) + getPlayerStatValue('explosiveRadiusBonus', 0);
             projectile.radius = 8;
         }
 
@@ -217,7 +260,7 @@ export function createWeaponSystem({
                     if (isTurretAligned(turretRef.current.angle, targetAngle, turretRef.current.alignTolerance)) {
                         const fired = fireTurret(0, target);
                         if (fired) {
-                            turretCooldownsRef.current[0] = { fireCooldown: activeTurrets[0].cooldown };
+                            turretCooldownsRef.current[0] = { fireCooldown: getEffectiveCooldown(activeTurrets[0], 0) };
                         }
                     } else {
                         turretCooldownsRef.current[0] = { fireCooldown: 0 };
@@ -241,7 +284,8 @@ export function createWeaponSystem({
 
             const currentAngle = secondaryTurretAnglesRef.current[idx - 1] || 0;
             const targetAngle = target ? Math.atan2(target.y - playerRef.current.y, target.x - playerRef.current.x) : currentAngle;
-            const newAngle = rotateTurretAngle(currentAngle, targetAngle, Math.PI * 1.8, dt);
+            const secondaryTurnSpeed = getPlayerStatValue('secondaryTurretTurnSpeed', Math.PI * 1.8);
+            const newAngle = rotateTurretAngle(currentAngle, targetAngle, secondaryTurnSpeed, dt);
             newAngles[idx - 1] = newAngle;
 
             if (cooldown > 0) {
@@ -252,7 +296,7 @@ export function createWeaponSystem({
             if (target && isTurretAligned(newAngle, targetAngle)) {
                 const fired = fireTurret(idx, target);
                 if (fired) {
-                    turretCooldownsRef.current[idx] = { fireCooldown: activeTurrets[idx].cooldown };
+                    turretCooldownsRef.current[idx] = { fireCooldown: getEffectiveCooldown(activeTurrets[idx], idx) };
                 } else {
                     turretCooldownsRef.current[idx] = { fireCooldown: 0 };
                 }
@@ -297,7 +341,7 @@ export function createWeaponSystem({
                 } else {
                     const fired = fireTurret(0, getTargetEnemy());
                     if (fired) {
-                        turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
+                        turretCooldownsRef.current[0] = { fireCooldown: getEffectiveCooldown(getActiveTurrets()[0], 0) };
                     }
                     fireRequestRef.current = false;
                 }
@@ -318,7 +362,7 @@ export function createWeaponSystem({
                 const distance = calculateDistance(muzzle.x, muzzle.y, target.x, target.y);
                 const effectiveRange = getEffectiveRange(config);
                 if (distance <= effectiveRange) {
-                    const speed = config.projectileSpeed;
+                    const speed = getEffectiveProjectileSpeed(config);
                     const dirX = (target.x - muzzle.x) / distance;
                     const dirY = (target.y - muzzle.y) / distance;
                     projectilesRef.current.push({
@@ -342,7 +386,7 @@ export function createWeaponSystem({
 
         if (burstStateRef.current.shotsRemaining <= 0) {
             burstStateRef.current.firing = false;
-            turretCooldownsRef.current[0] = { fireCooldown: getActiveTurrets()[0].cooldown };
+            turretCooldownsRef.current[0] = { fireCooldown: getEffectiveCooldown(getActiveTurrets()[0], 0) };
         }
     }
 
@@ -369,14 +413,16 @@ export function createWeaponSystem({
             return false;
         }
 
+        const swordStats = getEffectiveSwordStats(swordCfg);
+
         const player = playerRef.current;
         const aimAngle = getMeleeAimAngle();
-        const arcSpan = swordCfg.arcSpan ?? (Math.PI * 0.95);
+        const arcSpan = swordStats.arcSpan;
         const startAngle = aimAngle - arcSpan * 0.55;
         const endAngle = aimAngle + arcSpan * 0.45;
-        const swingDuration = swordCfg.swingDuration ?? 0.16;
+        const swingDuration = swordStats.swingDuration;
         const innerRadius = player.halfSize + (swordCfg.innerRadiusOffset ?? 6);
-        const outerRadius = player.halfSize + (swordCfg.outerRadiusOffset ?? 52);
+        const outerRadius = player.halfSize + swordStats.outerRadiusOffset;
 
         swordSwingsRef.current.push({
             id: crypto.randomUUID(),
@@ -393,7 +439,7 @@ export function createWeaponSystem({
             hitEnemyIds: new Set(),
         });
 
-        meleeCooldownsRef.current.cooldown = swordCfg.cooldown ?? 0.34;
+        meleeCooldownsRef.current.cooldown = Math.max(0.08, (swordCfg.cooldown ?? 0.34) - getPlayerStatValue('weaponCooldownReduction', 0));
         return true;
     }
 
@@ -409,7 +455,7 @@ export function createWeaponSystem({
 
         flailStateRef.current.boosted = true;
         flailStateRef.current.boostTimer = flailCfg.boostDuration ?? 1.1;
-        meleeCooldownsRef.current.cooldown = flailCfg.cooldown ?? 1.25;
+        meleeCooldownsRef.current.cooldown = Math.max(0.08, (flailCfg.cooldown ?? 1.25) - getPlayerStatValue('weaponCooldownReduction', 0));
         return true;
     }
 
@@ -436,11 +482,12 @@ export function createWeaponSystem({
 
         const player = playerRef.current;
         const aimAngle = getMeleeAimAngle();
-        const arcSpan = swordCfg.arcSpan ?? (Math.PI * 0.95);
+        const swordStats = getEffectiveSwordStats(swordCfg);
+        const arcSpan = swordStats.arcSpan;
         const startAngle = aimAngle - arcSpan * 0.55;
         const endAngle = aimAngle + arcSpan * 0.45;
         const innerRadius = player.halfSize + (swordCfg.innerRadiusOffset ?? 6);
-        const outerRadius = player.halfSize + (swordCfg.outerRadiusOffset ?? 52);
+        const outerRadius = player.halfSize + swordStats.outerRadiusOffset;
 
         for (const enemy of enemiesRef.current) {
             if (!enemy.alive) continue;
@@ -463,17 +510,18 @@ export function createWeaponSystem({
     function hasFlailAutoFireTarget() {
         const flailCfg = getMainWeaponConfig('FLAIL');
         if (!flailCfg) return false;
+        const flailStats = getEffectiveFlailStats(flailCfg);
 
         const player = playerRef.current;
         const flail = flailStateRef.current;
         const anchorAngle = getMeleeAimAngle();
-        const flailLength = player.halfSize + (flailCfg.length ?? 40);
+        const flailLength = player.halfSize + flailStats.length;
         const anchor = {
             x: player.x + Math.cos(anchorAngle) * flailLength,
             y: player.y + Math.sin(anchorAngle) * flailLength,
         };
-        const orbitRadius = flailCfg.orbitRadius ?? 28;
-        const ballRadius = flailCfg.ballRadius ?? 10;
+        const orbitRadius = flailStats.orbitRadius;
+        const ballRadius = flailStats.ballRadius;
 
         const a1 = normalizeAngle(anchorAngle + flail.orbitAngle);
         const a2 = normalizeAngle(a1 + Math.PI);
@@ -537,13 +585,14 @@ export function createWeaponSystem({
     function updateFlail(dt) {
         const flailCfg = getMainWeaponConfig('FLAIL');
         if (!flailCfg) return;
+        const flailStats = getEffectiveFlailStats(flailCfg);
 
         const flail = flailStateRef.current;
         if (flail.boosted) {
             flail.boostTimer = Math.max(0, flail.boostTimer - dt);
             if (flail.boostTimer <= 0) flail.boosted = false;
         }
-        flail.orbitAngle = normalizeAngle(flail.orbitAngle + (flailCfg.spinSpeed ?? (Math.PI * 2.2)) * dt);
+        flail.orbitAngle = normalizeAngle(flail.orbitAngle + flailStats.spinSpeed * dt);
 
         for (const enemyId of Object.keys(flail.enemyHitCooldowns)) {
             flail.enemyHitCooldowns[enemyId] = Math.max(0, flail.enemyHitCooldowns[enemyId] - dt);
@@ -556,13 +605,13 @@ export function createWeaponSystem({
 
         const player = playerRef.current;
         const anchorAngle = getMeleeAimAngle();
-        const flailLength = player.halfSize + (flailCfg.length ?? 40);
+        const flailLength = player.halfSize + flailStats.length;
         const anchor = {
             x: player.x + Math.cos(anchorAngle) * flailLength,
             y: player.y + Math.sin(anchorAngle) * flailLength,
         };
-        const orbitRadius = flailCfg.orbitRadius ?? 28;
-        const ballRadius = flailCfg.ballRadius ?? 10;
+        const orbitRadius = flailStats.orbitRadius;
+        const ballRadius = flailStats.ballRadius;
 
         const a1 = normalizeAngle(anchorAngle + flail.orbitAngle);
         const a2 = normalizeAngle(a1 + Math.PI);
@@ -643,19 +692,21 @@ export function createWeaponSystem({
 
         let swordIdle = null;
         if (currentType === 'SWORD' && currentCfg && swordSwings.length === 0) {
+            const swordStats = getEffectiveSwordStats(currentCfg);
             swordIdle = {
                 x: player.x,
                 y: player.y,
                 angle: getMeleeAimAngle(),
-                length: currentCfg.length ?? 44,
+                length: swordStats.length,
             };
         }
 
         let flail = null;
         if (currentType === 'FLAIL' && currentCfg) {
+            const flailStats = getEffectiveFlailStats(currentCfg);
             const flailRuntime = flailStateRef.current;
             const anchorAngle = getMeleeAimAngle();
-            const flailLength = player.halfSize + (currentCfg.length ?? 40);
+            const flailLength = player.halfSize + flailStats.length;
             const anchor = {
                 x: player.x + Math.cos(anchorAngle) * flailLength,
                 y: player.y + Math.sin(anchorAngle) * flailLength,
@@ -667,10 +718,10 @@ export function createWeaponSystem({
                 player: { x: player.x, y: player.y },
                 anchor,
                 balls: [
-                    { x: anchor.x + Math.cos(a1) * (currentCfg.orbitRadius ?? 28), y: anchor.y + Math.sin(a1) * (currentCfg.orbitRadius ?? 28) },
-                    { x: anchor.x + Math.cos(a2) * (currentCfg.orbitRadius ?? 28), y: anchor.y + Math.sin(a2) * (currentCfg.orbitRadius ?? 28) },
+                    { x: anchor.x + Math.cos(a1) * flailStats.orbitRadius, y: anchor.y + Math.sin(a1) * flailStats.orbitRadius },
+                    { x: anchor.x + Math.cos(a2) * flailStats.orbitRadius, y: anchor.y + Math.sin(a2) * flailStats.orbitRadius },
                 ],
-                ballRadius: currentCfg.ballRadius ?? 10,
+                ballRadius: flailStats.ballRadius,
             };
         }
 

@@ -1,5 +1,8 @@
 
 import { squareOverlapsCircle } from '../../utils/MathUtils.js';
+import { WEAPON_CONFIGS } from '../../configs/weaponConfigs.js';
+
+const MAX_SWORD_ARC_SPAN = Math.PI * 1.5;
 
 export function createProgressionSystem({
     refs,
@@ -9,6 +12,8 @@ export function createProgressionSystem({
     const {
         playerRef,
         playerStatsRef,
+        turretRef,
+        activeWeaponTypeRef,
 
         advancedDropsRef,
         materialsRef,
@@ -116,33 +121,144 @@ export function createProgressionSystem({
         }
     }
 
-    function applyShopPurchase(upgradeType,cost){
-        if (upgradeType == 'range') {
+    function applyShopPurchase(upgradeType, cost) {
+        const activeWeaponType = activeWeaponTypeRef.current;
+        let purchased = true;
+
+        if (upgradeType === 'range') {
             playerStatsRef.current.range += 20;
         }
-        else if (upgradeType == 'atk') {
+        else if (upgradeType === 'atk') {
             playerStatsRef.current.atk += 1;
         }
-        else if (upgradeType == 'def') {
+        else if (upgradeType === 'def') {
             playerStatsRef.current.def += 1;
         }
-        else if (upgradeType == 'maxHP') {
+        else if (upgradeType === 'maxHP') {
             playerStatsRef.current.maxHP += 2;
             playerStatsRef.current.hp += 2;
         }
-        else if (upgradeType == 'speed') {
+        else if (upgradeType === 'speed') {
             playerRef.current.speed += 20;
 
         }
-        else if (upgradeType == "heal") {
+        else if (upgradeType === 'heal') {
             playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
         }
-        else {
-            console.log(`Error has occured with purchasing your shop upgrade.`)
+        else if (upgradeType === 'weaponTurnSpeed') {
+            turretRef.current.turnSpeed += Math.PI / 18;
+            playerStatsRef.current.secondaryTurretTurnSpeed += Math.PI / 18;
         }
-        materialsRef.current -= cost;
-        setMaterialsView(materialsRef.current);
-        setPlayerStatsView({ ...playerStatsRef.current });
+        else if (upgradeType === 'projectileSpeed') {
+            if (activeWeaponType !== 'SWORD' && activeWeaponType !== 'FLAIL') {
+                playerStatsRef.current.weaponProjectileSpeedBonus += 20;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'weaponCooldown') {
+            if (activeWeaponType !== 'SWORD' && activeWeaponType !== 'FLAIL') {
+                playerStatsRef.current.weaponCooldownReduction += 0.03;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'secondaryWeaponCooldown') {
+            if (activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') {
+                const maxSecondaryTurrets = activeWeaponType === 'TRIPLE' ? 2 : 1;
+                const upgradeIndex = playerStatsRef.current.secondaryCooldownUpgradeIndex % maxSecondaryTurrets;
+                const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
+
+                reductions[upgradeIndex] = (reductions[upgradeIndex] ?? 0) + 0.03;
+                playerStatsRef.current.secondaryTurretCooldownReductions = reductions;
+                playerStatsRef.current.secondaryCooldownUpgradeIndex = (upgradeIndex + 1) % maxSecondaryTurrets;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'weaponDamage') {
+            playerStatsRef.current.weaponDamage += 1;
+        }
+        else if (upgradeType === 'explosionRadius') {
+            if (activeWeaponType === 'EXPLOSIVE') {
+                playerStatsRef.current.explosiveRadiusBonus += 8;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'swordSwingSpeed') {
+            if (activeWeaponType === 'SWORD') {
+                playerStatsRef.current.swordSwingDurationReduction += 0.01;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'swordLength') {
+            if (activeWeaponType === 'SWORD') {
+                playerStatsRef.current.swordLengthBonus += 8;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'swordArcSize') {
+            if (activeWeaponType === 'SWORD') {
+                const baseArc = WEAPON_CONFIGS.SWORD?.[0]?.arcSpan ?? (Math.PI * 0.95);
+                const currentArc = baseArc + (playerStatsRef.current.swordArcSpanBonus ?? 0);
+
+                if (currentArc >= MAX_SWORD_ARC_SPAN) {
+                    purchased = false;
+                } else {
+                    const upgradeStep = Math.PI * 0.06;
+                    const remaining = MAX_SWORD_ARC_SPAN - currentArc;
+                    playerStatsRef.current.swordArcSpanBonus += Math.min(upgradeStep, remaining);
+                }
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'flailSize') {
+            if (activeWeaponType === 'FLAIL') {
+                playerStatsRef.current.flailOrbitRadiusBonus += 4;
+                playerStatsRef.current.flailBallRadiusBonus += 2;
+                playerStatsRef.current.flailLengthBonus += 5;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'flailSpinSpeed') {
+            if (activeWeaponType === 'FLAIL') {
+                playerStatsRef.current.flailSpinSpeedBonus += Math.PI * 0.2;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'burstProjectileCount') {
+            if (activeWeaponType === 'BURST') {
+                playerStatsRef.current.burstProjectileCountBonus += 1;
+                playerStatsRef.current.burstCooldownPenalty += 0.06;
+            } else {
+                purchased = false;
+            }
+        }
+        else if (upgradeType === 'autoClosestTargeting') {
+            if (playerStatsRef.current.autoClosestTargetingEnabled) {
+                purchased = false;
+            } else {
+                playerStatsRef.current.autoClosestTargetingEnabled = true;
+            }
+        }
+        else {
+            console.log('Error has occured with purchasing your shop upgrade.');
+            purchased = false;
+        }
+
+        if (purchased) {
+            materialsRef.current -= cost;
+            setMaterialsView(materialsRef.current);
+            setPlayerStatsView({ ...playerStatsRef.current });
+        }
+
+        return purchased;
     }
 
 

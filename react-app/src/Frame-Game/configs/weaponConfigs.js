@@ -1,7 +1,7 @@
 // Shared base turret values extracted from runtime defaults.
 export const BASE_TURRET_CONFIG = {
     angle: 0,
-    turnSpeed: Math.PI * 1.4,
+    turnSpeed: (25 * Math.PI) / 18,
     length: 26,
     width: 10,
     alignTolerance: 0.12,

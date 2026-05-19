@@ -89,9 +89,9 @@ export function createCombatSystem({
             ? 0
             : (defenseOverride ?? enemy.def ?? 0);
 
-        // Unified formula (for now): playerAtk + projectileDamage, then modifiers, then defense.
+        // Unified formula (for now): playerAtk + weaponDamage + projectileDamage, then modifiers, then defense.
         // sourceType is reserved for future source-specific perks/scaling.
-        const baseDamage = playerStatsRef.current.atk + projectileDamage;
+        const baseDamage = playerStatsRef.current.atk + (playerStatsRef.current.weaponDamage ?? 0) + projectileDamage;
         let actualDamage = Math.max(
             minDamage,
             Math.round(baseDamage * weaponMultiplier * (1 + sourceBonusPct) + flatBonuses - targetDefense)
