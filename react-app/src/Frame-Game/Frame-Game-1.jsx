@@ -18,7 +18,9 @@ import { createCombatSystem } from './systems/combat/combatSystem.js';
 import { createProgressionSystem } from './systems/progression/progressionSystem.js';
 import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
 import { createEffectsSystem } from './systems/effects/effectsSystem.js';
-import { createQuestSystem, INITIAL_QUEST_DEFS } from './systems/quest/questSystem.js';
+import { createQuestSystem, QUEST_DEFS } from './systems/quest/questSystem.js';
+
+
 
 import FrameGameShopOverlay from './components/Shop.jsx'
 import FrameGameKeybindsOverlay from './components/Keybinds.jsx'
@@ -48,6 +50,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         shopOpen: false,
         developerMode: true,
         settingsOpen: false,
+        activeQuestOverlayOpen: false,
     };
 
     function uiReducer(state, action) {
@@ -118,6 +121,18 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     keybindOpen: action.value,
                 };
 
+            case 'toggleActiveQuestOverlay':
+                return {
+                    ...state,
+                    activeQuestOverlayOpen: !state.activeQuestOverlayOpen,
+                };
+
+            case 'setActiveQuestOverlayOpen':
+                return {
+                    ...state,
+                    activeQuestOverlayOpen: action.value,
+                };
+
             case 'setDeveloperMode':
                 return {
                     ...state,
@@ -153,6 +168,11 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         dispatchUi({ type: 'setKeybindOpen', value: resolved });
     }
 
+    function setActiveQuestOverlayOpen(nextValue) {
+        const resolved = resolveReducerValue(nextValue, activeQuestOverlayOpen);
+        dispatchUi({ type: 'setActiveQuestOverlayOpen', value: resolved });
+    }
+
     function setFirstWeaponUpgradeOpen(nextValue) {
         const resolved = resolveReducerValue(nextValue, firstWeaponUpgradeOpen);
         firstWeaponUpgradeOpenRef.current = resolved;
@@ -180,6 +200,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         shopOpen,
         developerMode,
         settingsOpen,
+        activeQuestOverlayOpen,
     } = uiState;
 
 
@@ -292,6 +313,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         hasChosenAdvancedWeaponRef.current = false;
         setActiveWeaponType('SINGLE');
         setFirstWeaponUpgradeOpen(initialUiState.firstWeaponUpgradeOpen);
+        getQuestSystem().reset();
 
         const y = killsRef.current;
         const scaled = getDifficultyFromKills(y);
@@ -725,6 +747,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const keybinds = useRef(
         {
             shop: "b",
+            activeQuestOverlay: "q",
             cycleTarget: "Tab",
             fire: " ",
             // Add more actions and their default keys here
@@ -790,6 +813,11 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         if (e.key === keybinds.current.shop) {
             e.preventDefault();
             setShopOpen((current) => !current);
+        }
+
+        if (e.key === keybinds.current.activeQuestOverlay) {
+            e.preventDefault();
+            setActiveQuestOverlayOpen((current) => !current);
         }
 
         if (e.key === keybinds.current.cycleTarget) {
@@ -1031,10 +1059,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             return;
         }
 
-        if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen) {
+        if (shopOpen || firstWeaponUpgradeOpen || keybindOpen || settingsOpen || activeQuestOverlayOpen || questSelectionOpen) {
             return;
         }
-
         pruneFarEntities();
         updateAdvancedDrops();
 
@@ -1083,7 +1110,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         const cleanupCanvas = setupCanvas(canvas);
         loadSave(); // <- before enemy spawn so difficulty scaling uses loaded kills
-
+        getQuestSystem().initialize();
 
         const { startCount } = enemySpawnConfigRef.current;
 
@@ -1252,32 +1279,62 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             console.error('Failed to load save:', e);
         }
     }
+    const [questView, setQuestView] = useState([]);
+    const [questChoicesView, setQuestChoicesView] = useState([]);
+    const activeQuestsRef = useRef([]);
+    const pendingQuestChoicesRef = useRef([]);
+    const maxActiveQuestsRef = useRef(3);
+    const completedQuestsCountRef = useRef(0);
+    const completedQuestDetailsRef = useRef([]);
+    const [questSelectionOpen, setQuestSelectionOpen] = useState(false);
 
-    const [questView, setQuestView] = useState(
-        INITIAL_QUEST_DEFS.map((q) => ({
-            ...q,
-            reward: { ...q.reward },
-            progress: 0,
-            completed: false,
-            rewarded: false,
-        }))
-    );
-    const questsRef = useRef([]);
+    // const [questView, setQuestView] = useState(
+    //     INITIAL_QUEST_DEFS.map((q) => ({
+    //         ...q,
+    //         reward: { ...q.reward },
+    //         progress: 0,
+    //         completed: false,
+    //         rewarded: false,
+    //     }))
+    // );
+    // const questsRef = useRef([]);
     const questSystemRef = useRef(null);
-
     function getQuestSystem() {
         if (!questSystemRef.current) {
             questSystemRef.current = createQuestSystem({
-                refs: { questsRef },
+                refs: {
+                    activeQuestsRef,
+                    pendingQuestChoicesRef,
+                    maxActiveQuestsRef,
+                    bossesDefeatedRef,
+                    completedQuestsCountRef,
+                    completedQuestDetailsRef,
+                },
                 callbacks: {
                     setQuestView,
+                    setQuestChoicesView,
+                    setQuestSelectionOpen,
                     grantMaterials: (amount) => grantMaterials(amount),
                 },
             });
             questSystemRef.current.syncView();
+            questSystemRef.current.syncChoiceView();
         }
         return questSystemRef.current;
     }
+    // function getQuestSystem() {
+    //     if (!questSystemRef.current) {
+    //         questSystemRef.current = createQuestSystem({
+    //             refs: { questsRef },
+    //             callbacks: {
+    //                 setQuestView,
+    //                 grantMaterials: (amount) => grantMaterials(amount),
+    //             },
+    //         });
+    //         questSystemRef.current.syncView();
+    //     }
+    //     return questSystemRef.current;
+    // }
 
 
     return (
@@ -1288,7 +1345,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     <button onClick={() => dispatchUi({ type: 'toggleShop' })}>
                         {shopOpen ? 'Close Shop' : 'Open Shop'}
                     </button>
-
+                    <button onClick={() => setActiveQuestOverlayOpen((open) => !open)}>
+                        {activeQuestOverlayOpen ? 'Close Active Quests' : 'Open Active Quests'}
+                    </button>
                     <button onClick={() => dispatchUi({ type: 'toggleSettings' })}>
                         {settingsOpen ? 'Close Settings' : 'Open Settings'}
                     </button>
@@ -1305,31 +1364,29 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     height: 'min(65vh, 560px)',
                 }}
             >
-                <div className="Frame-Game-1-Active-Quest-Log"
-                    style={{
-                        position: 'absolute',
-                        top: 12,
-                        right: 12,
-                        zIndex: 20,
-                        minWidth: 240,
-                        background: 'rgba(17, 24, 39, 0.85)',
-                        border: '1px solid #374151',
-                        borderRadius: 10,
-                        padding: 10,
-                        color: '#f9fafb',
-                        fontSize: 13,
-                        pointerEvents: 'none',
-                    }}
-                >
-                    <div style={{ fontWeight: 700, marginBottom: 8 }}>Quests</div>
+                <div className="Frame-Game-1-Active-Quest-Log" style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    zIndex: 20,
+                    minWidth: 220,
+                    background: 'rgba(17, 24, 39, 0.85)',
+                    border: '1px solid #374151',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    color: '#f9fafb',
+                    fontSize: 13,
+                    pointerEvents: 'none',
+                }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quests</div>
                     {questView.map((q) => {
                         const progress = Math.min(q.progress, q.target);
                         return (
-                            <div key={q.id} style={{ marginBottom: 6, opacity: q.completed ? 0.75 : 1 }}>
-                                <div>{q.completed ? 'Completed: ' : 'Active: '}{q.label}</div>
-                                <div>
+                            <div key={q.id} style={{ marginBottom: 6, opacity: q.completed ? 0.6 : 1, lineHeight: 1.4 }}>
+                                <div style={{ color: '#f3f4f6' }}>{q.completed ? '✓ ' : ''}{q.label}</div>
+                                <div style={{ color: '#9ca3af', fontSize: 12 }}>
                                     {Math.floor(progress)} / {q.target}
-                                    {q.reward?.materials ? ` | +${q.reward.materials} materials` : ''}
+                                    {q.reward?.materials ? ` · +${q.reward.materials} mat` : ''}
                                 </div>
                             </div>
                         );
@@ -1491,6 +1548,81 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                         </div>
                     </div>
                 )}
+
+                
+                {activeQuestOverlayOpen && (
+                    <div className="Frame-Overlay" style={{ zIndex: 31 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Active Quest Log</h2>
+                            <button
+                                type="button"
+                                className="Frame-Overlay-Close-Button"
+                                aria-label="Close quest log"
+                                onClick={() => setActiveQuestOverlayOpen(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div style={{ marginBottom: 8, fontSize: 13, color: '#d1d5db' }}>
+                            Active: {questView.length} / {maxActiveQuestsRef.current}
+                        </div>
+                        {questView.length === 0 ? (
+                            <div style={{ fontSize: 13, color: '#9ca3af' }}>No active quests.</div>
+                        ) : (
+                            questView.map((q) => {
+                                const progress = Math.min(q.progress, q.target);
+                                return (
+                                    <div key={q.id} style={{ marginBottom: 8, padding: 8, border: '1px solid #374151', borderRadius: 8 }}>
+                                        <div style={{ fontWeight: 600 }}>{q.label}</div>
+                                        <div style={{ fontSize: 13, color: '#d1d5db' }}>
+                                            {Math.floor(progress)} / {q.target}
+                                        </div>
+                                        {q.reward?.materials && (
+                                            <div style={{ fontSize: 13, color: '#fbbf24', fontWeight: 500 }}>+{q.reward.materials} materials</div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
+
+                {questSelectionOpen && (
+                    <div className="Frame-Overlay" style={{ zIndex: 32 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Choose a Quest</h2>
+                        </div>
+                        {questChoicesView.map((q) => (
+                            <div key={q.id} style={{ marginBottom: 10, padding: 10, border: '1px solid #4b5563', borderRadius: 8 }}>
+                                <div style={{ fontWeight: 600, marginBottom: 6 }}>{q.label}</div>
+                                {q.reward?.materials && (
+                                    <div style={{ fontSize: 13, color: '#fbbf24', fontWeight: 500, marginBottom: 8 }}>+{q.reward.materials} materials</div>
+                                )}
+                                <button
+                                    onClick={() => getQuestSystem().selectQuest(q.id)}
+                                    disabled={questView.length >= maxActiveQuestsRef.current}
+                                    style={{
+                                        alignSelf: 'flex-start',
+                                        padding: '6px 18px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #6b7280',
+                                        background: '#374151',
+                                        color: '#f9fafb',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        opacity: questView.length >= maxActiveQuestsRef.current ? 0.4 : 1,
+                                    }}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                        ))}
+                        {questChoicesView.length === 0 && (
+                            <div style={{ fontSize: 13, color: '#9ca3af' }}>No quest choices available.</div>
+                        )}
+                    </div>
+                )}
+
                 {gameOver && (
                     <div
                         style={{
