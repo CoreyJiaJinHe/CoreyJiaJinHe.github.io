@@ -3,7 +3,7 @@ import { WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN } from '../configs/weaponConfigs.js'
 import { formatNumber, radiansToDegrees } from '../utils/MathUtils.js';
 
 
-function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStatsView, mainTurretTurnSpeed, handleShopClose, upgradeCountsRef, upgradeCostRef, pacingProfileRef, activeWeaponType }) {
+function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStatsView, playerSpeed, mainTurretTurnSpeed, handleShopClose, upgradeCountsRef, upgradeCostRef, pacingProfileRef, activeWeaponType }) {
 
     function canSpendMaterials(cost) {
         if (materialsView < cost) {
@@ -27,7 +27,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
     }
 
     function incrementCount() {
-        upgradeCountsRef.current += 1;
+        //upgradeCountsRef.current += 1;
     }
 
     useEffect(
@@ -73,10 +73,40 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
     }
 
     function getShopOptions() {
+        const swordConfig = WEAPON_CONFIGS.SWORD?.[0] ?? {};
+        const SWORD_SWING_FLOOR = swordConfig.swingDurationFloor ?? 0.06;
         const swordBaseArc = WEAPON_CONFIGS.SWORD?.[0]?.arcSpan ?? (Math.PI * 0.95);
         const swordCurrentArc = swordBaseArc + (playerStatsView?.swordArcSpanBonus ?? 0);
         const swordArcCapped = swordCurrentArc >= MAX_SWORD_ARC_SPAN - 0.0001;
         const autoClosestTargetingPurchased = !!playerStatsView?.autoClosestTargetingEnabled;
+        const mainWeaponConfig = WEAPON_CONFIGS[activeWeaponType]?.[0] ?? {};
+        const mainCooldownFloor = mainWeaponConfig.cooldownFloor ?? 0.08;
+        const baseMainCooldown = mainWeaponConfig.cooldown ?? 0;
+        const burstPenalty = activeWeaponType === 'BURST' ? (playerStatsView.burstCooldownPenalty ?? 0) : 0;
+        const mainCooldown = Math.max(
+            mainCooldownFloor,
+            baseMainCooldown + burstPenalty - (playerStatsView.weaponCooldownReduction ?? 0)
+        );
+        const mainCooldownCapped = mainCooldown <= mainCooldownFloor + 0.0001;
+        const secondaryBaseConfigs = WEAPON_CONFIGS[activeWeaponType]?.slice(1) ?? [];
+        const secondaryReductions = playerStatsView?.secondaryTurretCooldownReductions ?? [0, 0];
+        const secondary1Floor = secondaryBaseConfigs[0]?.cooldownFloor ?? 0.08;
+        const secondary2Floor = secondaryBaseConfigs[1]?.cooldownFloor ?? 0.08;
+        const secondary1Cooldown = Math.max(
+            secondary1Floor,
+            (secondaryBaseConfigs[0]?.cooldown ?? secondary1Floor) - (secondaryReductions[0] ?? 0)
+        );
+        const secondary2Cooldown = Math.max(
+            secondary2Floor,
+            (secondaryBaseConfigs[1]?.cooldown ?? secondary2Floor) - (secondaryReductions[1] ?? 0)
+        );
+        const secondary1Capped = secondary1Cooldown <= secondary1Floor + 0.0001;
+        const secondary2Capped = secondary2Cooldown <= secondary2Floor + 0.0001;
+        const swordSwingDuration = Math.max(
+            SWORD_SWING_FLOOR,
+            (WEAPON_CONFIGS.SWORD?.[0]?.swingDuration ?? 0.16) - (playerStatsView?.swordSwingDurationReduction ?? 0)
+        );
+        const swordSwingCapped = swordSwingDuration <= SWORD_SWING_FLOOR + 0.0001;
 
         // Row 1: Base stats
         const baseStats = [
@@ -107,15 +137,31 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
         const isMeleeWeapon = activeWeaponType === 'SWORD' || activeWeaponType === 'FLAIL';
         if (!isMeleeWeapon) {
             weaponUpgrades.push(
-                { type: 'projectileSpeed', label: 'Increase Projectile Speed', cost: upgradeCostView },
-                { type: 'weaponCooldown', label: 'Reduce Main Cooldown', cost: upgradeCostView }
+                { type: 'projectileSpeed', label: 'Increase Projectile Speed', cost: upgradeCostView }
             );
         }
+        weaponUpgrades.push({
+            type: 'weaponCooldown',
+            label: mainCooldownCapped ? 'Main Cooldown (MAX)' : '-0.03s Main Cooldown',
+            cost: upgradeCostView,
+            disabled: mainCooldownCapped,
+        });
 
         if (activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') {
-            const maxSecondaryTurrets = activeWeaponType === 'TRIPLE' ? 2 : 1;
-            const nextUpgradeIndex = ((playerStatsView?.secondaryCooldownUpgradeIndex ?? 0) % maxSecondaryTurrets) + 1;
-            weaponUpgrades.push({ type: 'secondaryWeaponCooldown', label: `Reduce Secondary ${nextUpgradeIndex} Cooldown`, cost: upgradeCostView });
+            weaponUpgrades.push({
+                type: 'secondaryWeaponCooldown0',
+                label: secondary1Capped ? 'Secondary 1 Cooldown (MAX)' : '-0.03s Secondary 1 Cooldown',
+                cost: upgradeCostView,
+                disabled: secondary1Capped,
+            });
+        }
+        if (activeWeaponType === 'TRIPLE') {
+            weaponUpgrades.push({
+                type: 'secondaryWeaponCooldown1',
+                label: secondary2Capped ? 'Secondary 2 Cooldown (MAX)' : '-0.03s Secondary 2 Cooldown',
+                cost: upgradeCostView,
+                disabled: secondary2Capped,
+            });
         }
 
         if (activeWeaponType === 'EXPLOSIVE') {
@@ -124,7 +170,12 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
 
         if (activeWeaponType === 'SWORD') {
             weaponUpgrades.push(
-                { type: 'swordSwingSpeed', label: 'Increase Swing Speed', cost: upgradeCostView },
+                {
+                    type: 'swordSwingSpeed',
+                    label: swordSwingCapped ? 'Sword Swing Speed (MAX)' : '-0.01s Swing Time',
+                    cost: upgradeCostView,
+                    disabled: swordSwingCapped,
+                },
                 { type: 'swordLength', label: 'Increase Sword Length', cost: upgradeCostView },
                 {
                     type: 'swordArcSize',
@@ -157,15 +208,17 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
 
     const projectileSpeed = (activeConfig.projectileSpeed ?? 0) + (playerStatsView.weaponProjectileSpeedBonus ?? 0);
     const burstPenalty = activeWeaponType === 'BURST' ? (playerStatsView.burstCooldownPenalty ?? 0) : 0;
+    const mainCooldownFloor = activeConfig.cooldownFloor ?? 0.08;
     const mainCooldown = Math.max(
-        0.08,
+        mainCooldownFloor,
         (activeConfig.cooldown ?? 0) + burstPenalty - (playerStatsView.weaponCooldownReduction ?? 0)
     );
 
     const swordBaseArc = WEAPON_CONFIGS.SWORD?.[0]?.arcSpan ?? (Math.PI * 0.95);
+    const swordSwingFloor = WEAPON_CONFIGS.SWORD?.[0]?.swingDurationFloor ?? 0.06;
     const swordArcSpan = Math.min(MAX_SWORD_ARC_SPAN, swordBaseArc + (playerStatsView.swordArcSpanBonus ?? 0));
     const swordSwingDuration = Math.max(
-        0.06,
+        swordSwingFloor,
         (WEAPON_CONFIGS.SWORD?.[0]?.swingDuration ?? 0.16) - (playerStatsView.swordSwingDurationReduction ?? 0)
     );
     const swordReach = (WEAPON_CONFIGS.SWORD?.[0]?.outerRadiusOffset ?? 52) + (playerStatsView.swordLengthBonus ?? 0);
@@ -265,9 +318,12 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
                             <div style={{ fontWeight: 700, color: '#e5e7eb' }}>Current Build Stats</div>
                             <div>ATK: {playerStatsView.atk} | Weapon DMG Bonus: {playerStatsView.weaponDamage}</div>
                             <div>DEF: {playerStatsView.def} | Range: {playerStatsView.range}</div>
+                            <div>Speed: {formatNumber(playerSpeed ?? 0, 0)}</div>
                             <div>HP: {playerStatsView.hp} / {playerStatsView.maxHP}</div>
                             <div>Main Turn Speed: {formatNumber(radiansToDegrees(mainTurretTurnSpeed), 1)} deg/s</div>
-                            <div>Secondary Turn Speed: {formatNumber(radiansToDegrees(playerStatsView.secondaryTurretTurnSpeed ?? 0), 1)} deg/s</div>
+                            {(activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') && (
+                                <div>Secondary Turn Speed: {formatNumber(radiansToDegrees(playerStatsView.secondaryTurretTurnSpeed ?? 0), 1)} deg/s</div>
+                            )}
                             {!isMeleeWeapon && (
                                 <>
                                     <div>Projectile Speed: {formatNumber(projectileSpeed, 0)}</div>
@@ -276,9 +332,10 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
                             )}
                             {(activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') && secondaryConfigs.map((cfg, index) => {
                                 const reduction = secondaryReductions[index] ?? 0;
+                                const cooldownFloor = cfg.cooldownFloor ?? 0.08;
                                 const effectiveCooldown = Math.max(
-                                    0.08,
-                                    (cfg.cooldown ?? 0) - (playerStatsView.weaponCooldownReduction ?? 0) - reduction
+                                    cooldownFloor,
+                                    (cfg.cooldown ?? 0) - reduction
                                 );
                                 return (
                                     <div key={`sec-stat-${index}`}>
@@ -294,6 +351,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
                             )}
                             {activeWeaponType === 'SWORD' && (
                                 <>
+                                    <div>Sword Cooldown: {formatNumber(mainCooldown, 2)}s</div>
                                     <div>Sword Arc: {formatNumber(radiansToDegrees(swordArcSpan), 1)} deg</div>
                                     <div>Sword Swing Duration: {formatNumber(swordSwingDuration, 2)}s</div>
                                     <div>Sword Reach Offset: {formatNumber(swordReach, 0)}</div>
@@ -301,6 +359,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
                             )}
                             {activeWeaponType === 'FLAIL' && (
                                 <>
+                                    <div>Flail Cooldown: {formatNumber(mainCooldown, 2)}s</div>
                                     <div>Flail Length: {formatNumber(flailLength, 0)}</div>
                                     <div>Flail Orbit Radius: {formatNumber(flailOrbit, 0)}</div>
                                     <div>Flail Ball Radius: {formatNumber(flailBall, 0)}</div>

@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState, useReducer } from 'react';
 
-
 import ToggleableSwitchComponent from '../components/ToggleComponent'
 
 import {
@@ -20,6 +19,7 @@ import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
 import { createEffectsSystem } from './systems/effects/effectsSystem.js';
 import { createQuestSystem, QUEST_DEFS } from './systems/quest/questSystem.js';
 
+import { clampToWorld, clampPointToWorld,clampCameraToWorld } from './utils/MathUtils.js';
 
 
 import FrameGameShopOverlay from './components/Shop.jsx'
@@ -346,6 +346,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         revivesBoughtRef.current = 0;
         setGameOver(false);
 
+        upgradeCountsRef.current = 0;
         setShopOpen(false);
         setSettingsOpen(false);
         setKeybindOpen(false);
@@ -393,18 +394,18 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const tabPressedRef = useRef(false);
     const enemiesRef = useRef([]);
-    const enemySpawnConfigRef = useRef({
-        startCount: 5, // Hard cap seed count: how many regular enemies are created at game start.
-        maxActive: 30, // Hard cap population ceiling: regular enemies cannot exceed this, regardless of difficulty profile.
-        spawnInterval: 0.5, // Hard cap spawn floor in seconds: regular refill spawn delay will never go below this value.
-    });
+    
 
     const enemyArchetypeSpawnConfigRef = useRef(createDefaultEnemyArchetypeSpawnConfig());
 
     const enemySpawnTimerRef = useRef(0);
     const killsRef = useRef(0);
     const [killsView, setKillsView] = useState(0);
-
+    const enemySpawnConfigRef = useRef({
+            startCount: 5, // Hard cap seed count: how many regular enemies are created at game start.
+            maxActive: 100, // Hard cap population ceiling: regular enemies cannot exceed this, regardless of difficulty profile.
+            spawnInterval: 0.1, // Hard cap spawn floor in seconds: regular refill spawn delay will never go below this value.
+        });
     function getDifficultyFromKills(kills) {
         const d = DIFFICULTY_PROFILES[pacingProfileRef.current]; // Active pacing profile config (P1/P2/P3).
         const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0; // Disable progression scaling when toggle is OFF.
@@ -413,10 +414,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         const profileMaxActive = Math.min(d.maxActiveCap, d.maxActiveBase + extraActive); // Profile-driven max active enemies before global hard cap.
 
         const spawnStepCount = Math.floor(effectiveKills / d.killsPerSpawnStep); // How many spawn-rate acceleration steps unlocked by kills.
-        const profileSpawnInterval = Math.max(
+        const scaledProfileSpawnInterval = Math.max(
             d.spawnIntervalMin, // Profile floor: prevents interval from going below this value.
             d.spawnIntervalBase - spawnStepCount * d.spawnStep // Linear reduction: base - (steps * stepSize).
         );
+        const profileSpawnInterval = d.spawnIntervalBase; // Initial profile spawn rate (before scaling).
+
 
         const hp = d.enemyHpBase + Math.floor(effectiveKills / d.killsPerHpStep) * d.hpStep; // Enemy HP scaling.
         const atk = d.enemyAtkBase + Math.floor(effectiveKills / d.killsPerAtkStep) * d.atkStep; // Enemy ATK scaling.
@@ -426,9 +429,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         // 1) maxActive is clamped DOWN by hard cap (cannot exceed hard limit)
         // 2) spawnInterval is clamped UP by hard floor (cannot become faster than this)
         const maxActive = Math.min(enemySpawnConfigRef.current.maxActive, profileMaxActive); // Final allowed active count.
-        const spawnInterval = Math.max(enemySpawnConfigRef.current.spawnInterval, profileSpawnInterval); // Final refill delay (seconds).
+        const spawnInterval = Math.max(enemySpawnConfigRef.current.spawnInterval, scaledProfileSpawnInterval); // Final refill delay (seconds).
 
-        return { maxActive, spawnInterval, hp, atk, def };
+        return { maxActive, spawnInterval, profileSpawnInterval, hp, atk, def };
     }
     const enemySystemRef = useRef(null);
 
@@ -919,33 +922,33 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }
 
-    //Switch to import later for these four.
-    function clampToWorld(x, y, b) {
-        return {
-            x: Math.max(b.minX, Math.min(b.maxX, x)),
-            y: Math.max(b.minY, Math.min(b.maxY, y)),
-        };
-    }
+    // //Switch to import later for these four.
+    // function clampToWorld(x, y, b) {
+    //     return {
+    //         x: Math.max(b.minX, Math.min(b.maxX, x)),
+    //         y: Math.max(b.minY, Math.min(b.maxY, y)),
+    //     };
+    // }
 
-    function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-    }
+    // function clamp(value, min, max) {
+    //     return Math.max(min, Math.min(max, value));
+    // }
 
-    function clampPointToWorld(x, y, bounds = worldBoundsRef.current, halfSize = 0) {
-        return {
-            x: clamp(x, bounds.minX + halfSize, bounds.maxX - halfSize),
-            y: clamp(y, bounds.minY + halfSize, bounds.maxY - halfSize),
-        };
-    }
+    // function clampPointToWorld(x, y, bounds = worldBoundsRef.current, halfSize = 0) {
+    //     return {
+    //         x: clamp(x, bounds.minX + halfSize, bounds.maxX - halfSize),
+    //         y: clamp(y, bounds.minY + halfSize, bounds.maxY - halfSize),
+    //     };
+    // }
 
-    function clampCameraToWorld(camX, camY, canvas, b) {
-        const halfW = canvas.width / 2;
-        const halfH = canvas.height / 2;
-        return {
-            x: Math.max(b.minX + halfW, Math.min(b.maxX - halfW, camX)),
-            y: Math.max(b.minY + halfH, Math.min(b.maxY - halfH, camY)),
-        };
-    }
+    // function clampCameraToWorld(camX, camY, canvas, b) {
+    //     const halfW = canvas.width / 2;
+    //     const halfH = canvas.height / 2;
+    //     return {
+    //         x: Math.max(b.minX + halfW, Math.min(b.maxX - halfW, camX)),
+    //         y: Math.max(b.minY + halfH, Math.min(b.maxY - halfH, camY)),
+    //     };
+    // }
 
 
     function updatePlayerMovement(dt, canvas) {
@@ -1467,6 +1470,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     shopUpgradeCallbacks={applyShopPurchase}
                     materialsView={materialsView}
                     playerStatsView={playerStatsView}
+                    playerSpeed={playerRef.current.speed}
                     mainTurretTurnSpeed={turretRef.current.turnSpeed}
                     handleShopClose={setShopOpen}
                     upgradeCountsRef={upgradeCountsRef}

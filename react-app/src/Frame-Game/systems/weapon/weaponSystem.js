@@ -71,7 +71,8 @@ export function createWeaponSystem({
 
     function getEffectiveCooldown(config, idx) {
         const baseCooldown = config.cooldown ?? BASE_TURRET_CONFIG.cooldown;
-        const mainReduction = getPlayerStatValue('weaponCooldownReduction', 0);
+        const cooldownFloor = config.cooldownFloor ?? BASE_TURRET_CONFIG.cooldownFloor ?? 0.08;
+        const mainReduction = idx === 0 ? getPlayerStatValue('weaponCooldownReduction', 0) : 0;
         const secondaryReductions = playerStatsRef.current?.secondaryTurretCooldownReductions;
         const secondaryReduction = idx > 0 && Array.isArray(secondaryReductions)
             ? (secondaryReductions[idx - 1] ?? 0)
@@ -79,13 +80,13 @@ export function createWeaponSystem({
         const burstPenalty = (activeWeaponTypeRef.current === 'BURST' && idx === 0)
             ? getPlayerStatValue('burstCooldownPenalty', 0)
             : 0;
-        return Math.max(0.08, baseCooldown + burstPenalty - mainReduction - secondaryReduction);
+        return Math.max(cooldownFloor, baseCooldown + burstPenalty - mainReduction - secondaryReduction);
     }
 
     function getEffectiveSwordStats(config) {
         return {
             arcSpan: Math.min(MAX_SWORD_ARC_SPAN, (config.arcSpan ?? (Math.PI * 0.95)) + getPlayerStatValue('swordArcSpanBonus', 0)),
-            swingDuration: Math.max(0.06, (config.swingDuration ?? 0.16) - getPlayerStatValue('swordSwingDurationReduction', 0)),
+            swingDuration: Math.max((config.swingDurationFloor ?? 0.06), (config.swingDuration ?? 0.16) - getPlayerStatValue('swordSwingDurationReduction', 0)),
             outerRadiusOffset: (config.outerRadiusOffset ?? 52) + getPlayerStatValue('swordLengthBonus', 0),
             length: (config.length ?? 44) + getPlayerStatValue('swordLengthBonus', 0),
         };
@@ -431,7 +432,8 @@ export function createWeaponSystem({
             hitEnemyIds: new Set(),
         });
 
-        meleeCooldownsRef.current.cooldown = Math.max(0.08, (swordCfg.cooldown ?? 0.34) - getPlayerStatValue('weaponCooldownReduction', 0));
+        const swordCooldownFloor = swordCfg.cooldownFloor ?? BASE_TURRET_CONFIG.cooldownFloor ?? 0.08;
+        meleeCooldownsRef.current.cooldown = Math.max(swordCooldownFloor, (swordCfg.cooldown ?? 0.34) - getPlayerStatValue('weaponCooldownReduction', 0));
         return true;
     }
 
@@ -447,7 +449,8 @@ export function createWeaponSystem({
 
         flailStateRef.current.boosted = true;
         flailStateRef.current.boostTimer = flailCfg.boostDuration ?? 1.1;
-        meleeCooldownsRef.current.cooldown = Math.max(0.08, (flailCfg.cooldown ?? 1.25) - getPlayerStatValue('weaponCooldownReduction', 0));
+        const flailCooldownFloor = flailCfg.cooldownFloor ?? BASE_TURRET_CONFIG.cooldownFloor ?? 0.08;
+        meleeCooldownsRef.current.cooldown = Math.max(flailCooldownFloor, (flailCfg.cooldown ?? 1.25) - getPlayerStatValue('weaponCooldownReduction', 0));
         return true;
     }
 
@@ -838,7 +841,7 @@ export function createWeaponSystem({
         // getTurretMuzzlePosition,
         // getSecondaryTurretTarget,
         // rotateTurretAngle,
-        // isTurretAligned,
+        isTurretAligned,
         getEffectiveRange,
         fireTurret,
         updateTurretAutoFire,

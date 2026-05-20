@@ -1,8 +1,6 @@
 
-import { squareOverlapsCircle } from '../../utils/MathUtils.js';
-import { WEAPON_CONFIGS } from '../../configs/weaponConfigs.js';
-
-const MAX_SWORD_ARC_SPAN = Math.PI * 1.5;
+import { squareOverlapsCircle,  } from '../../utils/MathUtils.js';
+import { WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN} from '../../configs/weaponConfigs.js';
 
 export function createProgressionSystem({
     refs,
@@ -157,21 +155,62 @@ export function createProgressionSystem({
             }
         }
         else if (upgradeType === 'weaponCooldown') {
-            if (activeWeaponType !== 'SWORD' && activeWeaponType !== 'FLAIL') {
-                playerStatsRef.current.weaponCooldownReduction += 0.03;
+            const mainWeaponConfig = WEAPON_CONFIGS[activeWeaponType]?.[0] ?? {};
+            const cooldownFloor = mainWeaponConfig.cooldownFloor ?? 0.08;
+            const baseCooldown = mainWeaponConfig.cooldown ?? 0;
+            const burstPenalty = activeWeaponType === 'BURST' ? (playerStatsRef.current.burstCooldownPenalty ?? 0) : 0;
+            const currentReduction = playerStatsRef.current.weaponCooldownReduction ?? 0;
+            const currentCooldown = Math.max(cooldownFloor, baseCooldown + burstPenalty - currentReduction);
+
+            if (currentCooldown <= cooldownFloor + 0.0001) {
+                purchased = false;
+            } else {
+                const remaining = currentCooldown - cooldownFloor;
+                playerStatsRef.current.weaponCooldownReduction += Math.min(0.03, remaining);
+            }
+        }
+        else if (upgradeType === 'secondaryWeaponCooldown0') {
+            if (activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') {
+                const secondaryConfig = WEAPON_CONFIGS[activeWeaponType]?.[1];
+                const cooldownFloor = secondaryConfig?.cooldownFloor ?? 0.08;
+                const baseCooldown = secondaryConfig?.cooldown;
+                if (typeof baseCooldown !== 'number') {
+                    purchased = false;
+                } else {
+                const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
+                    const currentCooldown = Math.max(cooldownFloor, baseCooldown - (reductions[0] ?? 0));
+
+                    if (currentCooldown <= cooldownFloor + 0.0001) {
+                        purchased = false;
+                    } else {
+                        const remaining = currentCooldown - cooldownFloor;
+                        reductions[0] = (reductions[0] ?? 0) + Math.min(0.03, remaining);
+                        playerStatsRef.current.secondaryTurretCooldownReductions = reductions;
+                    }
+                }
             } else {
                 purchased = false;
             }
         }
-        else if (upgradeType === 'secondaryWeaponCooldown') {
-            if (activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') {
-                const maxSecondaryTurrets = activeWeaponType === 'TRIPLE' ? 2 : 1;
-                const upgradeIndex = playerStatsRef.current.secondaryCooldownUpgradeIndex % maxSecondaryTurrets;
+        else if (upgradeType === 'secondaryWeaponCooldown1') {
+            if (activeWeaponType === 'TRIPLE') {
+                const secondaryConfig = WEAPON_CONFIGS[activeWeaponType]?.[2];
+                const cooldownFloor = secondaryConfig?.cooldownFloor ?? 0.08;
+                const baseCooldown = secondaryConfig?.cooldown;
+                if (typeof baseCooldown !== 'number') {
+                    purchased = false;
+                } else {
                 const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
+                    const currentCooldown = Math.max(cooldownFloor, baseCooldown - (reductions[1] ?? 0));
 
-                reductions[upgradeIndex] = (reductions[upgradeIndex] ?? 0) + 0.03;
-                playerStatsRef.current.secondaryTurretCooldownReductions = reductions;
-                playerStatsRef.current.secondaryCooldownUpgradeIndex = (upgradeIndex + 1) % maxSecondaryTurrets;
+                    if (currentCooldown <= cooldownFloor + 0.0001) {
+                        purchased = false;
+                    } else {
+                        const remaining = currentCooldown - cooldownFloor;
+                        reductions[1] = (reductions[1] ?? 0) + Math.min(0.03, remaining);
+                        playerStatsRef.current.secondaryTurretCooldownReductions = reductions;
+                    }
+                }
             } else {
                 purchased = false;
             }
@@ -188,7 +227,18 @@ export function createProgressionSystem({
         }
         else if (upgradeType === 'swordSwingSpeed') {
             if (activeWeaponType === 'SWORD') {
-                playerStatsRef.current.swordSwingDurationReduction += 0.01;
+                const swordConfig = WEAPON_CONFIGS.SWORD?.[0] ?? {};
+                const swingFloor = swordConfig.swingDurationFloor ?? 0.06;
+                const baseSwing = swordConfig.swingDuration ?? 0.16;
+                const currentReduction = playerStatsRef.current.swordSwingDurationReduction ?? 0;
+                const currentSwing = Math.max(swingFloor, baseSwing - currentReduction);
+
+                if (currentSwing <= swingFloor + 0.0001) {
+                    purchased = false;
+                } else {
+                    const remaining = currentSwing - swingFloor;
+                    playerStatsRef.current.swordSwingDurationReduction += Math.min(0.01, remaining);
+                }
             } else {
                 purchased = false;
             }

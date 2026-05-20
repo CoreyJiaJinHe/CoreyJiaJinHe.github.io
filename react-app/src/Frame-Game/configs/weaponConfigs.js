@@ -7,6 +7,7 @@ export const BASE_TURRET_CONFIG = {
     alignTolerance: 0.12,
     fireCooldown: 0,
     cooldown: 0.35,
+    cooldownFloor: 0.08,
     projectileSpeed: 420,
 };
 
@@ -103,6 +104,7 @@ export const WEAPON_CONFIGS = {
                 projectileType: 'MELEE_SWORD',
                 arcSpan: Math.PI * 0.95,
                 swingDuration: 0.16,
+                swingDurationFloor: 0.06,
                 cooldown: 0.34,
                 innerRadiusOffset: 6,
                 outerRadiusOffset: 52,
