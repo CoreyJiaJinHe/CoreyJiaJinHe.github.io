@@ -1,18 +1,9 @@
 import { useEffect, useState } from 'react';
-import { WEAPON_CONFIGS } from '../configs/weaponConfigs.js';
+import { WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN } from '../configs/weaponConfigs.js';
+import { formatNumber, radiansToDegrees } from '../utils/MathUtils.js';
 
-const MAX_SWORD_ARC_SPAN = Math.PI * 1.5;
 
 function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStatsView, mainTurretTurnSpeed, handleShopClose, upgradeCountsRef, upgradeCostRef, pacingProfileRef, activeWeaponType }) {
-
-    function formatNumber(value, digits = 2) {
-        const factor = Math.pow(10, digits);
-        return (Math.round(value * factor) / factor).toString();
-    }
-
-    function radiansToDegrees(value) {
-        return value * (180 / Math.PI);
-    }
 
     function canSpendMaterials(cost) {
         if (materialsView < cost) {

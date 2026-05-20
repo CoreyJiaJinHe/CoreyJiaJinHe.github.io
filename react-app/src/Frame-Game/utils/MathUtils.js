@@ -92,6 +92,21 @@ function clampCameraToWorld(camX, camY, canvas, b) {
   };
 }
 
+    function formatNumber(value, digits = 2) {
+        const factor = Math.pow(10, digits);
+        return (Math.round(value * factor) / factor).toString();
+    }
+
+    function radiansToDegrees(value) {
+        return value * (180 / Math.PI);
+    }
+
+function normalizeAngle(angle) {
+    while (angle > Math.PI) angle -= Math.PI * 2;
+    while (angle < -Math.PI) angle += Math.PI * 2;
+    return angle;
+}
+
 export { 
     squareOverlapsCircle,
     squaresOverlap,
@@ -104,4 +119,7 @@ export {
     clampToWorld,
     clampPointToWorld,
     clampCameraToWorld,
+    formatNumber,
+    radiansToDegrees,
+    normalizeAngle,
 };

@@ -1,14 +1,6 @@
-import { BASE_TURRET_CONFIG, WEAPON_CONFIGS } from '../../configs/weaponConfigs.js';
+import { BASE_TURRET_CONFIG, WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN } from '../../configs/weaponConfigs.js';
 import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from '../../configs/enemyArchetypeConfigs.js';
-import { calculateDistance, randomBetween, worldToScreen } from '../../utils/MathUtils.js';
-
-function normalizeAngle(angle) {
-    while (angle > Math.PI) angle -= Math.PI * 2;
-    while (angle < -Math.PI) angle += Math.PI * 2;
-    return angle;
-}
-
-const MAX_SWORD_ARC_SPAN = Math.PI * 1.5;
+import { calculateDistance, randomBetween, worldToScreen, normalizeAngle } from '../../utils/MathUtils.js';
 
 function getBurstDefaults() {
     return WEAPON_CONFIGS.BURST?.[0] || { burstInterval: 0.15, burstCount: 3 };
@@ -839,29 +831,30 @@ export function createWeaponSystem({
         getWeaponTypeKeys,
         getActiveTurrets,
         syncWeaponType,
-        isMeleeWeaponType,
-        getMainWeaponConfig,
-        getTargetEnemy,
-        getTargetAngle,
-        getTurretMuzzlePosition,
-        getSecondaryTurretTarget,
-        rotateTurretAngle,
-        isTurretAligned,
+        // isMeleeWeaponType,
+        // getMainWeaponConfig,
+        // getTargetEnemy,
+        // getTargetAngle,
+        // getTurretMuzzlePosition,
+        // getSecondaryTurretTarget,
+        // rotateTurretAngle,
+        // isTurretAligned,
         getEffectiveRange,
         fireTurret,
         updateTurretAutoFire,
         updateTurret,
         handleBurstFire,
-        getMeleeAimAngle,
-        isAngleWithinSweep,
-        trySwordAttack,
-        tryFlailAttack,
-        handleMeleeFireRequest,
-        hasSwordAutoFireTarget,
-        hasFlailAutoFireTarget,
-        shouldAutoFireMelee,
-        updateSwordSwings,
-        updateFlail,
+
+        // getMeleeAimAngle,
+        // isAngleWithinSweep,
+        // trySwordAttack,
+        // tryFlailAttack,
+        // handleMeleeFireRequest,
+        // hasSwordAutoFireTarget,
+        // hasFlailAutoFireTarget,
+        // shouldAutoFireMelee,
+        // updateSwordSwings,
+        // updateFlail,
         updateMeleeWeapons,
         getMeleeVisualState,
         updateProjectiles,

@@ -550,9 +550,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getTargetingSystem().ensureValidTarget();
     }
 
-    function getAliveEnemiesSortedByDistance() {
-        return getTargetingSystem().getAliveEnemiesSortedByDistance();
-    }
+    // function getAliveEnemiesSortedByDistance() {
+    //     return getTargetingSystem().getAliveEnemiesSortedByDistance();
+    // }
 
     function cycleTargetReverseClosestToFarthest() {
         return getTargetingSystem().cycleTargetReverseClosestToFarthest();
@@ -730,45 +730,45 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getWeaponSystem().getActiveTurrets();
     }
 
-    function isMeleeWeaponType(type) {
-        return getWeaponSystem().isMeleeWeaponType(type);
-    }
+    // function isMeleeWeaponType(type) {
+    //     return getWeaponSystem().isMeleeWeaponType(type);
+    // }
 
-    function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
-        return getWeaponSystem().getMainWeaponConfig(type);
-    }
+    // function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
+    //     return getWeaponSystem().getMainWeaponConfig(type);
+    // }
 
     function normalizeAngle(angle) {
         return getWeaponSystem().normalizeAngle(angle);
     }
 
-    function getTargetEnemy() {
-        return getWeaponSystem().getTargetEnemy();
-    }
+    // function getTargetEnemy() {
+    //     return getWeaponSystem().getTargetEnemy();
+    // }
 
-    function getTargetAngle() {
-        return getWeaponSystem().getTargetAngle();
-    }
+    // function getTargetAngle() {
+    //     return getWeaponSystem().getTargetAngle();
+    // }
 
-    function getTurretMuzzlePosition(idx) {
-        return getWeaponSystem().getTurretMuzzlePosition(idx);
-    }
+    // function getTurretMuzzlePosition(idx) {
+    //     return getWeaponSystem().getTurretMuzzlePosition(idx);
+    // }
 
-    function getSecondaryTurretTarget(idx, alreadyTargeted) {
-        return getWeaponSystem().getSecondaryTurretTarget(idx, alreadyTargeted);
-    }
+    // function getSecondaryTurretTarget(idx, alreadyTargeted) {
+    //     return getWeaponSystem().getSecondaryTurretTarget(idx, alreadyTargeted);
+    // }
 
-    function rotateTurretAngle(current, target, turnSpeed, dt) {
-        return getWeaponSystem().rotateTurretAngle(current, target, turnSpeed, dt);
-    }
+    // function rotateTurretAngle(current, target, turnSpeed, dt) {
+    //     return getWeaponSystem().rotateTurretAngle(current, target, turnSpeed, dt);
+    // }
 
     function isTurretAligned(current, target, tolerance = 0.13) {
         return getWeaponSystem().isTurretAligned(current, target, tolerance);
     }
 
-    function fireTurret(idx, target) {
-        return getWeaponSystem().fireTurret(idx, target);
-    }
+    // function fireTurret(idx, target) {
+    //     return getWeaponSystem().fireTurret(idx, target);
+    // }
 
     // --- Unified auto-fire logic for all turrets (main and secondary) ---
     function updateTurretAutoFire(dt) {
@@ -1011,45 +1011,45 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getCombatSystem().resolveEnemyHit(enemy, options);
     }
 
-    function getMeleeAimAngle() {
-        return getWeaponSystem().getMeleeAimAngle();
-    }
+    // function getMeleeAimAngle() {
+    //     return getWeaponSystem().getMeleeAimAngle();
+    // }
 
-    function isAngleWithinSweep(angle, start, end) {
-        return getWeaponSystem().isAngleWithinSweep(angle, start, end);
-    }
+    // function isAngleWithinSweep(angle, start, end) {
+    //     return getWeaponSystem().isAngleWithinSweep(angle, start, end);
+    // }
 
-    function trySwordAttack() {
-        return getWeaponSystem().trySwordAttack();
-    }
+    // function trySwordAttack() {
+    //     return getWeaponSystem().trySwordAttack();
+    // }
 
-    function tryFlailAttack() {
-        return getWeaponSystem().tryFlailAttack();
-    }
+    // function tryFlailAttack() {
+    //     return getWeaponSystem().tryFlailAttack();
+    // }
 
-    function handleMeleeFireRequest() {
-        return getWeaponSystem().handleMeleeFireRequest();
-    }
+    // function handleMeleeFireRequest() {
+    //     return getWeaponSystem().handleMeleeFireRequest();
+    // }
 
-    function hasSwordAutoFireTarget() {
-        return getWeaponSystem().hasSwordAutoFireTarget();
-    }
+    // function hasSwordAutoFireTarget() {
+    //     return getWeaponSystem().hasSwordAutoFireTarget();
+    // }
 
-    function hasFlailAutoFireTarget() {
-        return getWeaponSystem().hasFlailAutoFireTarget();
-    }
+    // function hasFlailAutoFireTarget() {
+    //     return getWeaponSystem().hasFlailAutoFireTarget();
+    // }
 
-    function shouldAutoFireMelee() {
-        return getWeaponSystem().shouldAutoFireMelee();
-    }
+    // function shouldAutoFireMelee() {
+    //     return getWeaponSystem().shouldAutoFireMelee();
+    // }
 
-    function updateSwordSwings(dt) {
-        return getWeaponSystem().updateSwordSwings(dt);
-    }
+    // function updateSwordSwings(dt) {
+    //     return getWeaponSystem().updateSwordSwings(dt);
+    // }
 
-    function updateFlail(dt) {
-        return getWeaponSystem().updateFlail(dt);
-    }
+    // function updateFlail(dt) {
+    //     return getWeaponSystem().updateFlail(dt);
+    // }
 
     function updateMeleeWeapons(dt) {
         return getWeaponSystem().updateMeleeWeapons(dt);

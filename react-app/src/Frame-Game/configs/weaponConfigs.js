@@ -10,6 +10,8 @@ export const BASE_TURRET_CONFIG = {
     projectileSpeed: 420,
 };
 
+export const MAX_SWORD_ARC_SPAN = Math.PI * 1.5;
+
 // Consolidated weapon configuration: each weapon type key maps to an array of turret configs
 export const WEAPON_CONFIGS = {
         SINGLE: [

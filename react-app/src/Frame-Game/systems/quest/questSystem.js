@@ -414,7 +414,7 @@ export function createQuestSystem({ refs, callbacks = {} }) {
 
     return {
         initialize,
-        refreshPendingChoices,
+        // refreshPendingChoices, // exposed in case we want to trigger a manual refresh outside of enemy kills
         selectQuest,
         onEnemyKilled,
         onDistanceTraveled,
