@@ -83,11 +83,16 @@ export function createProgressionSystem({
 
     function updateAdvancedDrops() {
         const p = playerRef.current;
+        const pickupRadiusBonus = playerStatsRef.current.pickupRadiusBonus ?? 0;
+        const pickupShape = {
+            ...p,
+            halfSize: (p.halfSize ?? 0) + pickupRadiusBonus,
+        };
 
         for (const drop of advancedDropsRef.current) {
             if (!drop.alive) continue;
 
-            if (!squareOverlapsCircle(p, drop)) {
+            if (!squareOverlapsCircle(pickupShape, drop)) {
                 continue;
             }
 
@@ -144,7 +149,11 @@ export function createProgressionSystem({
             if (playerStatsRef.current.hp >= playerStatsRef.current.maxHP) {
                 purchased = false;
             } else {
-            playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
+                playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
+            }
+        }
+        else if (upgradeType === 'pickupRadius') {
+            playerStatsRef.current.pickupRadiusBonus += 12;
         }
         else if (upgradeType === 'weaponTurnSpeed') {
             turretRef.current.turnSpeed += Math.PI / 18;

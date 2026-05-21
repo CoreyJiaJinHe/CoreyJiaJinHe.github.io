@@ -120,7 +120,13 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
 
         // Row 2: Utility upgrades
         const utilityUpgrades = [
-            { type: 'heal', label: 'Heal for 10', cost: 5 },
+            {
+                type: 'heal',
+                label: healAtFullHealth ? 'Heal for 10 (FULL HP)' : 'Heal for 10',
+                cost: 5,
+                disabled: healAtFullHealth,
+            },
+            { type: 'pickupRadius', label: '+12 Pickup Radius', cost: upgradeCostView },
             {
                 type: 'autoClosestTargeting',
                 label: autoClosestTargetingPurchased ? 'Auto Closest Targeting (OWNED)' : 'Auto Closest Targeting',
@@ -276,7 +282,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
 
                         {/* Row 2: Utilities */}
                         <div style={{ display: 'flex', flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-                            {shopOptions.slice(5, 7).map((option) => (
+                            {shopOptions.slice(5, 8).map((option) => (
                                 <button
                                     key={option.type}
                                     style={fancyButtonsStyle}
@@ -290,7 +296,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
 
                         {/* Rows 3+: Weapon-Specific */}
                         <div style={{ display: 'flex', flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-                            {shopOptions.slice(7).map((option) => (
+                            {shopOptions.slice(8).map((option) => (
                                 <button
                                     key={option.type}
                                     style={fancyButtonsStyle}
@@ -320,6 +326,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
                             <div>ATK: {playerStatsView.atk} | Weapon DMG Bonus: {playerStatsView.weaponDamage}</div>
                             <div>DEF: {playerStatsView.def} | Range: {playerStatsView.range}</div>
                             <div>Speed: {formatNumber(playerSpeed ?? 0, 0)}</div>
+                            <div>Pickup Radius Bonus: +{formatNumber(playerStatsView.pickupRadiusBonus ?? 0, 0)}</div>
                             <div>HP: {playerStatsView.hp} / {playerStatsView.maxHP}</div>
                             <div>Main Turn Speed: {formatNumber(radiansToDegrees(mainTurretTurnSpeed), 1)} deg/s</div>
                             {(activeWeaponType === 'DOUBLE' || activeWeaponType === 'TRIPLE') && (

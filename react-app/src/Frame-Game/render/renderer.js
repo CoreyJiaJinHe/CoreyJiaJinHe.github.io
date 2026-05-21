@@ -1,6 +1,37 @@
 import {worldToScreen} from '../utils/MathUtils.js';
 import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from '../configs/enemyArchetypeConfigs.js';
 
+const COLOR_BACKGROUND = '#3a3a3a';
+const COLOR_WORLD_BOUNDARY_DEFAULT = '#ef4444';
+const COLOR_PLAYER = '#4a9eff';
+const COLOR_PICKUP_RADIUS_OUTLINE = 'rgba(196, 132, 252, 0.45)';
+const COLOR_SWORD_BLADE = '#e2e8f0';
+const COLOR_SWORD_SWEEP = '#f8fafc';
+const COLOR_FLAIL_CHAIN = '#d1d5db';
+const COLOR_FLAIL_ACTIVE = '#fbbf24';
+const COLOR_FLAIL_INACTIVE = '#64748b';
+const COLOR_FLAIL_BALL_ACTIVE = '#fde68a';
+const COLOR_FLAIL_BALL_INACTIVE = '#94a3b8';
+const COLOR_TURRET_MAIN = '#9ad1ff';
+const COLOR_TURRET_SECONDARY = '#7a9abf';
+const COLOR_SECONDARY_RANGE = 'rgba(122, 154, 191, 0.18)';
+const COLOR_BURST_TIP = '#222';
+const COLOR_EXPLOSIVE_TIP = '#e22';
+const COLOR_PROJECTILE = '#ffd54a';
+const COLOR_MAIN_RANGE = 'rgba(154, 209, 255, 0.25)';
+const COLOR_HEALTH_BAR_BG = '#222222';
+const COLOR_HEALTH_BAR_FILL = '#4caf50';
+const COLOR_SHIELD_BAR_BG = '#1a1a1a';
+const COLOR_TARGET_HIGHLIGHT = '#ff3b3b';
+const COLOR_ADV_DROP_FILL = '#c084fc';
+const COLOR_ADV_DROP_STROKE = '#6b21a8';
+const COLOR_MARKER_DROP = '#f59e0b';
+const COLOR_MARKER_BOSS = '#ef4444';
+const COLOR_EFFECT_EXPLOSION_FALLBACK = '#ffb347';
+const COLOR_EFFECT_TEXT_FALLBACK = '#ffffff';
+const COLOR_MARKER_FILL_FALLBACK = '#ffffff';
+const COLOR_MARKER_STROKE = '#111827';
+
 function drawScene(ctx, canvas, gameState) {
     const {
         player,
@@ -19,7 +50,7 @@ function drawScene(ctx, canvas, gameState) {
     } = gameState;
 
     // --- BACKGROUND ---
-    ctx.fillStyle = '#3a3a3a';
+    ctx.fillStyle = COLOR_BACKGROUND;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     function drawWorldBoundary(ctx, canvas, camera, worldBounds) {
@@ -34,7 +65,7 @@ function drawScene(ctx, canvas, gameState) {
         const h = bottomRight.sy - topLeft.sy;
 
         ctx.save();
-        ctx.strokeStyle = worldBounds.borderColor ?? '#ef4444';
+        ctx.strokeStyle = worldBounds.borderColor ?? COLOR_WORLD_BOUNDARY_DEFAULT;
         ctx.lineWidth = worldBounds.borderWidth ?? 4;
         ctx.strokeRect(x, y, w, h);
         ctx.restore();
@@ -43,13 +74,26 @@ function drawScene(ctx, canvas, gameState) {
 
     // --- PLAYER ---
     const { sx, sy } = worldToScreen(player.x, player.y, camera, canvas);
-    ctx.fillStyle = '#4a9eff';
+    ctx.fillStyle = COLOR_PLAYER;
     ctx.fillRect(
         sx - player.halfSize,
         sy - player.halfSize,
         player.halfSize * 2,
         player.halfSize * 2
     );
+
+    const pickupRadiusBonus = playerStats.pickupRadiusBonus ?? 0;
+    if (pickupRadiusBonus > 0) {
+        ctx.save();
+        ctx.strokeStyle = COLOR_PICKUP_RADIUS_OUTLINE;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.arc(sx, sy, (player.halfSize ?? 0) + pickupRadiusBonus, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
 
     // --- MELEE VISUALS ---
     // Only show idle sword if not swinging
@@ -60,7 +104,7 @@ function drawScene(ctx, canvas, gameState) {
             sy: swordOrigin.sy + Math.sin(meleeVisuals.swordIdle.angle) * meleeVisuals.swordIdle.length,
         };
         ctx.save();
-        ctx.strokeStyle = '#e2e8f0';
+        ctx.strokeStyle = COLOR_SWORD_BLADE;
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -82,7 +126,7 @@ function drawScene(ctx, canvas, gameState) {
             sy: swordOrigin.sy + Math.sin(bladeAngle) * bladeLength,
         };
         ctx.save();
-        ctx.strokeStyle = '#e2e8f0';
+        ctx.strokeStyle = COLOR_SWORD_BLADE;
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -97,7 +141,7 @@ function drawScene(ctx, canvas, gameState) {
             const center = worldToScreen(swing.x, swing.y, camera, canvas);
             ctx.save();
             ctx.globalAlpha = Math.max(0.12, Math.min(0.9, swing.life));
-            ctx.fillStyle = '#f8fafc';
+            ctx.fillStyle = COLOR_SWORD_SWEEP;
             ctx.beginPath();
             // Outer arc (fan edge)
             ctx.moveTo(center.sx, center.sy);
@@ -118,14 +162,14 @@ function drawScene(ctx, canvas, gameState) {
         const ballB = worldToScreen(meleeVisuals.flail.balls[1].x, meleeVisuals.flail.balls[1].y, camera, canvas);
 
         ctx.save();
-        ctx.strokeStyle = '#d1d5db';
+        ctx.strokeStyle = COLOR_FLAIL_CHAIN;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(playerPoint.sx, playerPoint.sy);
         ctx.lineTo(anchor.sx, anchor.sy);
         ctx.stroke();
 
-        ctx.strokeStyle = meleeVisuals.flail.active ? '#fbbf24' : '#64748b';
+        ctx.strokeStyle = meleeVisuals.flail.active ? COLOR_FLAIL_ACTIVE : COLOR_FLAIL_INACTIVE;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(anchor.sx, anchor.sy);
@@ -135,7 +179,7 @@ function drawScene(ctx, canvas, gameState) {
         ctx.stroke();
 
         const br = meleeVisuals.flail.ballRadius;
-        ctx.fillStyle = meleeVisuals.flail.active ? '#fde68a' : '#94a3b8';
+        ctx.fillStyle = meleeVisuals.flail.active ? COLOR_FLAIL_BALL_ACTIVE : COLOR_FLAIL_BALL_INACTIVE;
         ctx.beginPath();
         ctx.arc(ballA.sx, ballA.sy, br, 0, Math.PI * 2);
         ctx.arc(ballB.sx, ballB.sy, br, 0, Math.PI * 2);
@@ -156,7 +200,7 @@ function drawScene(ctx, canvas, gameState) {
         ctx.save();
         ctx.translate(sx, sy);
         ctx.rotate(angle + (config.baseOffset || 0));
-        ctx.strokeStyle = isMain ? '#9ad1ff' : '#7a9abf';
+        ctx.strokeStyle = isMain ? COLOR_TURRET_MAIN : COLOR_TURRET_SECONDARY;
         ctx.lineWidth = width;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -179,7 +223,7 @@ function drawScene(ctx, canvas, gameState) {
             const angle = secondaryTurretAngles[idx - 1] || 0;
             const range = playerStats.range * (config.rangeMultiplier ?? 1);
             ctx.save();
-            ctx.strokeStyle = 'rgba(122, 154, 191, 0.18)';
+            ctx.strokeStyle = COLOR_SECONDARY_RANGE;
             ctx.lineWidth = 1.5;
             ctx.setLineDash([6, 6]);
             ctx.beginPath();
@@ -198,16 +242,16 @@ function drawScene(ctx, canvas, gameState) {
             drawTurret(secondaryTurretAngles[0] || 0, { isMain: false, baseOffset: 0.25 });
             drawTurret(secondaryTurretAngles[1] || 0, { isMain: false, baseOffset: -0.25 });
         } else if (weaponType === 'BURST') {
-            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: '#222' });
+            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: COLOR_BURST_TIP });
         } else if (weaponType === 'EXPLOSIVE' || weaponType === 'SINGLE') {
-            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: weaponType === 'EXPLOSIVE' ? '#e22' : undefined });
+            drawTurret(mainTurretAngle, { ...turrets[0], isMain: true, tipColor: weaponType === 'EXPLOSIVE' ? COLOR_EXPLOSIVE_TIP : undefined });
         }
     }
 
     // --- PROJECTILES ---
     for (const projectile of projectiles) {
         const { sx: projectileSx, sy: projectileSy } = worldToScreen(projectile.x, projectile.y, camera, canvas);
-        ctx.fillStyle = '#ffd54a';
+        ctx.fillStyle = COLOR_PROJECTILE;
         ctx.beginPath();
         ctx.arc(projectileSx, projectileSy, projectile.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -216,7 +260,7 @@ function drawScene(ctx, canvas, gameState) {
     // --- MAIN TURRET RANGE ---
     if (!isMeleeWeapon) {
         const range = playerStats.range;
-        ctx.strokeStyle = 'rgba(154, 209, 255, 0.25)';
+        ctx.strokeStyle = COLOR_MAIN_RANGE;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(sx, sy, range, 0, Math.PI * 2);
@@ -385,9 +429,9 @@ function drawScene(ctx, canvas, gameState) {
         const barX = enemySx - enemy.halfSize;
         const barY = enemySy - enemy.halfSize - 12;
         const healthRatio = enemy.hp / enemy.maxHp;
-        ctx.fillStyle = '#222222';
+        ctx.fillStyle = COLOR_HEALTH_BAR_BG;
         ctx.fillRect(barX, barY, barWidth, barHeight);
-        ctx.fillStyle = '#4caf50';
+        ctx.fillStyle = COLOR_HEALTH_BAR_FILL;
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
 
         // Shield health bar for armored
@@ -398,7 +442,7 @@ function drawScene(ctx, canvas, gameState) {
                 ?? Math.max(1, enemy.shieldHealth);
             const shieldRatio = Math.max(0, Math.min(1, enemy.shieldHealth / Math.max(1, maxShield)));
             const barY2 = barY - 8;
-            ctx.fillStyle = '#1a1a1a';
+            ctx.fillStyle = COLOR_SHIELD_BAR_BG;
             ctx.fillRect(barX, barY2, barWidth, barHeight);
             ctx.fillStyle = archetypeCfg.shieldColor ?? archetypeCfg.borderColor ?? archetypeCfg.color;
             ctx.fillRect(barX, barY2, barWidth * shieldRatio, barHeight);
@@ -407,7 +451,7 @@ function drawScene(ctx, canvas, gameState) {
         // Target highlight
         if (enemy.id === targetEnemyId) {
             const pad = 4;
-            ctx.strokeStyle = '#ff3b3b';
+            ctx.strokeStyle = COLOR_TARGET_HIGHLIGHT;
             ctx.lineWidth = 3;
             ctx.strokeRect(
                 enemySx - enemy.halfSize - pad,
@@ -421,11 +465,11 @@ function drawScene(ctx, canvas, gameState) {
     // --- ADVANCED DROPS ---
     for (const drop of advancedDrops) {
         const { sx: dropSx, sy: dropSy } = worldToScreen(drop.x, drop.y, camera, canvas);
-        ctx.fillStyle = '#c084fc';
+        ctx.fillStyle = COLOR_ADV_DROP_FILL;
         ctx.beginPath();
         ctx.arc(dropSx, dropSy, drop.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#6b21a8';
+        ctx.strokeStyle = COLOR_ADV_DROP_STROKE;
         ctx.lineWidth = 2;
         ctx.stroke();
     }
@@ -438,7 +482,7 @@ function drawScene(ctx, canvas, gameState) {
                 id: drop.id,
                 x: drop.x,
                 y: drop.y,
-                color: '#f59e0b',
+                color: COLOR_MARKER_DROP,
                 ringOffset: 44,
                 size: 12,
             })),
@@ -448,7 +492,7 @@ function drawScene(ctx, canvas, gameState) {
                 id: boss.id,
                 x: boss.x,
                 y: boss.y,
-                color: '#ef4444',
+                color: COLOR_MARKER_BOSS,
                 ringOffset: 64,
                 size: 14,
             })),
@@ -477,7 +521,7 @@ function drawEffects(ctx, effects, shake, player, camera, canvas) {
             ctx.globalAlpha = Math.max(0, textObj.life);
             ctx.beginPath();
             ctx.arc(textObj.x, textObj.y, textObj.explosionRadius, 0, Math.PI * 2);
-            ctx.fillStyle = textObj.color || '#ffb347';
+            ctx.fillStyle = textObj.color || COLOR_EFFECT_EXPLOSION_FALLBACK;
             ctx.fill();
             ctx.restore();
         }
@@ -485,7 +529,7 @@ function drawEffects(ctx, effects, shake, player, camera, canvas) {
             ctx.save();
             ctx.globalAlpha = Math.max(0, textObj.life);
             ctx.font = 'bold 18px Arial';
-            ctx.fillStyle = textObj.color || 'white';
+            ctx.fillStyle = textObj.color || COLOR_EFFECT_TEXT_FALLBACK;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(textObj.text, textObj.x, textObj.y);
@@ -529,8 +573,8 @@ function drawOffscreenMarkers(ctx, canvas, camera, player, targets) {
         ctx.translate(mx, my);
         ctx.rotate(angle);
 
-        ctx.fillStyle = target.color || '#fff';
-        ctx.strokeStyle = '#111827';
+        ctx.fillStyle = target.color || COLOR_MARKER_FILL_FALLBACK;
+        ctx.strokeStyle = COLOR_MARKER_STROKE;
         ctx.lineWidth = 2;
 
         ctx.beginPath();
