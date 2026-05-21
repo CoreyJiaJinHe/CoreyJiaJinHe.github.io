@@ -249,6 +249,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         explosionBonusPct: 0,
         def: 2,
         range: 220,
+        pickupRadiusBonus: 0,
         // Additional stats for secondary turrets
         secondaryTurretAngle: 0,
         secondaryTurretTurnSpeed: Math.PI * 1.8,
@@ -302,6 +303,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             explosionBonusPct: 0,
             def: 2,
             range: 220,
+            pickupRadiusBonus: 0,
             secondaryTurretAngle: 0,
             secondaryTurretTurnSpeed: Math.PI * 1.8,
         };
@@ -733,45 +735,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return getWeaponSystem().getActiveTurrets();
     }
 
-    // function isMeleeWeaponType(type) {
-    //     return getWeaponSystem().isMeleeWeaponType(type);
-    // }
-
-    // function getMainWeaponConfig(type = activeWeaponTypeRef.current) {
-    //     return getWeaponSystem().getMainWeaponConfig(type);
-    // }
-
     function normalizeAngle(angle) {
         return getWeaponSystem().normalizeAngle(angle);
     }
 
-    // function getTargetEnemy() {
-    //     return getWeaponSystem().getTargetEnemy();
-    // }
-
-    // function getTargetAngle() {
-    //     return getWeaponSystem().getTargetAngle();
-    // }
-
-    // function getTurretMuzzlePosition(idx) {
-    //     return getWeaponSystem().getTurretMuzzlePosition(idx);
-    // }
-
-    // function getSecondaryTurretTarget(idx, alreadyTargeted) {
-    //     return getWeaponSystem().getSecondaryTurretTarget(idx, alreadyTargeted);
-    // }
-
-    // function rotateTurretAngle(current, target, turnSpeed, dt) {
-    //     return getWeaponSystem().rotateTurretAngle(current, target, turnSpeed, dt);
-    // }
-
     function isTurretAligned(current, target, tolerance = 0.13) {
         return getWeaponSystem().isTurretAligned(current, target, tolerance);
     }
-
-    // function fireTurret(idx, target) {
-    //     return getWeaponSystem().fireTurret(idx, target);
-    // }
 
     // --- Unified auto-fire logic for all turrets (main and secondary) ---
     function updateTurretAutoFire(dt) {
@@ -922,34 +892,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }
 
-    // //Switch to import later for these four.
-    // function clampToWorld(x, y, b) {
-    //     return {
-    //         x: Math.max(b.minX, Math.min(b.maxX, x)),
-    //         y: Math.max(b.minY, Math.min(b.maxY, y)),
-    //     };
-    // }
-
-    // function clamp(value, min, max) {
-    //     return Math.max(min, Math.min(max, value));
-    // }
-
-    // function clampPointToWorld(x, y, bounds = worldBoundsRef.current, halfSize = 0) {
-    //     return {
-    //         x: clamp(x, bounds.minX + halfSize, bounds.maxX - halfSize),
-    //         y: clamp(y, bounds.minY + halfSize, bounds.maxY - halfSize),
-    //     };
-    // }
-
-    // function clampCameraToWorld(camX, camY, canvas, b) {
-    //     const halfW = canvas.width / 2;
-    //     const halfH = canvas.height / 2;
-    //     return {
-    //         x: Math.max(b.minX + halfW, Math.min(b.maxX - halfW, camX)),
-    //         y: Math.max(b.minY + halfH, Math.min(b.maxY - halfH, camY)),
-    //     };
-    // }
-
 
     function updatePlayerMovement(dt, canvas) {
         const p = playerRef.current;
@@ -1013,46 +955,6 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function resolveEnemyHit(enemy, options = {}) {
         return getCombatSystem().resolveEnemyHit(enemy, options);
     }
-
-    // function getMeleeAimAngle() {
-    //     return getWeaponSystem().getMeleeAimAngle();
-    // }
-
-    // function isAngleWithinSweep(angle, start, end) {
-    //     return getWeaponSystem().isAngleWithinSweep(angle, start, end);
-    // }
-
-    // function trySwordAttack() {
-    //     return getWeaponSystem().trySwordAttack();
-    // }
-
-    // function tryFlailAttack() {
-    //     return getWeaponSystem().tryFlailAttack();
-    // }
-
-    // function handleMeleeFireRequest() {
-    //     return getWeaponSystem().handleMeleeFireRequest();
-    // }
-
-    // function hasSwordAutoFireTarget() {
-    //     return getWeaponSystem().hasSwordAutoFireTarget();
-    // }
-
-    // function hasFlailAutoFireTarget() {
-    //     return getWeaponSystem().hasFlailAutoFireTarget();
-    // }
-
-    // function shouldAutoFireMelee() {
-    //     return getWeaponSystem().shouldAutoFireMelee();
-    // }
-
-    // function updateSwordSwings(dt) {
-    //     return getWeaponSystem().updateSwordSwings(dt);
-    // }
-
-    // function updateFlail(dt) {
-    //     return getWeaponSystem().updateFlail(dt);
-    // }
 
     function updateMeleeWeapons(dt) {
         return getWeaponSystem().updateMeleeWeapons(dt);
@@ -1158,25 +1060,27 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         const ctx = canvas.getContext('2d');
 
         const cleanupCanvas = setupCanvas(canvas);
-        loadSave(); // <- before enemy spawn so difficulty scaling uses loaded kills
+        const loadResult = loadSave(); // <- before enemy spawn so difficulty scaling uses loaded kills
         getQuestSystem().initialize();
 
-        const { startCount } = enemySpawnConfigRef.current;
+        if (!loadResult?.hasEnemies) {
+            const { startCount } = enemySpawnConfigRef.current;
 
-        const y = killsRef.current;
-        const scaled = getDifficultyFromKills(y);
+            const y = killsRef.current;
+            const scaled = getDifficultyFromKills(y);
 
-        enemiesRef.current = Array.from({ length: startCount }, () =>
-            createEnemy(
-                playerRef.current,
-                {
-                    hp: scaled.hp,
-                    atk: scaled.atk,
-                    def: scaled.def,
-                },
-                pickRandomEnemyArchetype(y)
-            )
-        );
+            enemiesRef.current = Array.from({ length: startCount }, () =>
+                createEnemy(
+                    playerRef.current,
+                    {
+                        hp: scaled.hp,
+                        atk: scaled.atk,
+                        def: scaled.def,
+                    },
+                    pickRandomEnemyArchetype(y)
+                )
+            );
+        }
         ensureValidTarget();
 
         const cleanupInput = setupInput(canvas);
@@ -1241,6 +1145,16 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             const saveFile = {
                 player: { ...playerRef.current },
                 playerStats: { ...playerStatsRef.current },
+                advancedDrops: advancedDropsRef.current.map((drop) => ({ ...drop })),
+                enemies: enemiesRef.current.map((enemy) => ({ ...enemy })),
+                enemySpawnTimer: enemySpawnTimerRef.current,
+                bossSpawnTimer: bossSpawnTimerRef.current,
+                targetEnemyId: targetEnemyIdRef.current,
+                turretAngle: turretRef.current.angle,
+                secondaryTurretAngles: [...secondaryTurretAnglesRef.current],
+                upgradeCounts: upgradeCountsRef.current,
+                upgradeCost: upgradeCostRef.current,
+                revivesBought: revivesBoughtRef.current,
                 materials: materialsRef.current,
                 kills: killsRef.current,
                 bossesDefeated: bossesDefeatedRef.current,
@@ -1264,7 +1178,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     function loadSave() {
         try {
             const raw = localStorage.getItem('frameGameSave');
-            if (!raw) return;
+            if (!raw) return { hasEnemies: false };
 
             const save = JSON.parse(raw);
 
@@ -1276,6 +1190,33 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             }
             if (save.playerStats) {
                 Object.assign(playerStatsRef.current, save.playerStats);
+            }
+            if (Array.isArray(save.advancedDrops)) {
+                advancedDropsRef.current = save.advancedDrops.map((drop) => ({ ...drop }));
+            }
+            if (Array.isArray(save.enemies)) {
+                enemiesRef.current = save.enemies.map((enemy) => ({ ...enemy }));
+            }
+            if (typeof save.enemySpawnTimer === 'number') {
+                enemySpawnTimerRef.current = save.enemySpawnTimer;
+            }
+            if (typeof save.bossSpawnTimer === 'number') {
+                bossSpawnTimerRef.current = save.bossSpawnTimer;
+            }
+            if (typeof save.targetEnemyId === 'string' || save.targetEnemyId === null) {
+                setTargetEnemyId(save.targetEnemyId);
+            }
+            if (typeof save.turretAngle === 'number') {
+                turretRef.current.angle = save.turretAngle;
+            }
+            if (Array.isArray(save.secondaryTurretAngles)) {
+                secondaryTurretAnglesRef.current = [...save.secondaryTurretAngles];
+            }
+            if (typeof save.upgradeCounts === 'number') {
+                upgradeCountsRef.current = Math.max(0, save.upgradeCounts);
+            }
+            if (typeof save.upgradeCost === 'number') {
+                upgradeCostRef.current = Math.max(0, save.upgradeCost);
             }
 
             if (typeof playerStatsRef.current.weaponDamage !== 'number') playerStatsRef.current.weaponDamage = 0;
@@ -1301,6 +1242,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             if (typeof playerStatsRef.current.burstProjectileCountBonus !== 'number') playerStatsRef.current.burstProjectileCountBonus = 0;
             if (typeof playerStatsRef.current.burstCooldownPenalty !== 'number') playerStatsRef.current.burstCooldownPenalty = 0;
             if (typeof playerStatsRef.current.autoClosestTargetingEnabled !== 'boolean') playerStatsRef.current.autoClosestTargetingEnabled = false;
+            if (typeof playerStatsRef.current.pickupRadiusBonus !== 'number') playerStatsRef.current.pickupRadiusBonus = 0;
             if (typeof playerStatsRef.current.secondaryTurretTurnSpeed !== 'number') {
                 playerStatsRef.current.secondaryTurretTurnSpeed = Math.PI * 1.8;
             }
@@ -1351,8 +1293,11 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
             setBossesDefeatedView(bossesDefeatedRef.current);
             setPlayerStatsView({ ...playerStatsRef.current });
 
+            return { hasEnemies: Array.isArray(save.enemies) && save.enemies.length > 0 };
+
         } catch (e) {
             console.error('Failed to load save:', e);
+            return { hasEnemies: false };
         }
     }
 

@@ -86,6 +86,18 @@ function copyCompletedDetail(detail) {
     };
 }
 
+// Input: an array.
+// Output: a new shuffled copy of the array.
+// Purpose: randomize quest offers while leaving the original array untouched.
+function shuffledCopy(items) {
+    const result = [...items];
+    for (let i = result.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+}
+
 // Input: a quest, the grantMaterials callback, and optional completion tracker refs.
 // Output: none.
 // Purpose: mark a quest complete, record hidden completion data, and award materials once.
@@ -204,10 +216,12 @@ export function createQuestSystem({ refs, callbacks = {} }) {
     // Purpose: build the candidate pool for the next quest selection round.
     function buildUnlockedCandidates() {
         const unavailable = currentUnavailableIds();
-        return QUEST_DEFS
+        const available = QUEST_DEFS
             .filter((def) => isUnlocked(def))
             .filter((def) => !unavailable.has(def.id))
             .map(copyQuestRecord);
+
+        return shuffledCopy(available);
     }
 
     /*

@@ -141,6 +141,9 @@ export function createProgressionSystem({
 
         }
         else if (upgradeType === 'heal') {
+            if (playerStatsRef.current.hp >= playerStatsRef.current.maxHP) {
+                purchased = false;
+            } else {
             playerStatsRef.current.hp = Math.min(playerStatsRef.current.maxHP, playerStatsRef.current.hp + 10);
         }
         else if (upgradeType === 'weaponTurnSpeed') {

@@ -107,6 +107,7 @@ function FrameGameShopOverlay({ shopUpgradeCallbacks, materialsView, playerStats
             (WEAPON_CONFIGS.SWORD?.[0]?.swingDuration ?? 0.16) - (playerStatsView?.swordSwingDurationReduction ?? 0)
         );
         const swordSwingCapped = swordSwingDuration <= SWORD_SWING_FLOOR + 0.0001;
+        const healAtFullHealth = (playerStatsView?.hp ?? 0) >= (playerStatsView?.maxHP ?? 0);
 
         // Row 1: Base stats
         const baseStats = [
