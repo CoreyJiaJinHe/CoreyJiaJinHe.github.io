@@ -27,6 +27,8 @@ export function createTargetingSystem({
             });
     }
 
+    // Reverse cycle starts from the closest enemy and walks backward through the
+    // distance-sorted list. If the current target is missing, it re-anchors to closest.
     function cycleTargetReverseClosestToFarthest() {
         const sorted = getAliveEnemiesSortedByDistance();
 
@@ -51,6 +53,7 @@ export function createTargetingSystem({
     }
 
 
+    // Forward cycle starts from the closest enemy and walks forward through the list.
     function cycleTargetClosestToFarthest() {
         const sorted = getAliveEnemiesSortedByDistance();
 
@@ -73,7 +76,9 @@ export function createTargetingSystem({
         setTargetEnemyId(sorted[nextIndex].id);
     }
 
-    function ensureValidTarget(){
+    // Keep the current target when manual targeting is active.
+    // Auto-closest mode always snaps to the nearest living enemy.
+    function ensureValidTarget() {
         const sorted = getAliveEnemiesSortedByDistance();
         if (sorted.length === 0) {
             setTargetEnemyId(null);
@@ -88,20 +93,17 @@ export function createTargetingSystem({
             return;
         }
 
-        const closestId = sorted[0].id;
         const currentId = targetEnemyIdRef.current;
         const currentIndex = sorted.findIndex((enemy) => enemy.id === currentId);
 
-        // If no target             or target is not closest, snap to closest first. 
-        // (I don't want it to automatically snap)
-        if (currentIndex === -1 ) { //|| currentId !== closestId
-            setTargetEnemyId(closestId);
+        // If there is no valid target, fall back to the closest enemy once.
+        if (currentIndex === -1) {
+            setTargetEnemyId(sorted[0].id);
             return;
         }
     }
 
     return {
-        getAliveEnemiesSortedByDistance,
         cycleTargetReverseClosestToFarthest,
         cycleTargetClosestToFarthest,
         ensureValidTarget,

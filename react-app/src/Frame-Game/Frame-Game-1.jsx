@@ -19,7 +19,7 @@ import { createTargetingSystem } from './systems/targeting/targetingSystem.js';
 import { createEffectsSystem } from './systems/effects/effectsSystem.js';
 import { createQuestSystem, QUEST_DEFS } from './systems/quest/questSystem.js';
 
-import { clampToWorld, clampPointToWorld,clampCameraToWorld } from './utils/MathUtils.js';
+import { clampToWorld, clampPointToWorld, clampCameraToWorld } from './utils/MathUtils.js';
 
 
 import FrameGameShopOverlay from './components/Shop.jsx'
@@ -36,8 +36,11 @@ import {
     worldToScreen,
     isOnScreen
 } from './utils/MathUtils.js';
-import { drawScene, drawEffects, drawOffscreenMarkers } from './render/renderer.js';
+import { drawScene } from './render/renderer.js';
 
+// Input: component props `{ largeMode, toggleLargeMode }`
+// Output: JSX tree for the frame-game screen and overlays
+// Purpose: root orchestrator that wires systems, simulation flow, and UI state.
 function FrameGame1({ largeMode, toggleLargeMode }) {
     const canvasRef = useRef(null);
 
@@ -53,6 +56,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         activeQuestOverlayOpen: false,
     };
 
+    // Input: current UI reducer state and action
+    // Output: next UI reducer state
+    // Purpose: centralizes all UI toggle and overlay transitions.
     function uiReducer(state, action) {
         switch (action.type) {
             case 'toggleMouseSeek':
@@ -149,30 +155,43 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     }
 
+    // Input: next value or updater function, and current value
+    // Output: resolved next value
+    // Purpose: supports value/function setter semantics for local helper setters.
     function resolveReducerValue(nextValue, currentValue) {
         return typeof nextValue === 'function' ? nextValue(currentValue) : nextValue;
     }
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: updates shop visibility through reducer dispatch.
     function setShopOpen(nextValue) {
         const resolved = resolveReducerValue(nextValue, shopOpen);
         dispatchUi({ type: 'setShopOpen', value: resolved });
     }
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: updates settings overlay visibility through reducer dispatch.
     function setSettingsOpen(nextValue) {
         const resolved = resolveReducerValue(nextValue, settingsOpen);
         dispatchUi({ type: 'setSettingsOpen', value: resolved });
     }
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: updates keybind overlay visibility through reducer dispatch.
     function setKeybindOpen(nextValue) {
         const resolved = resolveReducerValue(nextValue, keybindOpen);
         dispatchUi({ type: 'setKeybindOpen', value: resolved });
     }
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: updates active quest overlay visibility through reducer dispatch.
     function setActiveQuestOverlayOpen(nextValue) {
         const resolved = resolveReducerValue(nextValue, activeQuestOverlayOpen);
         dispatchUi({ type: 'setActiveQuestOverlayOpen', value: resolved });
     }
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: syncs first-weapon-upgrade open state across ref and reducer state.
     function setFirstWeaponUpgradeOpen(nextValue) {
         const resolved = resolveReducerValue(nextValue, firstWeaponUpgradeOpen);
         firstWeaponUpgradeOpenRef.current = resolved;
@@ -181,10 +200,12 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         });
     }
 
+    // Purpose: closes keybinds overlay.
     function handleKeybindsClose() {
         dispatchUi({ type: 'setKeybindOpen', value: false });
     }
 
+    // Purpose: closes settings overlay.
     function handleSettingsClose() {
         dispatchUi({ type: 'setSettingsOpen', value: false });
     }
@@ -264,15 +285,18 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const revivesBoughtRef = useRef(0);
     const BASE_REVIVE_COST = 100;
 
+    // Output: numeric revive cost
+    // Purpose: computes revive price using exponential scaling by purchases.
     function getReviveCost() {
         return BASE_REVIVE_COST * Math.pow(2, revivesBoughtRef.current);
     }
 
-
+    // Purpose: starts a fresh run by delegating to hard restart.
     function startNewGame() {
         hardRestartRun()
     }
 
+    // Purpose: resets all runtime refs/state and reseeds initial run entities.
     function hardRestartRun() {
         localStorage.removeItem('frameGameSave');
 
@@ -318,8 +342,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
         materialsRef.current = 0;
         setMaterialsView(0);
-        if (developerMode)
-        {
+        if (developerMode) {
             materialsRef.current = 1000;
             setMaterialsView(1000);
         }
@@ -379,6 +402,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         ensureValidTarget();
     }
 
+    // Purpose: spends materials to revive player with partial HP.
     function buyOneLife() {
         const cost = getReviveCost();
         if (materialsRef.current < cost) return;
@@ -396,7 +420,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const tabPressedRef = useRef(false);
     const enemiesRef = useRef([]);
-    
+
 
     const enemyArchetypeSpawnConfigRef = useRef(createDefaultEnemyArchetypeSpawnConfig());
 
@@ -404,10 +428,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const killsRef = useRef(0);
     const [killsView, setKillsView] = useState(0);
     const enemySpawnConfigRef = useRef({
-            startCount: 5, // Hard cap seed count: how many regular enemies are created at game start.
-            maxActive: 100, // Hard cap population ceiling: regular enemies cannot exceed this, regardless of difficulty profile.
-            spawnInterval: 0.1, // Hard cap spawn floor in seconds: regular refill spawn delay will never go below this value.
-        });
+        startCount: 5, // Hard cap seed count: how many regular enemies are created at game start.
+        maxActive: 100, // Hard cap population ceiling: regular enemies cannot exceed this, regardless of difficulty profile.
+        spawnInterval: 0.1, // Hard cap spawn floor in seconds: regular refill spawn delay will never go below this value.
+    });
+    // Input: kills count
+    // Output: difficulty profile object `{ maxActive, spawnInterval, profileSpawnInterval, hp, atk, def }`
+    // Purpose: derives scaled spawn pacing and enemy stats with global hard caps.
     function getDifficultyFromKills(kills) {
         const d = DIFFICULTY_PROFILES[pacingProfileRef.current]; // Active pacing profile config (P1/P2/P3).
         const effectiveKills = scaledEnemiesEnabledRef.current ? kills : 0; // Disable progression scaling when toggle is OFF.
@@ -437,6 +464,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
     const enemySystemRef = useRef(null);
 
+    // Output: enemy system instance
+    // Purpose: lazily creates and returns enemy subsystem with shared refs/callbacks.
     function getEnemySystem() {
         if (!enemySystemRef.current) {
             enemySystemRef.current = createEnemySystem({
@@ -462,23 +491,36 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     normalizeAngle: getWeaponSystem().normalizeAngle,
                     fireEnemyTurret: getWeaponSystem().fireEnemyTurret,
                 }),
+                callbacks: {
+                    emitEvent: emitGameEvent,
+                },
             });
         }
         return enemySystemRef.current;
     }
 
+    // Input: kills count
+    // Output: archetype id
+    // Purpose: wrapper for enemy-system archetype selection.
     function pickRandomEnemyArchetype(kills) {
         return getEnemySystem().pickRandomEnemyArchetype(kills);
     }
 
+    // Input: player object, stat override map, and archetype
+    // Output: enemy entity object
+    // Purpose: wrapper for enemy-system enemy factory.
     function createEnemy(player, statOverrides = {}, archetype = ENEMY_ARCHETYPES.NORMAL) {
         return getEnemySystem().createEnemy(player, statOverrides, archetype);
     }
 
+    // Input: dt (seconds)
+    // Purpose: updates enemy AI simulation.
     function updateEnemyAi(dt) {
         getEnemySystem().updateEnemyAi(dt);
     }
 
+    // Input: dt (seconds), canvas
+    // Purpose: updates regular enemy spawn population.
     function updateEnemyPopulation(dt, canvas) {
         getEnemySystem().updateEnemyPopulation(dt);
     }
@@ -489,10 +531,13 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const [bossesDefeatedView, setBossesDefeatedView] = useState(0);
     const bossesDefeatedRef = useRef(0);
 
+    // Input: dt (seconds), canvas
+    // Purpose: updates boss spawn flow.
     function updateBossSpawn(dt, canvas) {
         getEnemySystem().updateBossSpawn(dt);
     }
 
+    // Purpose: removes distant entities through enemy-system culling logic.
     function pruneFarEntities() {
         getEnemySystem().pruneFarEntities();
     }
@@ -500,6 +545,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const scaledEnemiesEnabledRef = useRef(false);
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: synchronizes scaled-enemies toggle to both ref and reducer state.
     function setScaledEnemiesEnabledSync(nextValue) {
         const resolved =
             typeof nextValue === 'function'
@@ -512,6 +559,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const pacingProfileRef = useRef(PROFILE.P2);
 
+    // Input: nextValue (profile value or updater function)
+    // Purpose: synchronizes pacing profile to both ref and reducer state.
     function setPacingProfileSync(nextValue) {
         const resolved =
             typeof nextValue === 'function'
@@ -526,6 +575,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const targetEnemyIdRef = useRef(null);
     const [targetEnemyIdView, setTargetEnemyIdView] = useState(null);
 
+    // Input: target enemy id (or null)
+    // Purpose: keeps target id synchronized between ref and state view.
     function setTargetEnemyId(nextValue) {
         targetEnemyIdRef.current = nextValue;
         setTargetEnemyIdView(nextValue);
@@ -534,6 +585,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const targetingSystemRef = useRef(null);
 
+    // Output: targeting system instance
+    // Purpose: lazily creates and returns targeting subsystem.
     function getTargetingSystem() {
         if (!targetingSystemRef.current) {
             targetingSystemRef.current = createTargetingSystem({
@@ -551,27 +604,27 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return targetingSystemRef.current;
     }
 
+    // Purpose: validates/corrects active target based on current targeting rules.
     function ensureValidTarget() {
         return getTargetingSystem().ensureValidTarget();
     }
 
-    // function getAliveEnemiesSortedByDistance() {
-    //     return getTargetingSystem().getAliveEnemiesSortedByDistance();
-    // }
-
+    // Purpose: cycles target selection in reverse distance order.
     function cycleTargetReverseClosestToFarthest() {
         return getTargetingSystem().cycleTargetReverseClosestToFarthest();
     }
 
+    // Purpose: cycles target selection in forward distance order.
     function cycleTargetClosestToFarthest() {
         return getTargetingSystem().cycleTargetClosestToFarthest();
     }
 
-    // const [firstWeaponUpgradeOpen, setFirstWeaponUpgradeOpen] = useState(true);
     const firstWeaponUpgradeOpenRef = useRef(firstWeaponUpgradeOpen);
 
-    function applyPlayerProjectileDamage(amount) {
-        playerTakeDamage(amount, playerRef.current.x, playerRef.current.y, true);
+    // Input: damage amount and optional world-space hit position
+    // Purpose: applies projectile damage to player and syncs player view state.
+    function applyPlayerProjectileDamage(amount, x = playerRef.current.x, y = playerRef.current.y) {
+        playerTakeDamage(amount, x, y, true);
         if (playerStatsRef.current.hp <= 0) {
             playerStatsRef.current.alive = false;
         }
@@ -580,6 +633,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const progressionSystemRef = useRef(null);
 
+    // Output: progression system instance
+    // Purpose: lazily creates and returns progression subsystem.
     function getProgressionSystem() {
         if (!progressionSystemRef.current) {
             progressionSystemRef.current = createProgressionSystem({
@@ -600,25 +655,33 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     setBossesDefeatedView: setBossesDefeatedView,
                     setPlayerStatsView: setPlayerStatsView,
                     setFirstWeaponUpgradeOpen: setFirstWeaponUpgradeOpen,
+                    emitEvent: emitGameEvent,
                 }
             });
         }
         return progressionSystemRef.current;
     }
 
+    // Input: enemy entity
+    // Purpose: single kill side-effect entry for quest and progression updates.
     function onEnemyKilled(enemy) {
+        if (!enemy || enemy.__killHandled) {
+            return;
+        }
+        enemy.__killHandled = true;
+
         getQuestSystem().onEnemyKilled(enemy);
         return getProgressionSystem().onEnemyKilled(enemy);
     }
+
+
+    // Input: material amount
+    // Purpose: delegates material grant to progression system.
     function grantMaterials(amount) {
         return getProgressionSystem().grantMaterials(amount);
     }
-    function maybeSpawnAdvancedDrop(x, y) {
-        return getProgressionSystem().maybeSpawnAdvancedDrop(x, y);
-    }
-    function applyAdvancedModifier(drop) {
-        return getProgressionSystem().applyAdvancedModifier(drop);
-    }
+    
+    // Purpose: updates pickup overlap and advanced drop resolution.
     function updateAdvancedDrops() {
         return getProgressionSystem().updateAdvancedDrops();
     }
@@ -683,6 +746,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         firing: false,
     });
 
+    // Output: weapon system instance
+    // Purpose: lazily creates and returns weapon subsystem.
     function getWeaponSystem() {
         if (!weaponSystemRef.current) {
             weaponSystemRef.current = createWeaponSystem({
@@ -711,6 +776,7 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     onEnemyKilled,
                     onPlayerHit: applyPlayerProjectileDamage,
                     onExplosion: triggerExplosionEffect,
+                    emitEvent: emitGameEvent,
                 },
             });
         }
@@ -719,6 +785,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
     const hasChosenAdvancedWeaponRef = useRef(false);
 
+    // Input: weapon type key
+    // Purpose: applies selected advanced weapon and closes first-upgrade overlay.
     function selectAdvancedWeaponUpgrade(weaponType) {
         if (!WEAPON_CONFIGS[weaponType]) {
             console.error('Invalid weapon upgrade selection:', weaponType);
@@ -731,32 +799,48 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         dispatchUi({ type: 'closeFirstWeaponUpgrade' });
     }
 
+    // Output: active turret config list
+    // Purpose: forwards active turret data for render and simulation.
     function getActiveTurrets() {
         return getWeaponSystem().getActiveTurrets();
     }
 
+    // Input: angle in radians
+    // Output: normalized angle in radians
+    // Purpose: forwards weapon-system angle normalization utility.
     function normalizeAngle(angle) {
         return getWeaponSystem().normalizeAngle(angle);
     }
 
+    // Input: current angle, target angle, optional tolerance
+    // Output: boolean aligned flag
+    // Purpose: forwards turret alignment check.
     function isTurretAligned(current, target, tolerance = 0.13) {
         return getWeaponSystem().isTurretAligned(current, target, tolerance);
     }
 
     // --- Unified auto-fire logic for all turrets (main and secondary) ---
+    // Input: dt (seconds)
+    // Purpose: updates auto-fire decisions for active turrets.
     function updateTurretAutoFire(dt) {
         getWeaponSystem().updateTurretAutoFire(dt);
     }
 
     // --- Main turret aim and player-controlled fire ---
+    // Input: dt (seconds)
+    // Purpose: updates player turret aim and manual fire behavior.
     function updateTurret(dt) {
         getWeaponSystem().updateTurret(dt);
     }
 
     // --- Burst fire handler ---
+    // Input: dt (seconds)
+    // Purpose: advances burst-fire sequencing/timers.
     function handleBurstFire(dt) {
         getWeaponSystem().handleBurstFire(dt);
     }
+    // Input: dt (seconds), canvas
+    // Purpose: advances projectile simulation and collision outcomes.
     function updateProjectiles(dt, canvas) {
         return getWeaponSystem().updateProjectiles(dt);
     }
@@ -793,6 +877,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const mouseSeekModeRef = useRef(false);
     const mouseRef = useRef({ x: 0, y: 0, inside: false });
 
+    // Input: nextValue (boolean or updater function)
+    // Purpose: syncs mouse-seek mode to ref and reducer state.
     function setMouseSeekMode(nextValue) {
         const resolved =
             typeof nextValue === 'function'
@@ -873,6 +959,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         }
     });
 
+    // Input: canvas DOM element
+    // Output: cleanup function
+    // Purpose: registers input listeners and returns disposal callback.
     function setupInput(canvas) {
         const onMouseMove = (e) => handleMouseMove(e, canvas);
         const onMouseLeave = () => handleMouseLeave();
@@ -893,6 +982,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
 
 
+    // Input: dt (seconds), canvas
+    // Purpose: applies keyboard/mouse movement and world-bound clamping.
     function updatePlayerMovement(dt, canvas) {
         const p = playerRef.current;
         const playerStats = playerStatsRef.current;
@@ -927,6 +1018,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     }
     const combatSystemRef = useRef(null);
 
+    // Output: combat system instance
+    // Purpose: lazily creates and returns combat subsystem.
     function getCombatSystem() {
         if (!combatSystemRef.current) {
             combatSystemRef.current = createCombatSystem({
@@ -942,28 +1035,40 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
                     onEnemyKilled,
                     setPlayerStatsView: setPlayerStatsView,
                     triggerEffects: triggerEffects,
+                    emitEvent: emitGameEvent,
                 },
             });
         }
         return combatSystemRef.current;
     }
 
+    // Input: damage amount, world x/y, and player-hit flag
+    // Purpose: forwards player damage to combat subsystem.
     function playerTakeDamage(amount, x, y, isPlayer) {
         return getCombatSystem().playerTakeDamage(amount, x, y, isPlayer);
     }
 
+    // Input: enemy entity and hit options
+    // Output: combat hit result
+    // Purpose: forwards enemy hit resolution to combat subsystem.
     function resolveEnemyHit(enemy, options = {}) {
         return getCombatSystem().resolveEnemyHit(enemy, options);
     }
 
+    // Input: dt (seconds)
+    // Purpose: advances melee-weapon simulation.
     function updateMeleeWeapons(dt) {
         return getWeaponSystem().updateMeleeWeapons(dt);
     }
 
+    // Output: melee visual state object
+    // Purpose: returns render-facing melee visual data.
     function getMeleeVisualState() {
         return getWeaponSystem().getMeleeVisualState();
     }
 
+    // Input: dt (seconds)
+    // Purpose: advances combat simulation step.
     function updateCombat(dt) {
         return getCombatSystem().updateCombat(dt);
     }
@@ -974,6 +1079,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
 
     const effectsSystemRef = useRef(null);
 
+    // Output: effects system instance
+    // Purpose: lazily creates and returns effects subsystem.
     function getEffectsSystem() {
         if (!effectsSystemRef.current) {
             effectsSystemRef.current = createEffectsSystem({
@@ -988,17 +1095,140 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         return effectsSystemRef.current;
     }
 
+    // Input: screen x/y, text, optional color and player-hit flag
+    // Purpose: pushes a damage/effect text item and optional shake.
     function triggerEffects(x, y, text, color = "white", isPlayer = false) {
         return getEffectsSystem().triggerEffects(x, y, text, color, isPlayer);
     }
 
+    // Input: world-space x/y and explosion radius
+    // Purpose: emits explosion visual effect through effects subsystem.
     function triggerExplosionEffect(worldX, worldY, explosionRadius = 60) {
         return getEffectsSystem().triggerExplosionEffect(worldX, worldY, explosionRadius);
     }
 
+    // Input: dt (seconds)
+    // Purpose: advances/decays transient visual effects.
     function updateEffects(dt) {
         return getEffectsSystem().updateEffects(dt);
     }
+
+    const eventQueueRef = useRef([]);
+
+    // Event-driven flow rationale:
+    // Input: queued domain events emitted by combat/weapon/enemy/progression systems.
+    // Output: deterministic, in-frame side effects and state transitions.
+    // Purpose: replace brittle direct cross-system ref coupling with explicit event contracts.
+    // Why refactored: direct ref writes from multiple systems made ordering implicit and fragile.
+    // Why better now: phase-based event draining keeps causality explicit (combat -> projectiles -> spawn),
+    // enables deduping/guard rails in one place, and preserves same-frame correctness without hidden coupling.
+
+    // Input: event envelope `{ type, data }`
+    // Purpose: queues domain events for deterministic orchestrator dispatch.
+    function emitGameEvent(event) {
+        eventQueueRef.current.push(event);
+    }
+
+    // Input: spawned enemy or boss entity
+    // Purpose: inserts spawned entity once, deduped by id.
+    function addSpawnedEnemyIfMissing(spawnedEnemy) {
+        if (!spawnedEnemy) return;
+        if (!enemiesRef.current.some((enemy) => enemy.id === spawnedEnemy.id)) {
+            enemiesRef.current.push(spawnedEnemy);
+        }
+    }
+
+    // Purpose: processes one queued event batch and routes all supported event types.
+    function processGameEvents() {
+        if (eventQueueRef.current.length === 0) return;
+
+        const queue = eventQueueRef.current;
+        eventQueueRef.current = [];
+
+        for (const evt of queue) {
+            if (!evt || !evt.type) continue;
+
+            if (evt.type === 'PLAYER_DAMAGED' || evt.type === 'ENEMY_DAMAGED') {
+                const { amount = 0, x = 0, y = 0, color = 'white', isPlayer = false } = evt.data || {};
+                const { sx, sy } = worldToScreen(x, y, cameraRef.current, canvasRef.current);
+                triggerEffects(sx, sy, `-${amount}`, color, isPlayer);
+                continue;
+            }
+
+            if (evt.type === 'PLAYER_HIT' || evt.type === 'PLAYER_HIT_BY_PROJECTILE') {
+                const { damage = 0, x = playerRef.current.x, y = playerRef.current.y } = evt.data || {};
+                applyPlayerProjectileDamage(damage, x, y);
+                continue;
+            }
+
+            if (evt.type === 'EXPLOSION_TRIGGERED' || evt.type === 'EXPLOSION_OCCURRED') {
+                const { x = 0, y = 0, explosionRadius = 60 } = evt.data || {};
+                triggerExplosionEffect(x, y, explosionRadius);
+                continue;
+            }
+
+            if (evt.type === 'ENEMY_KILLED') {
+                const enemy = evt.data?.enemy;
+                if (!enemy || !enemy.alive) continue;
+
+                // Mark immediately to prevent duplicate reward events in same frame.
+                enemy.alive = false;
+                enemy.hp = 0;
+
+                onEnemyKilled(enemy);
+                continue;
+            }
+
+            if (evt.type === 'ENEMY_SPAWNED') {
+                addSpawnedEnemyIfMissing(evt.data?.enemy);
+                continue;
+            }
+            //Kept separate from ENEMY_SPAWNED in case we want different handling later (e.g. boss spawn effects, quest triggers, etc.)
+            if (evt.type === 'BOSS_SPAWNED') {
+                addSpawnedEnemyIfMissing(evt.data?.enemy);
+                continue;
+            }
+
+            if (evt.type === 'ADVANCED_DROP_PICKED') {
+                const { drop, x = 0, y = 0 } = evt.data || {};
+                if (drop) {
+                    getProgressionSystem().applyAdvancedModifier(drop);
+                }
+
+                const { sx, sy } = worldToScreen(x, y, cameraRef.current, canvasRef.current);
+                triggerEffects(sx, sy, drop?.label || 'PICKUP', '#34d399', false);
+                continue;
+            }
+
+        }
+    }
+
+    // Input: optional maximum drain passes (default 8)
+    // Purpose: drains chained event emissions until queue is stable for the current phase.
+    function processGameEventsUntilEmpty(maxPasses = 8) {
+        let passes = 0;
+        while (eventQueueRef.current.length > 0 && passes < maxPasses) {
+            processGameEvents();
+            passes += 1;
+        }
+    }
+
+    // Input: dt (seconds), canvas
+    // Purpose: runs event-producing phases in deterministic order with drains between phases.
+    // Why better than direct-ref coupling: side effects are explicit, ordered, and centralized,
+    // avoiding hidden cross-system mutations and frame-order bugs.
+    function runFrameEventPhases(dt, canvas) {
+        updateCombat(dt);
+        processGameEventsUntilEmpty();
+
+        updateProjectiles(dt, canvas);
+        processGameEventsUntilEmpty();
+
+        updateEnemyPopulation(dt, canvas);
+        updateBossSpawn(dt, canvas);
+        processGameEventsUntilEmpty();
+    }
+
 
     const runGameFrame = useEffectEvent((dt, canvas) => {
         if (gameOver) return;
@@ -1035,14 +1265,16 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         updateTurretAutoFire(dt);
         updateEnemyAi(dt);
         ensureValidTarget();
-        updateCombat(dt);
-        updateProjectiles(dt, canvas);
-        updateEnemyPopulation(dt, canvas);
-        updateBossSpawn(dt, canvas);
+        runFrameEventPhases(dt, canvas);
+
+
         updateEffects(dt);
     });
 
 
+    // Input: canvas DOM element
+    // Output: cleanup function
+    // Purpose: syncs internal canvas size to layout size and observes resize changes.
     function setupCanvas(canvas) {
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
@@ -1088,6 +1320,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         let animFrameId;
         let lastTime = 0;
 
+        // Input: RAF timestamp
+        // Output: none
+        // Purpose: computes frame dt, advances simulation, and renders one frame.
         function loop(timestamp) {
             const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
             lastTime = timestamp;
@@ -1135,6 +1370,9 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const upgradeCountsRef = useRef(0)
     const upgradeCostRef = useRef(0);
 
+    // Input: upgrade type key and material cost
+    // Output: boolean purchase result
+    // Purpose: delegates shop upgrade purchase to progression subsystem.
     function applyShopPurchase(upgradeType, cost) {
         return progressionSystemRef.current.applyShopPurchase(upgradeType, cost);
     }
@@ -1175,6 +1413,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
         };
     }, []);
 
+    // Output: object with `hasEnemies` boolean
+    // Purpose: restores persisted run data into refs/state with compatibility guards.
     function loadSave() {
         try {
             const raw = localStorage.getItem('frameGameSave');
@@ -1311,6 +1551,8 @@ function FrameGame1({ largeMode, toggleLargeMode }) {
     const [questSelectionOpen, setQuestSelectionOpen] = useState(false);
 
     const questSystemRef = useRef(null);
+    // Output: quest system instance
+    // Purpose: lazily creates and returns quest subsystem and syncs initial quest views.
     function getQuestSystem() {
         if (!questSystemRef.current) {
             questSystemRef.current = createQuestSystem({

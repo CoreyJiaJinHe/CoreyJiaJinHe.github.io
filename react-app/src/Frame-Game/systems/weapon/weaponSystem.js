@@ -1,10 +1,6 @@
 import { BASE_TURRET_CONFIG, WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN } from '../../configs/weaponConfigs.js';
 import { ENEMY_ARCHETYPES, ARCHETYPE_CONFIGS } from '../../configs/enemyArchetypeConfigs.js';
-import { calculateDistance, randomBetween, worldToScreen, normalizeAngle } from '../../utils/MathUtils.js';
-
-function getBurstDefaults() {
-    return WEAPON_CONFIGS.BURST?.[0] || { burstInterval: 0.15, burstCount: 3 };
-}
+import { calculateDistance, normalizeAngle } from '../../utils/MathUtils.js';
 
 export function createWeaponSystem({
     refs,
@@ -27,8 +23,6 @@ export function createWeaponSystem({
         meleeAimAngleRef,
         flailStateRef,
         meleeCooldownsRef,
-        cameraRef,
-        canvasRef,
     } = refs;
 
     const {
@@ -36,7 +30,49 @@ export function createWeaponSystem({
         onEnemyKilled,
         onPlayerHit,
         onExplosion,
+        emitEvent,     // new event driven path
     } = callbacks;
+
+    function pushPlayerHit(damage) {
+        if (typeof emitEvent === 'function') {
+            emitEvent({
+                type: 'PLAYER_HIT',
+                data: {
+                    damage,
+                    x: playerRef.current.x,
+                    y: playerRef.current.y,
+                },
+            });
+            return;
+        }
+
+        onPlayerHit(damage);
+    }
+
+    function pushExplosion(x, y, explosionRadius) {
+        if (typeof emitEvent === 'function') {
+            emitEvent({
+                type: 'EXPLOSION_TRIGGERED',
+                data: { x, y, explosionRadius },
+            });
+            return;
+        }
+
+        onExplosion(x, y, explosionRadius);
+    }
+
+    function pushEnemyKilled(enemy) {
+        if (typeof emitEvent === 'function') {
+            emitEvent({
+                type: 'ENEMY_KILLED',
+                data: { enemy },
+            });
+            return;
+        }
+
+        onEnemyKilled(enemy);
+    }
+
 
     function getWeaponTypeKeys() {
         return Object.keys(WEAPON_CONFIGS);
@@ -570,7 +606,8 @@ export function createWeaponSystem({
 
                 resolveEnemyHit?.(enemy, { sourceType: 'melee', projectileDamage: swing.weaponDamage, weaponMultiplier: 1, minDamage: 1 });
                 swing.hitEnemyIds.add(enemy.id);
-                if (enemy.hp <= 0) onEnemyKilled?.(enemy);
+                // if (enemy.hp <= 0) onEnemyKilled?.(enemy);
+                if (enemy.hp <= 0) pushEnemyKilled(enemy);
             }
         }
 
@@ -637,7 +674,8 @@ export function createWeaponSystem({
             resolveEnemyHit?.(enemy, damageOptions);
             flail.enemyHitCooldowns[enemy.id] = flailCfg.contactInterval ?? 0.14;
 
-            if (enemy.hp <= 0) onEnemyKilled?.(enemy);
+            // if (enemy.hp <= 0) onEnemyKilled?.(enemy);
+            if (enemy.hp <= 0) pushEnemyKilled(enemy);
         }
     }
 
@@ -773,11 +811,13 @@ export function createWeaponSystem({
                         weaponMultiplier: 1,
                         minDamage: 1,
                     });
-                    if (affectedEnemy.hp <= 0) onEnemyKilled?.(affectedEnemy);
+                    // if (affectedEnemy.hp <= 0) onEnemyKilled?.(affectedEnemy);
+                    if (affectedEnemy.hp <= 0) { pushEnemyKilled(affectedEnemy); }
                 }
             }
 
-            onExplosion?.(projectile.x, projectile.y, explosionRadius);
+            //onExplosion?.(projectile.x, projectile.y, explosionRadius);
+            pushExplosion(projectile.x, projectile.y, explosionRadius);
         }
 
         for (const projectile of projectilesRef.current) {
@@ -800,7 +840,8 @@ export function createWeaponSystem({
                 const distToPlayer = Math.hypot(projectile.x - player.x, projectile.y - player.y);
                 if (distToPlayer <= projectile.radius + player.halfSize) {
                     projectile.alive = false;
-                    onPlayerHit?.(projectile.damage);
+                    //onPlayerHit?.(projectile.damage);
+                    pushPlayerHit(projectile.damage);
                 }
                 continue;
             }
@@ -820,7 +861,8 @@ export function createWeaponSystem({
                 } else {
                     projectile.alive = false;
                     resolveEnemyHit?.(enemy, { sourceType: 'projectile', projectileDamage: projectile.damage, weaponMultiplier: 1, minDamage: 1 });
-                    if (enemy.hp <= 0) onEnemyKilled?.(enemy);
+                    // if (enemy.hp <= 0) onEnemyKilled?.(enemy);
+                    if (enemy.hp <= 0) pushEnemyKilled(enemy);
                 }
 
                 break;

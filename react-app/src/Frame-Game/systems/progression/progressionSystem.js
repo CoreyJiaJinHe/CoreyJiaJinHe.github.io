@@ -1,6 +1,6 @@
 
-import { squareOverlapsCircle,  } from '../../utils/MathUtils.js';
-import { WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN} from '../../configs/weaponConfigs.js';
+import { squareOverlapsCircle, } from '../../utils/MathUtils.js';
+import { WEAPON_CONFIGS, MAX_SWORD_ARC_SPAN } from '../../configs/weaponConfigs.js';
 
 export function createProgressionSystem({
     refs,
@@ -27,10 +27,27 @@ export function createProgressionSystem({
         setBossesDefeatedView,
         setPlayerStatsView,
         setFirstWeaponUpgradeOpen,
+        emitEvent
     } = callbacks;
 
+    // Emit the pickup first so the orchestrator can own the visible response.
+    // If the event queue is not wired, fall back to applying the modifier here.
+    function pushAdvancedDropPicked(drop, playerX, playerY) {
+        if (typeof emitEvent === 'function') {
+            emitEvent({
+                type: 'ADVANCED_DROP_PICKED',
+                data: {
+                    drop: { ...drop },
+                    x: playerX,
+                    y: playerY,
+                },
+            });
+            return;
+        }
 
-
+        // Legacy path: apply the upgrade directly when the event queue is absent.
+        applyAdvancedModifier(drop);
+    }
 
 
 
@@ -39,6 +56,7 @@ export function createProgressionSystem({
         setMaterialsView(materialsRef.current);
     }
 
+    // Rarely spawns a persistent pickup that is later handled by updateAdvancedDrops().
     function maybeSpawnAdvancedDrop(x, y) {
         const chance = 0.2; // 20%
         if (Math.random() > chance) {
@@ -65,6 +83,7 @@ export function createProgressionSystem({
         });
     }
 
+    // Applies the stat change for a collected advanced drop.
     function applyAdvancedModifier(drop) {
         const stats = playerStatsRef.current;
         const player = playerRef.current;
@@ -81,6 +100,7 @@ export function createProgressionSystem({
         setPlayerStatsView({ ...stats });
     }
 
+    // Detect pickups in world space and forward the pickup through the event path.
     function updateAdvancedDrops() {
         const p = playerRef.current;
         const pickupRadiusBonus = playerStatsRef.current.pickupRadiusBonus ?? 0;
@@ -97,32 +117,64 @@ export function createProgressionSystem({
             }
 
             drop.alive = false;
-            applyAdvancedModifier(drop);
+            //applyAdvancedModifier(drop);
+            pushAdvancedDropPicked(drop, p.x, p.y);
         }
 
         advancedDropsRef.current = advancedDropsRef.current.filter((d) => d.alive);
     }
+    // Owns the reward side effects for kills so combat stays focused on hit resolution.
+    function applyEnemyKilledProgression(enemy) {
+        if (!enemy || enemy.__progressionApplied) {
+            return;
+        }
+        enemy.__progressionApplied = true;
 
-    function onEnemyKilled(enemy) {
         enemy.hp = 0;
         enemy.alive = false;
+
         killsRef.current += 1;
         setKillsView(killsRef.current);
-        // Basic material: auto-loot
-        grantMaterials(1);
 
-        // Advanced drop: rare physical pickup
+        grantMaterials(1);
         maybeSpawnAdvancedDrop(enemy.x, enemy.y);
+
         if (enemy.isBoss) {
             grantMaterials(4);
             bossesDefeatedRef.current += 1;
             setBossesDefeatedView(bossesDefeatedRef.current);
+
             if (bossesDefeatedRef.current === 1) {
                 setFirstWeaponUpgradeOpen(true);
                 firstWeaponUpgradeOpenRef.current = true;
             }
         }
     }
+
+    function onEnemyKilled(enemy) {
+        applyEnemyKilledProgression(enemy);
+    }
+
+    // function onEnemyKilled(enemy) {
+    //     enemy.hp = 0;
+    //     enemy.alive = false;
+    //     killsRef.current += 1;
+    //     setKillsView(killsRef.current);
+    //     // Basic material: auto-loot
+    //     grantMaterials(1);
+
+    //     // Advanced drop: rare physical pickup
+    //     maybeSpawnAdvancedDrop(enemy.x, enemy.y);
+    //     if (enemy.isBoss) {
+    //         grantMaterials(4);
+    //         bossesDefeatedRef.current += 1;
+    //         setBossesDefeatedView(bossesDefeatedRef.current);
+    //         if (bossesDefeatedRef.current === 1) {
+    //             setFirstWeaponUpgradeOpen(true);
+    //             firstWeaponUpgradeOpenRef.current = true;
+    //         }
+    //     }
+    // }
 
     function applyShopPurchase(upgradeType, cost) {
         const activeWeaponType = activeWeaponTypeRef.current;
@@ -189,7 +241,7 @@ export function createProgressionSystem({
                 if (typeof baseCooldown !== 'number') {
                     purchased = false;
                 } else {
-                const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
+                    const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
                     const currentCooldown = Math.max(cooldownFloor, baseCooldown - (reductions[0] ?? 0));
 
                     if (currentCooldown <= cooldownFloor + 0.0001) {
@@ -212,7 +264,7 @@ export function createProgressionSystem({
                 if (typeof baseCooldown !== 'number') {
                     purchased = false;
                 } else {
-                const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
+                    const reductions = [...(playerStatsRef.current.secondaryTurretCooldownReductions ?? [0, 0])];
                     const currentCooldown = Math.max(cooldownFloor, baseCooldown - (reductions[1] ?? 0));
 
                     if (currentCooldown <= cooldownFloor + 0.0001) {
@@ -329,10 +381,11 @@ export function createProgressionSystem({
 
 
 
-    return{
+    return {
         grantMaterials,
         maybeSpawnAdvancedDrop,
         applyAdvancedModifier,
+        applyEnemyKilledProgression,
         updateAdvancedDrops,
         onEnemyKilled,
         applyShopPurchase

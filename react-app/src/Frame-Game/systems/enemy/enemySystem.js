@@ -7,6 +7,7 @@ export function createEnemySystem({
     configRefs,
     getDifficultyFromKills,
     getCombatCallbacks,
+    callbacks = {},
 }) {
     const {
         playerRef,
@@ -25,6 +26,35 @@ export function createEnemySystem({
         enemyArchetypeSpawnConfigRef,
         bossConfigRef,
     } = configRefs;
+
+    const {
+        emitEvent,
+    } = callbacks;
+
+    // Spawn events are emitted first so the orchestrator owns the write path.
+    // If the event queue is not wired, we fall back to the old direct ref mutation path.
+    function emitLifecycleEvent(type, data) {
+        if (typeof emitEvent === 'function') {
+            emitEvent({ type, data });
+            return;
+        }
+
+        // Legacy fallback: keep the module usable without the event queue.
+        if ((type === 'ENEMY_SPAWNED' || type === 'BOSS_SPAWNED') && data?.enemy) {
+            enemiesRef.current.push(data.enemy);
+        }
+    }
+
+    function getResolvedCombatCallbacks() {
+        // Resolve combat hooks on demand so the enemy system can keep working
+        // even when the caller omits one or more callbacks.
+        const combatCallbacks = typeof getCombatCallbacks === 'function' ? getCombatCallbacks() : {};
+        return {
+            isTurretAligned: combatCallbacks?.isTurretAligned ?? (() => false),
+            normalizeAngle: combatCallbacks?.normalizeAngle ?? ((angle) => angle),
+            fireEnemyTurret: combatCallbacks?.fireEnemyTurret ?? (() => false),
+        };
+    }
 
     function clamp01(v) {
         return Math.max(0, Math.min(1, v));
@@ -366,7 +396,7 @@ export function createEnemySystem({
         const p = playerRef.current;
         const cfg = getEnemyAiConfig();
         const playerPrev = previousPlayerPositionRef.current;
-        const { isTurretAligned, normalizeAngle, fireEnemyTurret } = getCombatCallbacks();
+        const { isTurretAligned, normalizeAngle, fireEnemyTurret } = getResolvedCombatCallbacks();
 
         const playerMoveX = p.x - playerPrev.x;
         const playerMoveY = p.y - playerPrev.y;
@@ -569,13 +599,22 @@ export function createEnemySystem({
             enemySpawnTimerRef.current = 0;
             const archetype = pickRandomEnemyArchetype(y);
 
-            enemiesRef.current.push(
-                createEnemy(playerRef.current, {
-                    hp: scaled.hp,
-                    atk: scaled.atk,
-                    def: scaled.def,
-                }, archetype)
-            );
+            const spawnedEnemy = createEnemy(playerRef.current, {
+                hp: scaled.hp,
+                atk: scaled.atk,
+                def: scaled.def,
+            }, archetype);
+
+            // Include the spawned entity in the event so the receiver can decide
+            // whether to insert it, inspect it, or ignore duplicates.
+            emitLifecycleEvent('ENEMY_SPAWNED', {
+                enemy: spawnedEnemy,
+                id: spawnedEnemy.id,
+                archetype: spawnedEnemy.archetype,
+                x: spawnedEnemy.x,
+                y: spawnedEnemy.y,
+                isBoss: false,
+            });
         }
     }
 
@@ -603,9 +642,9 @@ export function createEnemySystem({
         }
 
         const maxAllowed = cfg.maxSimultaneousBosses[profile];
-        const aliveBosSCount = enemiesRef.current.filter((e) => e.alive && e.isBoss).length;
+        const aliveBossCount = enemiesRef.current.filter((e) => e.alive && e.isBoss).length;
 
-        if (aliveBosSCount >= maxAllowed) {
+        if (aliveBossCount >= maxAllowed) {
             cfg.pendingBossSpawn = true;
             bossSpawnTimerRef.current = 0;
             return;
@@ -616,7 +655,18 @@ export function createEnemySystem({
         if (bossSpawnTimerRef.current >= cfg.spawnDelay) {
             bossSpawnTimerRef.current = 0;
             const scaled = getDifficultyFromKills(kills);
-            enemiesRef.current.push(createBoss(playerRef.current, scaled));
+            const spawnedBoss = createBoss(playerRef.current, scaled);
+            // Boss spawns use the same contract as regular enemy spawns so the
+            // orchestrator can own the actual insertion into enemiesRef.
+            emitLifecycleEvent('BOSS_SPAWNED', {
+                enemy: spawnedBoss,
+                id: spawnedBoss.id,
+                x: spawnedBoss.x,
+                y: spawnedBoss.y,
+                hp: spawnedBoss.hp,
+                maxHp: spawnedBoss.maxHp,
+                nextBossAt: cfg.nextBossAt,
+            });
             cfg.nextBossAt += cfg.killsPerBoss;
         }
     }
